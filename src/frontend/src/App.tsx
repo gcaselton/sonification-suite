@@ -2,11 +2,10 @@ import { ChakraProvider, defaultSystem} from '@chakra-ui/react'
 import { ColorModeProvider } from './components/ui/color-mode'
 import { Box } from '@chakra-ui/react'
 import ReactDOM from "react-dom/client";
-import { HashRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Lightcurves from './components/pages/Lightcurves';
 import Style from './components/pages/Style';
 import Sonify from './components/pages/Sonify';
-import Help from './components/pages/Help';
 import Planetaria from './components/pages/Planetaria';
 import Settings from './components/pages/Settings'
 import Landing from './components/pages/Landing';
@@ -50,7 +49,7 @@ function App() {
           minH="100vh"
           bg="bg"
         >
-          <HashRouter>
+          <BrowserRouter>
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/planetaria" element={<Planetaria />} />
@@ -60,10 +59,9 @@ function App() {
               <Route path="/refine" element={<Refine />} />
               <Route path="/style" element={<Style />} />
               <Route path="/sonify" element={<Sonify />} />
-              <Route path="/help" element={<Help />} />
               <Route path="/settings" element={<Settings />} />
             </Routes>
-          </HashRouter>
+          </BrowserRouter>
         </Box>
       </ColorModeProvider>
     </ChakraProvider>

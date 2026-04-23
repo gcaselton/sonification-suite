@@ -56,104 +56,102 @@ export default function Planetaria() {
 
   return (
     <PageContainer>
-      <Box as="main" role="main">
-        <Heading as="h1">Step 1: Data</Heading>
-        <br />
-        <HStack flexWrap="nowrap">
-          <Text textStyle="lg" flexShrink={1}>
-            Select a data source to sonify
-          </Text>
-        </HStack>
-        <br />
-        <br />
-        <Stack
-          gap="4"
-          direction="row"
-          wrap="wrap"
-          animation="fade-in 300ms ease-out"
-        >
-          {astroTypes.map((astroType) => (
-            <Tooltip
-              key={astroType.name}
-              content="Coming soon!"
-              openDelay={300}
-              disabled={astroType.page !== "/"}
-            >
-              <Card.Root
-                width="200px"
-                key={astroType.name}
-                variant="elevated"
-                _hover={{ transform: "scale(1.05)" }}
-                transition="transform 0.2s ease"
-              >
-                <LinkOverlay
-                  as={Link}
-                  onClick={() => navigate(astroType.page)}
-                  cursor={astroType.page === "/" ? "disabled" : "pointer"}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      navigate(astroType.page);
-                    }
-                  }}
-                >
-                  <img
-                    src={getImage(astroType.name)}
-                    alt={astroType.name}
-                    style={{
-                      width: "100%",
-                      height: "200px",
-                      objectFit: "cover",
-                      borderRadius: "8px",
-                    }}
-                  />
-                </LinkOverlay>
-                <Card.Body>
-                  <Card.Title mb="2">{astroType.name}</Card.Title>
-                  <Card.Description>{astroType.description}</Card.Description>
-                </Card.Body>
-              </Card.Root>
-            </Tooltip>
-          ))}
-          <Card.Root
-            width="200px"
-            key="examples"
-            variant="subtle"
-            _hover={{ transform: "scale(1.05)" }}
-            transition="transform 0.2s ease"
+      <Heading as="h1">Step 1: Data</Heading>
+      <br />
+      <HStack flexWrap="nowrap">
+        <Text textStyle="lg" flexShrink={1}>
+          Select a data source to sonify
+        </Text>
+      </HStack>
+      <br />
+      <br />
+      <Stack
+        gap="4"
+        direction="row"
+        wrap="wrap"
+        animation="fade-in 300ms ease-out"
+      >
+        {astroTypes.map((astroType) => (
+          <Tooltip
+            key={astroType.name}
+            content="Coming soon!"
+            openDelay={300}
+            disabled={astroType.page !== "/"}
           >
-            <LinkOverlay
-              as={Link}
-              role="button"
-              tabIndex={0}
-              href="https://www.audiouniverse.org/sonification-suite/planetaria/example-bank"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Card.Root
+              width="200px"
+              key={astroType.name}
+              variant="elevated"
+              _hover={{ transform: "scale(1.05)" }}
+              transition="transform 0.2s ease"
             >
-              <Box
-                height="200px"
-                width="100%"
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-                borderRadius="8px"
+              <LinkOverlay
+                as={Link}
+                onClick={() => navigate(astroType.page)}
+                cursor={astroType.page === "/" ? "disabled" : "pointer"}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    navigate(astroType.page);
+                  }
+                }}
               >
-                <Icon boxSize="64px" color="gray.400">
-                  <LuFilm />
-                </Icon>
-              </Box>
-            </LinkOverlay>
-            <Card.Body>
-              <Card.Title mb="2">Example Bank</Card.Title>
-              <Card.Description>
-                Use some of our pre-made examples in your shows.
-              </Card.Description>
-            </Card.Body>
-          </Card.Root>
-        </Stack>
-      </Box>
+                <img
+                  src={getImage(astroType.name)}
+                  alt={astroType.name}
+                  style={{
+                    width: "100%",
+                    height: "200px",
+                    objectFit: "cover",
+                    borderRadius: "8px",
+                  }}
+                />
+              </LinkOverlay>
+              <Card.Body>
+                <Card.Title mb="2">{astroType.name}</Card.Title>
+                <Card.Description>{astroType.description}</Card.Description>
+              </Card.Body>
+            </Card.Root>
+          </Tooltip>
+        ))}
+        <Card.Root
+          width="200px"
+          key="examples"
+          variant="subtle"
+          _hover={{ transform: "scale(1.05)" }}
+          transition="transform 0.2s ease"
+        >
+          <LinkOverlay
+            as={Link}
+            role="button"
+            tabIndex={0}
+            href="https://www.audiouniverse.org/sonification-suite/planetaria/example-bank"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Box
+              height="200px"
+              width="100%"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              borderRadius="8px"
+            >
+              <Icon boxSize="64px" color="gray.400">
+                <LuFilm />
+              </Icon>
+            </Box>
+          </LinkOverlay>
+          <Card.Body>
+            <Card.Title mb="2">Example Bank</Card.Title>
+            <Card.Description>
+              Use some of our pre-made examples in your shows.
+            </Card.Description>
+          </Card.Body>
+        </Card.Root>
+      </Stack>
     </PageContainer>
   );
 }

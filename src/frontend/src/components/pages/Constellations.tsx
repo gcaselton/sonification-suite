@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 import { LuTelescope } from "react-icons/lu";
 import PageContainer from "../ui/PageContainer";
 import { getImage, randomRange } from "../../utils/assets";
@@ -16,7 +16,7 @@ import {
   LinkOverlay,
   Link,
   Image,
-  Field, 
+  Field,
   Input,
   InputGroup,
   Dialog,
@@ -31,7 +31,7 @@ import {
   Combobox,
   useListCollection,
   useFilter,
-  Portal
+  Portal,
 } from "@chakra-ui/react";
 
 export const constellations = [
@@ -122,167 +122,153 @@ export const constellations = [
   { label: "Equuleus", value: "Equuleus" },
   { label: "Piscis Austrinus", value: "Piscis Austrinus" },
   { label: "Grus", value: "Grus" },
-  { label: "Lacerta", value: "Lacerta" }
+  { label: "Lacerta", value: "Lacerta" },
 ];
 
 export default function Constellations() {
+  const soniType = "constellations";
 
-  const soniType = 'constellations'
-  
   const navigate = useNavigate();
-  
-  const [suggested, setSuggested] = useState<SuggestedData[]>([])
-  
+
+  const [suggested, setSuggested] = useState<SuggestedData[]>([]);
+
   useEffect(() => {
-        fetch(`${coreAPI}/suggested-data/${soniType}/`)
-            .then((res) => res.json())
-            .then((data) => {
-                setSuggested(data);
-                console.log(suggested)
-            })
-            .catch((err) => {
-                console.error("Failed to fetch suggested data:", err);
-            });
-    }, []
-  );
+    fetch(`${coreAPI}/suggested-data/${soniType}/`)
+      .then((res) => res.json())
+      .then((data) => {
+        setSuggested(data);
+        console.log(suggested);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch suggested data:", err);
+      });
+  }, []);
 
   const handleSelectConstellation = (constellationName: string) => {
     if (!constellationName) return;
 
     console.log("Constellation clicked:", constellationName);
-    const dataName = constellationName
-    const dataRef = ""
-    
-    navigate('/refine', { 
-      state: { dataName, dataRef, soniType } // Navigate to step 2
+    const dataName = constellationName;
+    const dataRef = "";
+
+    navigate("/refine", {
+      state: { dataName, dataRef, soniType }, // Navigate to step 2
     });
   };
 
-  
-  
   // Needed to use ComboBox search/filter
-  const { contains } = useFilter({ sensitivity: "base" })
+  const { contains } = useFilter({ sensitivity: "base" });
   const { collection, filter } = useListCollection({
     initialItems: constellations,
     filter: contains,
-  })
-
+  });
 
   return (
     <PageContainer>
-      <Box as="main" role="main">
-        <Heading as="h1">Constellations</Heading>
-        <br />
-        <Text textStyle="lg">
-          Search for a specific constellation or choose from the suggestions
-          below
-        </Text>
-        <br />
-        <br />
-        <Box display="flex" justifyContent="center">
-          <Combobox.Root
-            collection={collection}
-            onInputValueChange={(e) => filter(e.inputValue)}
-            onValueChange={(details) => {
-              if (details.value.length > 0) {
-                setTimeout(() => {
-                  // short delay
-                  handleSelectConstellation(details.value[0]);
-                }, 300);
-              }
-            }}
-            width="50%"
-          >
-            <Combobox.Control>
-              <InputGroup startElement={<LuTelescope size="1.1rem" />}>
-                <Combobox.Input placeholder="Search for a constellation" />
-              </InputGroup>
-              <Combobox.IndicatorGroup>
-                <Combobox.ClearTrigger />
-                <Combobox.Trigger />
-              </Combobox.IndicatorGroup>
-            </Combobox.Control>
-            <Portal>
-              <Combobox.Positioner>
-                <Combobox.Content>
-                  <Combobox.Empty>No items found</Combobox.Empty>
-                  {collection.items.map((item) => (
-                    <Combobox.Item item={item} key={item.value}>
-                      {item.label}
-                      <Combobox.ItemIndicator />
-                    </Combobox.Item>
-                  ))}
-                </Combobox.Content>
-              </Combobox.Positioner>
-            </Portal>
-          </Combobox.Root>
-        </Box>
-        <br />
-        <br />
-        <Box animation="fade-in 300ms ease-out">
-          <Heading size="2xl" as="h2">
-            Suggested
-          </Heading>
-          <br />
-          <Stack gap="4" direction="row" wrap="wrap">
-            {suggested.map((suggestion) => (
-              <Card.Root
-                width="200px"
-                key={suggestion.name}
-                variant="elevated"
-                _hover={{ transform: "scale(1.05)" }}
-                transition="transform 0.2s ease"
-                cursor="pointer"
-                tabIndex={0}
-                role="button"
-                aria-label={`Sonify ${suggestion.name}: ${suggestion.description}`}
-                onClick={() => handleSelectConstellation(suggestion.name)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleSelectConstellation(suggestion.name);
-                  }
-                }}
-              >
-                <Box
-                  position="relative"
-                  bg="black"
-                  borderRadius="8px"
-                  overflow="hidden"
-                >
-                  <img
-                    src={getImage(suggestion.name, ".png")}
-                    alt={`${suggestion.name} constellation`}
-                    style={{
-                      width: "100%",
-                      display: "block",
-                      borderRadius: "8px",
-                      animation: `twinkle ${randomRange(2, 3)}s infinite alternate`,
-                    }}
-                  />
-                </Box>
-                <Card.Body>
-                  <Card.Title mb="2">{suggestion.name}</Card.Title>
-                  <Card.Description>{suggestion.description}</Card.Description>
-                </Card.Body>
-              </Card.Root>
-            ))}
-          </Stack>
-          <br />
-        </Box>
-        <Text textAlign="center" fontSize="sm" color="gray.500" mt={4}>
-          Image credit:{" "}
-          <Link
-            href="https://noirlab.edu"
-            color="gray.400"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            NSF NOIRLab
-          </Link>{" "}
-          (CC BY 4.0)
-        </Text>
+      <Heading as="h1">Constellations</Heading>
+      <br />
+      <Text textStyle="lg">
+        Search for a specific constellation or choose from the suggestions below
+      </Text>
+      <br />
+      <br />
+      <Box display="flex" justifyContent="center">
+        <Combobox.Root
+          aria-label="Search constellations"
+          collection={collection}
+          onInputValueChange={(e) => filter(e.inputValue)}
+          onValueChange={(details) => {
+            if (details.value.length > 0) {
+              setTimeout(() => {
+                // short delay
+                handleSelectConstellation(details.value[0]);
+              }, 300);
+            }
+          }}
+          width="50%"
+        >
+          <Combobox.Control>
+            <InputGroup startElement={<LuTelescope size="1.1rem" />}>
+              <Combobox.Input placeholder="Search for a constellation" />
+            </InputGroup>
+            <Combobox.IndicatorGroup>
+              <Combobox.ClearTrigger />
+              <Combobox.Trigger />
+            </Combobox.IndicatorGroup>
+          </Combobox.Control>
+          <Portal>
+            <Combobox.Positioner>
+              <Combobox.Content>
+                <Combobox.Empty>No items found</Combobox.Empty>
+                {collection.items.map((item) => (
+                  <Combobox.Item item={item} key={item.value}>
+                    {item.label}
+                    <Combobox.ItemIndicator />
+                  </Combobox.Item>
+                ))}
+              </Combobox.Content>
+            </Combobox.Positioner>
+          </Portal>
+        </Combobox.Root>
       </Box>
+      <br />
+      <br />
+      <Box animation="fade-in 300ms ease-out">
+        <Heading size="2xl" as="h2">
+          Suggested
+        </Heading>
+        <br />
+        <Stack gap="4" direction="row" wrap="wrap">
+          {suggested.map((suggestion) => (
+            <Card.Root
+              width="200px"
+              key={suggestion.name}
+              variant="elevated"
+              _hover={{ transform: "scale(1.05)" }}
+              transition="transform 0.2s ease"
+              cursor="pointer"
+              as="button"
+              aria-label={`Sonify ${suggestion.name}`}
+              onClick={() => handleSelectConstellation(suggestion.name)}
+            >
+              <Box
+                position="relative"
+                bg="black"
+                borderRadius="8px"
+                overflow="hidden"
+              >
+                <img
+                  src={getImage(suggestion.name, ".png")}
+                  alt={`Outline of the ${suggestion.name} constellation, overlaid with its associated mythological figure.`}
+                  style={{
+                    width: "100%",
+                    display: "block",
+                    borderRadius: "8px",
+                    animation: `twinkle ${randomRange(2, 3)}s infinite alternate`,
+                  }}
+                />
+              </Box>
+              <Card.Body>
+                <Card.Title mb="2">{suggestion.name}</Card.Title>
+                <Card.Description>{suggestion.description}</Card.Description>
+              </Card.Body>
+            </Card.Root>
+          ))}
+        </Stack>
+        <br />
+      </Box>
+      <Text textAlign="center" fontSize="sm" color="gray.500" mt={4}>
+        Image credit:{" "}
+        <Link
+          href="https://noirlab.edu"
+          color="gray.400"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          NSF NOIRLab
+        </Link>{" "}
+        (CC BY 4.0)
+      </Text>
     </PageContainer>
   );
 }

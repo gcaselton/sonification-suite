@@ -69,8 +69,8 @@ export default function Style() {
         dataName,
         dataRef,
         styleRef,
-        styleName: 'Custom',
-        styleDescription: '',
+        styleName: "Custom",
+        styleDescription: "",
         soniType,
         ra,
         dec,
@@ -104,80 +104,77 @@ export default function Style() {
 
   return (
     <PageContainer>
-      <Box position="relative" as="main" role="main">
-        <Heading as="h1">Step 3: Style</Heading>
-        <br />
-        <Text textStyle="lg">
-          Choose from the styles below, or configure your own
-        </Text>
-        <br />
+      <Heading as="h1">Step 3: Style</Heading>
+      <br />
+      <Text textStyle="lg">
+        Choose from the styles below, or configure your own
+      </Text>
+      <br />
 
-        <Stack
-          gap="6"
-          direction="row"
-          wrap="wrap"
-          animation="fade-in 300ms ease-out"
-        >
-          {suggestedStyles.map((style, index) => {
-            const gradientClasses = [
-              "gradient-aurora",
-              "gradient-neon",
-              "gradient-darkwave",
-              "gradient-sunset",
-              "gradient-ocean",
-              "gradient-forest",
-            ];
-            const gradientClass =
-              style.name === "Custom"
-                ? "gradient-custom"
-                : gradientClasses[index % gradientClasses.length];
+      <Stack
+        gap="6"
+        direction="row"
+        wrap="wrap"
+        animation="fade-in 300ms ease-out"
+      >
+        {suggestedStyles.map((style, index) => {
+          const gradientClasses = [
+            "gradient-aurora",
+            "gradient-neon",
+            "gradient-darkwave",
+            "gradient-sunset",
+            "gradient-ocean",
+            "gradient-forest",
+          ];
+          const gradientClass =
+            style.name === "Custom"
+              ? "gradient-custom"
+              : gradientClasses[index % gradientClasses.length];
 
-            return (
-              <Box
-                key={style.name}
-                onClick={(e) => 
-                {
+          return (
+            <Box
+              key={style.name}
+              onClick={(e) => {
+                handleClick(style);
+              }}
+              style={{ cursor: "pointer", width: 200 }}
+              tabIndex={0}
+              role="button"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
                   handleClick(style);
-                }}
-                style={{ cursor: "pointer", width: 200 }}
-                tabIndex={0}
-                role="button"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleClick(style);
-                  }
-                }}
-              >
-                <StyleCard
-                  title={style.name}
-                  description={style.description}
-                  gradientClass={gradientClass}
-                  isCustom={style.name === "Custom"}
-                />
-              </Box>
-            );
-          })}
-        </Stack>
+                }
+              }}
+            >
+              <StyleCard
+                title={style.name}
+                description={style.description}
+                gradientClass={gradientClass}
+                isCustom={style.name === "Custom"}
+              />
+            </Box>
+          );
+        })}
+      </Stack>
 
-        {/* Hidden file input for YAML upload */}
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".yaml,.yml"
-          style={{ display: "none" }}
-          onChange={handleFileChange}
-        />
+      {/* Hidden file input for YAML upload */}
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".yaml,.yml"
+        style={{ display: "none" }}
+        onChange={handleFileChange}
+      />
 
-        <CustomStyleMenu
-          open={open}
-          onOpenChange={setOpen}
-          soniType={soniType}
-          dataRef={dataRef}
-          userUpload={userUpload}
-          onStyleCreated={handleStyleCreated}
-        />
-      </Box>
+      <CustomStyleMenu
+        open={open}
+        onOpenChange={setOpen}
+        soniType={soniType}
+        dataRef={dataRef}
+        userUpload={userUpload}
+        onStyleCreated={handleStyleCreated}
+      />
     </PageContainer>
   );
 }

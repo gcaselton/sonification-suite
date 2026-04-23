@@ -1,7 +1,15 @@
 import React, { useEffect, useState, createContext, useRef } from "react";
-import { useNavigate } from 'react-router-dom';
-import LoadingMessage from '../ui/LoadingMessage';
-import { LuX, LuChartSpline, LuAudioLines, LuSearch, LuSlidersHorizontal, LuTelescope, LuUpload } from "react-icons/lu";
+import { useNavigate } from "react-router-dom";
+import LoadingMessage from "../ui/LoadingMessage";
+import {
+  LuX,
+  LuChartSpline,
+  LuAudioLines,
+  LuSearch,
+  LuSlidersHorizontal,
+  LuTelescope,
+  LuUpload,
+} from "react-icons/lu";
 import PageContainer from "../ui/PageContainer";
 import { SonifyButton, PlotButton } from "../ui/Buttons";
 import { PlotDialog } from "../ui/PlotDialog";
@@ -38,10 +46,10 @@ import {
   Text,
   IconButton,
   chakra,
-  HStack
+  HStack,
 } from "@chakra-ui/react";
 
-const soniType = 'light_curves'
+const soniType = "light_curves";
 
 export interface Lightcurve {
   id: string;
@@ -62,32 +70,31 @@ export interface SuggestedData {
 }
 
 const LightcurvesContext = createContext({
-  lightcurves: [], fetchLightcurves: () => { }
-})
+  lightcurves: [],
+  fetchLightcurves: () => {},
+});
 
 function capitaliseWords(str: string) {
-  return str.replace(/\b\w/g, char => char.toUpperCase());
+  return str.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-
 export default function Lightcurves() {
-
   // Instantiate navigation
   const navigate = useNavigate();
 
   // Set up states
   const [selectedStar, setSelectedStar] = useState("");
-  const [lightcurves, setLightcurves] = useState([])
+  const [lightcurves, setLightcurves] = useState([]);
   const [image, setImage] = useState("");
   const [title, setTitle] = useState("");
   const [plotOpen, setPlotOpen] = useState(false);
   const [suggested, setSuggested] = useState<SuggestedData[]>([]);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false)
-  const [loadingPlot, setLoadingPlot] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [loadingId, setLoadingId] = useState("fake ID")
+  const [searched, setSearched] = useState(false);
+  const [loadingPlot, setLoadingPlot] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [loadingId, setLoadingId] = useState("fake ID");
 
   const [showFilters, setShowFilters] = useState(false);
   const [tessChecked, setTessChecked] = useState(true);
@@ -110,7 +117,7 @@ export default function Lightcurves() {
 
   const cancelSearch = () => {
     if (abortControllerRef.current) {
-      console.log("Cancelling search…")
+      console.log("Cancelling search…");
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
       setLoading(false);
@@ -143,12 +150,10 @@ export default function Lightcurves() {
       cancelSearch();
     };
   }, []);
-  
-  
-  const searchLightcurves = async () => {
 
+  const searchLightcurves = async () => {
     if (!selectedStar.trim()) {
-      setErrorMessage("Please enter a star name before searching.")
+      setErrorMessage("Please enter a star name before searching.");
       return;
     }
 
@@ -163,65 +168,59 @@ export default function Lightcurves() {
 
     // Dictionary of search filters
     const filters = {
-      "mission": {
-        "TESS": tessChecked,
-        "Kepler": keplerChecked,
-        "K2": k2Checked
-      }
-    }
+      mission: {
+        TESS: tessChecked,
+        Kepler: keplerChecked,
+        K2: k2Checked,
+      },
+    };
 
-    const url_search = `${lightCurvesAPI}/search-lightcurves`
+    const url_search = `${lightCurvesAPI}/search-lightcurves`;
     const data = {
-      "star_name": selectedStar,
-      "filters": filters
+      star_name: selectedStar,
+      filters: filters,
     };
 
     try {
-      const response = await apiRequest(
-        url_search,
-        data,
-        'POST',
-        { signal: controller.signal }
-      );
+      const response = await apiRequest(url_search, data, "POST", {
+        signal: controller.signal,
+      });
 
       setLightcurves(response.results);
       setRa(response.ra);
       setDec(response.dec);
-      console.log("ra: " + response.ra)
-      console.log("dec: " + response.dec)
+      console.log("ra: " + response.ra);
+      console.log("dec: " + response.dec);
 
       console.log("Search results:", response.results);
-
     } catch (error: any) {
-
       console.log(error.name);
 
-      if (error.name === 'AbortError') {
-        console.log("Search cancelled by user")
+      if (error.name === "AbortError") {
+        console.log("Search cancelled by user");
         setSearched(false);
         return;
       }
 
-      if (String(error).includes('Failed to fetch')) {
-        error = 'Network error: Please check your internet connection or use a suggested dataset.'
+      if (String(error).includes("Failed to fetch")) {
+        error =
+          "Network error: Please check your internet connection or use a suggested dataset.";
       }
 
       setErrorMessage(String(error)); // Set error message to display
-      setSearched(false)
-
+      setSearched(false);
     } finally {
       if (abortControllerRef.current === controller) {
         abortControllerRef.current = null;
         setLoading(false);
       }
     }
-  }
-
+  };
 
   const selectLightcurve = async (dataURI: string) => {
     // Call the API endpoint to select the lightcurve and get the filepath
     const url_selectlightcurve = `${lightCurvesAPI}/select-lightcurve/`;
-    const data = { "data_uri": dataURI }
+    const data = { data_uri: dataURI };
     try {
       const result = await apiRequest(url_selectlightcurve, data);
       console.log("Select Lightcurve API response:", result);
@@ -229,10 +228,9 @@ export default function Lightcurves() {
     } catch (error) {
       console.error("Error fetching sonification:", error);
     }
-  }
+  };
 
   const handleFileAccept = async (files: FileList | File[]) => {
-
     setUploading(true);
 
     const file = files[0];
@@ -269,16 +267,16 @@ export default function Lightcurves() {
         // response was not JSON (ignore)
       }
       setUploading(false);
-      setErrorMessage(message)
+      setErrorMessage(message);
       console.error(message);
     }
 
-    const result = await res.json()
+    const result = await res.json();
 
     const navInfo = {
       dataRef: result.file_ref,
-      dataName: file.name.split('.')[0],
-      userUpload: true
+      dataName: file.name.split(".")[0],
+      userUpload: true,
     };
 
     setUploading(false);
@@ -286,9 +284,9 @@ export default function Lightcurves() {
     if (result.reduced) {
       setDataReduced(true);
       setPendingNav(navInfo);
-      return
+      return;
     }
-    
+
     // Navigate to style page with data file path.
     navigate("/refine", { state: { ...navInfo, soniType } });
   };
@@ -301,17 +299,15 @@ export default function Lightcurves() {
       setPendingNav(null);
     }
   };
-  
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSearchTerm(capitaliseWords(selectedStar))
+    setSearchTerm(capitaliseWords(selectedStar));
     setSearched(true);
     searchLightcurves();
   };
 
   const handleClickSonify = (dataURI: string) => {
-
     setLoadingId(dataURI);
     console.log("Sonify button clicked for star:", selectedStar);
     console.log("Data URI:", dataURI);
@@ -320,25 +316,25 @@ export default function Lightcurves() {
       if (dataRef) {
         console.log("Lightcurve selected, file ref:", dataRef);
         // Navigate to the style page with the filepath and star name
-        const dataName = searchTerm
-        navigate('/refine', { state: { dataRef, dataName, soniType, ra, dec } });
+        const dataName = searchTerm;
+        navigate("/refine", {
+          state: { dataRef, dataName, soniType, ra, dec },
+        });
       }
     });
   };
 
   const handleClickPlot = async (item: Lightcurve | SuggestedData) => {
-
     console.log("Plot button clicked for star:", selectedStar);
 
-    let fileRef, plotTitle
+    let fileRef, plotTitle;
 
-    if ('dataURI' in item) {
-      fileRef = item.dataURI
-      plotTitle = `${item.period}, ${item.pipeline}, ${item.year}`
-    }
-    else {
-      fileRef = item.fileRef
-      plotTitle = item.name
+    if ("dataURI" in item) {
+      fileRef = item.dataURI;
+      plotTitle = `${item.period}, ${item.pipeline}, ${item.year}`;
+    } else {
+      fileRef = item.fileRef;
+      plotTitle = item.name;
     }
 
     setTitle(`Light Curve for ${plotTitle}`);
@@ -354,9 +350,8 @@ export default function Lightcurves() {
         setLoadingPlot(false);
       }
     } catch (err) {
-      console.error("Error plotting light curve:", err)
-    }
-    finally {
+      console.error("Error plotting light curve:", err);
+    } finally {
       setLoadingPlot(false);
     }
   };
@@ -364,12 +359,12 @@ export default function Lightcurves() {
   const handleClickSuggested = (star: any) => {
     console.log("Star clicked:", star.name);
     const dataRef = star.fileRef;
-    console.log('dataRef:' + dataRef)
+    console.log("dataRef:" + dataRef);
     const dataName = star.name;
     const ra = star.ra;
     const dec = star.dec;
 
-    navigate('/refine', { state: { dataRef, dataName, soniType, ra, dec } });
+    navigate("/refine", { state: { dataRef, dataName, soniType, ra, dec } });
   };
 
   const handleCancelReduced = () => {
@@ -380,7 +375,7 @@ export default function Lightcurves() {
     setUploadKey((k) => k + 1);
   };
 
-  const uploadDisabled = false
+  const uploadDisabled = false;
 
   const filterCount = [tessChecked, keplerChecked, k2Checked].filter(
     Boolean,
@@ -388,314 +383,312 @@ export default function Lightcurves() {
 
   return (
     <PageContainer>
-      <Box as="main" role="main">
-        <Dialog.Root
-          open={dataReduced}
-          onOpenChange={(e) => setDataReduced(e.open)}
-          placement="center"
-          motionPreset="slide-in-bottom"
-          role="alertdialog"
-        >
-          <Dialog.Backdrop />
-          <Dialog.Positioner>
-            <Dialog.Content>
-              <Dialog.Header>
-                <Dialog.Title>Multiple Columns Detected</Dialog.Title>
-              </Dialog.Header>
-              <Dialog.Body>
-                <VStack align="start" gap={3}>
-                  <Text>Your dataset contains more than two columns.</Text>
-                  <Text>
-                    This feature currently uses two columns (x and y) for
-                    sonification.
-                  </Text>
-                  <Text>
-                    Would you like to continue using the first two detected
-                    columns?
-                  </Text>
-                </VStack>
-              </Dialog.Body>
-              <Dialog.Footer>
-                <Flex justify="center" w="full" gap={3}>
-                  <Dialog.ActionTrigger asChild>
-                    <Button
-                      variant="outline"
-                      colorPalette="teal"
-                      onClick={handleCancelReduced}
-                    >
-                      Cancel
-                    </Button>
-                  </Dialog.ActionTrigger>
-                  <Button onClick={handleConfirmReduced} colorPalette="teal">
-                    Continue
-                  </Button>
-                </Flex>
-              </Dialog.Footer>
-              <Dialog.CloseTrigger asChild>
-                <CloseButton size="sm" onClick={handleCancelReduced} />
-              </Dialog.CloseTrigger>
-            </Dialog.Content>
-          </Dialog.Positioner>
-        </Dialog.Root>
-        <Heading as="h1">Light Curves</Heading>
-        <br />
-        <Text textStyle="lg">
-          Search for a specific star or choose from the suggestions below
-        </Text>
-        <br />
-        <br />
-        <form onSubmit={handleSubmit}>
-          <Box display="flex" justifyContent="center">
-            <VStack gap={4} width="50%">
-              <HStack width="100%">
-                <InputGroup
-                  startElement={<LuTelescope size="1.1rem" />}
-                  width="100%"
-                >
-                  <Input
-                    placeholder="Search for a star by name, TIC, KIC or EPIC identifier"
-                    type="text"
-                    name="star_name"
+      <Dialog.Root
+        open={dataReduced}
+        onOpenChange={(e) => setDataReduced(e.open)}
+        placement="center"
+        motionPreset="slide-in-bottom"
+        role="alertdialog"
+      >
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.Header>
+              <Dialog.Title>Multiple Columns Detected</Dialog.Title>
+            </Dialog.Header>
+            <Dialog.Body>
+              <VStack align="start" gap={3}>
+                <Text>Your dataset contains more than two columns.</Text>
+                <Text>
+                  This feature currently uses two columns (x and y) for
+                  sonification.
+                </Text>
+                <Text>
+                  Would you like to continue using the first two detected
+                  columns?
+                </Text>
+              </VStack>
+            </Dialog.Body>
+            <Dialog.Footer>
+              <Flex justify="center" w="full" gap={3}>
+                <Dialog.ActionTrigger asChild>
+                  <Button
                     variant="outline"
-                    value={selectedStar}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setSelectedStar(value);
-                      if (value.trim() === "") {
-                        setSearched(false);
-                        setLightcurves([]);
-                      }
-                    }}
-                  />
-                </InputGroup>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowFilters(!showFilters)}
-                  aria-label="Show filters"
-                >
-                  <LuSlidersHorizontal />
+                    colorPalette="teal"
+                    onClick={handleCancelReduced}
+                  >
+                    Cancel
+                  </Button>
+                </Dialog.ActionTrigger>
+                <Button onClick={handleConfirmReduced} colorPalette="teal">
+                  Continue
                 </Button>
-              </HStack>
-              {/* Collapsible filters */}
-              <Collapsible.Root open={showFilters}>
-                <Collapsible.Content>
-                  <Box borderWidth="1px" padding={3} borderRadius="md">
-                    <Text mb={3}>Missions</Text>
-                    <HStack align="start" gap={3}>
-                      {[
-                        {
-                          label: "TESS",
-                          checked: tessChecked,
-                          onChange: setTessChecked,
-                        },
-                        {
-                          label: "Kepler",
-                          checked: keplerChecked,
-                          onChange: setKeplerChecked,
-                        },
-                        {
-                          label: "K2",
-                          checked: k2Checked,
-                          onChange: setK2Checked,
-                        },
-                      ].map(({ label, checked, onChange }) => {
-                        const isDisabled = checked && filterCount === 1;
-                        return (
-                          <Tooltip
-                            key={label}
-                            content="At least one mission must be selected"
-                            disabled={!isDisabled}
-                            openDelay={100}
-                            portalled
-                            positioning={{ placement: "bottom" }}
-                          >
-                            <Box display="inline-flex">
-                              <Checkbox.Root
-                                checked={checked}
-                                onCheckedChange={(e) => onChange(!!e.checked)}
-                                disabled={isDisabled}
-                              >
-                                <Checkbox.HiddenInput />
-                                <Checkbox.Control />
-                                <Checkbox.Label>{label}</Checkbox.Label>
-                              </Checkbox.Root>
-                            </Box>
-                          </Tooltip>
-                        );
-                      })}
-                    </HStack>
-                  </Box>
-                </Collapsible.Content>
-              </Collapsible.Root>
-              {errorMessage && <ErrorMsg message={errorMessage} />}
-            </VStack>
-          </Box>
-        </form>
-        {loading && (
-          <LoadingMessage
-            msg={`Searching the Universe for ${searchTerm}...`}
-            icon="pulsar"
-            onCancel={cancelSearch}
-          />
-        )}
-        <br />
-        <PlotDialog
-          open={plotOpen}
-          setOpen={setPlotOpen}
-          title={title}
-          loadingPlot={loadingPlot}
-          image={image}
-        />
-        {!searched && (
-          <Box animation="fade-in 300ms ease-out">
-            <Heading size="2xl" as="h2">
-              Suggested
-            </Heading>
-            <br />
-            <Stack gap="4" direction="row" wrap="wrap">
-              {suggested.map((star) => (
-                <Card.Root
-                  width="200px"
-                  key={star.name}
-                  variant="elevated"
-                  _hover={{ transform: "scale(1.05)" }}
-                  transition="transform 0.2s ease"
-                  cursor="pointer"
-                  tabIndex={0}
-                  role="button"
-                  aria-label={`Sonify ${star.name}: ${star.description}`}
-                  onClick={() => handleClickSuggested(star)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      handleClickSuggested(star);
+              </Flex>
+            </Dialog.Footer>
+            <Dialog.CloseTrigger asChild>
+              <CloseButton size="sm" onClick={handleCancelReduced} />
+            </Dialog.CloseTrigger>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
+      <Heading as="h1">Light Curves</Heading>
+      <br />
+      <Text textStyle="lg">
+        Search for a specific star or choose from the suggestions below
+      </Text>
+      <br />
+      <br />
+      <form onSubmit={handleSubmit}>
+        <Box display="flex" justifyContent="center">
+          <VStack gap={4} width="50%">
+            <HStack width="100%">
+              <InputGroup
+                startElement={<LuTelescope size="1.1rem" />}
+                width="100%"
+              >
+                <Input
+                  placeholder="Search for a star by name, TIC, KIC or EPIC identifier"
+                  type="text"
+                  name="star_name"
+                  variant="outline"
+                  value={selectedStar}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSelectedStar(value);
+                    if (value.trim() === "") {
+                      setSearched(false);
+                      setLightcurves([]);
                     }
                   }}
-                >
-                  <Box position="relative" bg="black" borderRadius="8px">
-                    <img
-                      src={getImage("star", ".svg")}
-                      alt={`${star.name} star`}
-                      style={{
-                        width: "100%",
-                        borderRadius: "8px",
-                        display: "block",
-                        animation: `twinkle ${randomRange(2, 3)}s infinite alternate`,
-                      }}
-                    />
-
-                    <Box
-                      position="absolute"
-                      top="0.5rem"
-                      left="0.5rem"
-                      zIndex={10}
-                      onClick={(e) => {
-                        e.stopPropagation(); // prevent the card click
-                        handleClickPlot(star);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          e.stopPropagation(); // prevent the card's keyboard handler
-                          handleClickPlot(star);
-                        }
-                      }}
-                    >
-                      <Tooltip content="View plot">
-                        <Button
-                          size="xs"
-                          aria-label={`View plot for ${star.name}`}
+                />
+              </InputGroup>
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                aria-label="Show filters"
+              >
+                <LuSlidersHorizontal />
+              </Button>
+            </HStack>
+            {/* Collapsible filters */}
+            <Collapsible.Root open={showFilters}>
+              <Collapsible.Content>
+                <Box borderWidth="1px" padding={3} borderRadius="md">
+                  <Text mb={3}>Missions</Text>
+                  <HStack align="start" gap={3}>
+                    {[
+                      {
+                        label: "TESS",
+                        checked: tessChecked,
+                        onChange: setTessChecked,
+                      },
+                      {
+                        label: "Kepler",
+                        checked: keplerChecked,
+                        onChange: setKeplerChecked,
+                      },
+                      {
+                        label: "K2",
+                        checked: k2Checked,
+                        onChange: setK2Checked,
+                      },
+                    ].map(({ label, checked, onChange }) => {
+                      const isDisabled = checked && filterCount === 1;
+                      return (
+                        <Tooltip
+                          key={label}
+                          content="At least one mission must be selected"
+                          disabled={!isDisabled}
+                          openDelay={100}
+                          portalled
+                          positioning={{ placement: "bottom" }}
                         >
-                          <LuChartSpline />
-                        </Button>
-                      </Tooltip>
-                    </Box>
-                  </Box>
-                  <Card.Body>
-                    <Card.Title mb="2">{star.name}</Card.Title>
-                    <Card.Description>{star.description}</Card.Description>
-                  </Card.Body>
-                </Card.Root>
-              ))}
-              <FileUpload.Root
-                disabled={uploadDisabled}
-                accept={{ "*/*": [".csv", ".fits"] }}
-                key={uploadKey}
-                maxFiles={1}
-                maxFileSize={1e7}
-                w="200px"
-                onFileAccept={({ files }) => handleFileAccept(files)}
-                onFileReject={(details) => {
-                  setErrorMessage(
-                    `File rejected: ${details.files[0].errors.join(", ")}`,
-                  );
-                }}
+                          <Box display="inline-flex">
+                            <Checkbox.Root
+                              checked={checked}
+                              onCheckedChange={(e) => onChange(!!e.checked)}
+                              disabled={isDisabled}
+                            >
+                              <Checkbox.HiddenInput />
+                              <Checkbox.Control />
+                              <Checkbox.Label>{label}</Checkbox.Label>
+                            </Checkbox.Root>
+                          </Box>
+                        </Tooltip>
+                      );
+                    })}
+                  </HStack>
+                </Box>
+              </Collapsible.Content>
+            </Collapsible.Root>
+            {errorMessage && <ErrorMsg message={errorMessage} />}
+          </VStack>
+        </Box>
+      </form>
+      {loading && (
+        <LoadingMessage
+          msg={`Searching the Universe for ${searchTerm}...`}
+          icon="pulsar"
+          onCancel={cancelSearch}
+        />
+      )}
+      <br />
+      <PlotDialog
+        open={plotOpen}
+        setOpen={setPlotOpen}
+        title={title}
+        loadingPlot={loadingPlot}
+        image={image}
+      />
+      {!searched && (
+        <Box animation="fade-in 300ms ease-out">
+          <Heading size="2xl" as="h2">
+            Suggested
+          </Heading>
+          <br />
+          <Stack gap="4" direction="row" wrap="wrap">
+            {suggested.map((star) => (
+              <Card.Root
+                width="200px"
+                key={star.name}
+                variant="elevated"
                 _hover={{ transform: "scale(1.05)" }}
                 transition="transform 0.2s ease"
-                cursor={uploadDisabled ? "disabled" : "pointer"}
+                cursor="pointer"
+                tabIndex={0}
                 role="button"
-                aria-label="Upload your data"
+                aria-label={`Sonify ${star.name}: ${star.description}`}
+                onClick={() => handleClickSuggested(star)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleClickSuggested(star);
+                  }
+                }}
               >
-                <FileUpload.HiddenInput />
-                <FileUpload.Dropzone>
-                  <Icon size="lg" color="fg.muted">
-                    {uploading ? <Spinner /> : <LuUpload />}
-                  </Icon>
-                  <FileUpload.DropzoneContent>
-                    <Box textStyle="md">
-                      {uploading ? "Uploading..." : "Upload your own"}
-                    </Box>
-                    <Box color="fg.muted">
-                      {uploading ? "Please wait" : ".csv, .fits up to 10MB"}
-                    </Box>
-                  </FileUpload.DropzoneContent>
-                </FileUpload.Dropzone>
-              </FileUpload.Root>
-            </Stack>
-            <br />
-          </Box>
-        )}
-        {lightcurves.length > 0 && !loading && (
-          <>
-            <Heading>Search results for {searchTerm}:</Heading>
-            <br />
-            <Table.Root size="sm" interactive>
-              <Table.Header>
-                <Table.Row>
-                  <Table.ColumnHeader>Mission</Table.ColumnHeader>
-                  <Table.ColumnHeader>Exposure</Table.ColumnHeader>
-                  <Table.ColumnHeader>Pipeline</Table.ColumnHeader>
-                  <Table.ColumnHeader>Year</Table.ColumnHeader>
-                  <Table.ColumnHeader>Period</Table.ColumnHeader>
-                  <Table.ColumnHeader></Table.ColumnHeader>
-                  <Table.ColumnHeader></Table.ColumnHeader>
+                <Box position="relative" bg="black" borderRadius="8px">
+                  <img
+                    src={getImage("star", ".svg")}
+                    alt={`${star.name} star`}
+                    style={{
+                      width: "100%",
+                      borderRadius: "8px",
+                      display: "block",
+                      animation: `twinkle ${randomRange(2, 3)}s infinite alternate`,
+                    }}
+                  />
+
+                  <Box
+                    position="absolute"
+                    top="0.5rem"
+                    left="0.5rem"
+                    zIndex={10}
+                    onClick={(e) => {
+                      e.stopPropagation(); // prevent the card click
+                      handleClickPlot(star);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        e.stopPropagation(); // prevent the card's keyboard handler
+                        handleClickPlot(star);
+                      }
+                    }}
+                  >
+                    <Tooltip content="View plot">
+                      <Button
+                        size="xs"
+                        aria-label={`View plot for ${star.name}`}
+                      >
+                        <LuChartSpline />
+                      </Button>
+                    </Tooltip>
+                  </Box>
+                </Box>
+                <Card.Body>
+                  <Card.Title mb="2">{star.name}</Card.Title>
+                  <Card.Description>{star.description}</Card.Description>
+                </Card.Body>
+              </Card.Root>
+            ))}
+            <FileUpload.Root
+              disabled={uploadDisabled}
+              accept={{ "*/*": [".csv", ".fits"] }}
+              key={uploadKey}
+              maxFiles={1}
+              maxFileSize={1e7}
+              w="200px"
+              onFileAccept={({ files }) => handleFileAccept(files)}
+              onFileReject={(details) => {
+                setErrorMessage(
+                  `File rejected: ${details.files[0].errors.join(", ")}`,
+                );
+              }}
+              _hover={{ transform: "scale(1.05)" }}
+              transition="transform 0.2s ease"
+              cursor={uploadDisabled ? "disabled" : "pointer"}
+              role="button"
+              aria-label="Upload your data"
+            >
+              <FileUpload.HiddenInput />
+              <FileUpload.Dropzone>
+                <Icon size="lg" color="fg.muted">
+                  {uploading ? <Spinner /> : <LuUpload />}
+                </Icon>
+                <FileUpload.DropzoneContent>
+                  <Box textStyle="md">
+                    {uploading ? "Uploading..." : "Upload your own"}
+                  </Box>
+                  <Box color="fg.muted">
+                    {uploading ? "Please wait" : ".csv, .fits up to 10MB"}
+                  </Box>
+                </FileUpload.DropzoneContent>
+              </FileUpload.Dropzone>
+            </FileUpload.Root>
+          </Stack>
+          <br />
+        </Box>
+      )}
+      {lightcurves.length > 0 && !loading && (
+        <>
+          <Heading>Search results for {searchTerm}:</Heading>
+          <br />
+          <Table.Root size="sm" interactive>
+            <Table.Header>
+              <Table.Row>
+                <Table.ColumnHeader>Mission</Table.ColumnHeader>
+                <Table.ColumnHeader>Exposure</Table.ColumnHeader>
+                <Table.ColumnHeader>Pipeline</Table.ColumnHeader>
+                <Table.ColumnHeader>Year</Table.ColumnHeader>
+                <Table.ColumnHeader>Period</Table.ColumnHeader>
+                <Table.ColumnHeader></Table.ColumnHeader>
+                <Table.ColumnHeader></Table.ColumnHeader>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              {lightcurves.map((item: Lightcurve) => (
+                <Table.Row key={item.id}>
+                  <Table.Cell>{item.mission}</Table.Cell>
+                  <Table.Cell>{item.exposure}</Table.Cell>
+                  <Table.Cell>{item.pipeline}</Table.Cell>
+                  <Table.Cell>{item.year}</Table.Cell>
+                  <Table.Cell>{item.period}</Table.Cell>
+                  <Table.Cell>
+                    <PlotButton onClick={handleClickPlot} item={item} />
+                  </Table.Cell>
+                  <Table.Cell>
+                    <SonifyButton
+                      onClick={handleClickSonify}
+                      dataURI={item.dataURI}
+                      loading={item.dataURI === loadingId}
+                    />
+                  </Table.Cell>
                 </Table.Row>
-              </Table.Header>
-              <Table.Body>
-                {lightcurves.map((item: Lightcurve) => (
-                  <Table.Row key={item.id}>
-                    <Table.Cell>{item.mission}</Table.Cell>
-                    <Table.Cell>{item.exposure}</Table.Cell>
-                    <Table.Cell>{item.pipeline}</Table.Cell>
-                    <Table.Cell>{item.year}</Table.Cell>
-                    <Table.Cell>{item.period}</Table.Cell>
-                    <Table.Cell>
-                      <PlotButton onClick={handleClickPlot} item={item} />
-                    </Table.Cell>
-                    <Table.Cell>
-                      <SonifyButton
-                        onClick={handleClickSonify}
-                        dataURI={item.dataURI}
-                        loading={item.dataURI === loadingId}
-                      />
-                    </Table.Cell>
-                  </Table.Row>
-                ))}
-              </Table.Body>
-            </Table.Root>
-          </>
-        )}
-      </Box>
+              ))}
+            </Table.Body>
+          </Table.Root>
+        </>
+      )}
     </PageContainer>
   );
 }

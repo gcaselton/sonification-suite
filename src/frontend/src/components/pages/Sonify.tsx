@@ -201,7 +201,7 @@ export default function Sonify() {
       console.log("Sonification result:", response);
 
       if (response.alt_az) {
-        setAltAz(response.alt_az)
+        setAltAz(response.alt_az);
       }
 
       return response.file_ref;
@@ -299,367 +299,365 @@ export default function Sonify() {
 
   return (
     <PageContainer>
-      <Box position="relative" as="main" role="main">
-        <Heading as="h1">Step 4: Sonify</Heading>
-        <br />
-        <Text textStyle="lg">
-          Set the length of the sonification and specify the audio system you
-          intend to play it on
-        </Text>
-        <br />
-        <br />
-        <HStack gap="4" align="start" justify="center">
-          <Box width="50%">
-            <form onSubmit={handleSubmit}>
-              <VStack align="start" justify="center" w="80%" gap={5}>
-                <HStack gap={10}>
-                  <Field.Root invalid={invalidLength} width="auto">
-                    <HStack>
-                      <Field.Label>Duration (seconds)</Field.Label>
-                      <InfoTip
-                        content="The total length of the sonification. The sonification will compress or stretch to this length without distorting the aduio."
-                        positioning={{ placement: "right" }}
-                        contentProps={{ maxW: "300px" }}
-                      />
-                    </HStack>
-                    <NumberInput.Root
-                      value={length}
-                      onValueChange={(e) => handleLengthChange(e.value)}
-                      inputMode="decimal"
-                      step={1}
-                      min={1}
-                      max={defaults.max_length}
-                    >
-                      <NumberInput.Control />
-                      <NumberInput.Input />
-                    </NumberInput.Root>
-                    {Number(length) > 30 && Number(length) <= 120 && (
-                      <Field.HelperText>
-                        Warning: Longer sonifications take more time to
-                        generate, including the spectrogram.
-                      </Field.HelperText>
-                    )}
-                    <Field.ErrorText>
-                      Please enter a number up to {defaults.max_length} seconds.
-                    </Field.ErrorText>
-                  </Field.Root>
-                  {soniType === "light_curves" && (
-                    <>
-                      <Text textStyle="2xl" height="0.5">
-                        =
-                      </Text>
-                      <Field.Root width="auto">
-                        <HStack>
-                          <Field.Label>Days per Second</Field.Label>
-                          <InfoTip
-                            content="Alternatively, enter how many days in the dataset you want to transpire per second. This will then calculate a new sonification duration."
-                            positioning={{ placement: "right" }}
-                            contentProps={{ maxW: "300px" }}
-                          />
-                        </HStack>
-
-                        <NumberInput.Root
-                          value={String(daysPerSec)}
-                          onValueChange={(e) => {
-                            handleDaysPerSecChange(e.value);
-                          }}
-                          inputMode="decimal"
-                          min={0}
-                          max={totalDays}
-                        >
-                          <NumberInput.Control />
-                          <NumberInput.Input />
-                        </NumberInput.Root>
-                      </Field.Root>
-                    </>
-                  )}
-                </HStack>
-
-                {/* Audio system options */}
-                <HStack alignItems="flex-end" w="100%">
-                  <Select.Root
-                    collection={audioSystemOptions}
-                    value={audioSystem}
-                    onValueChange={(e) => setAudioSystem(e.value)}
-                    minW="50%"
+      <Heading as="h1">Step 4: Sonify</Heading>
+      <br />
+      <Text textStyle="lg">
+        Set the length of the sonification and specify the audio system you
+        intend to play it on
+      </Text>
+      <br />
+      <br />
+      <HStack gap="4" align="start" justify="center">
+        <Box width="50%">
+          <form onSubmit={handleSubmit}>
+            <VStack align="start" justify="center" w="80%" gap={5}>
+              <HStack gap={10}>
+                <Field.Root invalid={invalidLength} width="auto">
+                  <HStack>
+                    <Field.Label>Duration (seconds)</Field.Label>
+                    <InfoTip
+                      content="The total length of the sonification. The sonification will compress or stretch to this length without distorting the aduio."
+                      positioning={{ placement: "right" }}
+                      contentProps={{ maxW: "300px" }}
+                    />
+                  </HStack>
+                  <NumberInput.Root
+                    value={length}
+                    onValueChange={(e) => handleLengthChange(e.value)}
+                    inputMode="decimal"
+                    step={1}
+                    min={1}
+                    max={defaults.max_length}
                   >
-                    <Select.HiddenSelect />
-                    <HStack>
-                      <Select.Label>Audio System</Select.Label>
-                      <InfoTip
-                        content="Choose your planetarium's audio setup. Note that using Azimuth as an output parameter requires a 5.1 or 7.1 system, and using Pan requires a stereo system at minimum."
-                        positioning={{ placement: "right" }}
-                        contentProps={{ maxW: "300px" }}
-                      />
-                    </HStack>
-                    <Select.Control>
-                      <Select.Trigger>
-                        <Select.ValueText placeholder="Select audio system" />
-                      </Select.Trigger>
-                      <Select.IndicatorGroup>
-                        <Select.Indicator />
-                      </Select.IndicatorGroup>
-                    </Select.Control>
-                    <Portal>
-                      <Select.Positioner>
-                        <Select.Content>
-                          {audioSystemOptions.items.map((option) => (
-                            <Select.Item item={option} key={option.value}>
-                              {option.label}
-                              <Select.ItemIndicator />
-                            </Select.Item>
-                          ))}
-                        </Select.Content>
-                      </Select.Positioner>
-                    </Portal>
-                  </Select.Root>
-                  {soniType !== "night_sky" && ra && dec && (
-                    <HStack>
-                      <Tooltip
-                        content="Unavailable for Mono audio systems"
-                        disabled={audioSystem[0] !== "mono"}
-                        openDelay={100}
-                      >
-                        <Button
-                          colorPalette="teal"
-                          variant={observerValues ? "solid" : "subtle"}
-                          disabled={audioSystem[0] === "mono"}
-                          onClick={() => setObserverOpen(true)}
-                        >
-                          <LuLocateFixed />
-                          Place on Dome
-                        </Button>
-                      </Tooltip>
-                      <InfoTip
-                        content="Positions the audio in space to match where this object would appear in the sky from your location. Note: if your chosen style already maps data to Azimuth or Pan, those mappings will be overridden."
-                        positioning={{ placement: "right" }}
-                        contentProps={{ maxW: "300px" }}
-                      />
-                    </HStack>
+                    <NumberInput.Control />
+                    <NumberInput.Input />
+                  </NumberInput.Root>
+                  {Number(length) > 30 && Number(length) <= 120 && (
+                    <Field.HelperText>
+                      Warning: Longer sonifications take more time to generate,
+                      including the spectrogram.
+                    </Field.HelperText>
                   )}
-                </HStack>
-
-                {observerValues && (
-                  <HStack
-                    bg="teal.subtle"
-                    color="teal.fg"
-                    borderRadius="md"
-                    px={2}
-                    py={1}
-                    fontSize="xs"
-                    flexWrap="wrap"
-                    align="center"
-                  >
-                    <Text flex="1" whiteSpace="normal">
-                      {observerValues.locationName} (
-                      {formatCoord(observerValues.latitude)},{" "}
-                      {formatCoord(observerValues.longitude)}), facing{" "}
-                      {COMPASS[observerValues.orientation]},{" "}
-                      {observerValues.dateTime}
+                  <Field.ErrorText>
+                    Please enter a number up to {defaults.max_length} seconds.
+                  </Field.ErrorText>
+                </Field.Root>
+                {soniType === "light_curves" && (
+                  <>
+                    <Text textStyle="2xl" height="0.5">
+                      =
                     </Text>
-                    <CloseButton
-                      size="xs"
-                      variant="subtle"
-                      colorPalette="teal"
-                      onClick={() => setObserverValues(null)}
+                    <Field.Root width="auto">
+                      <HStack>
+                        <Field.Label>Days per Second</Field.Label>
+                        <InfoTip
+                          content="Alternatively, enter how many days in the dataset you want to transpire per second. This will then calculate a new sonification duration."
+                          positioning={{ placement: "right" }}
+                          contentProps={{ maxW: "300px" }}
+                        />
+                      </HStack>
+
+                      <NumberInput.Root
+                        value={String(daysPerSec)}
+                        onValueChange={(e) => {
+                          handleDaysPerSecChange(e.value);
+                        }}
+                        inputMode="decimal"
+                        min={0}
+                        max={totalDays}
+                      >
+                        <NumberInput.Control />
+                        <NumberInput.Input />
+                      </NumberInput.Root>
+                    </Field.Root>
+                  </>
+                )}
+              </HStack>
+
+              {/* Audio system options */}
+              <HStack alignItems="flex-end" w="100%">
+                <Select.Root
+                  collection={audioSystemOptions}
+                  value={audioSystem}
+                  onValueChange={(e) => setAudioSystem(e.value)}
+                  minW="50%"
+                >
+                  <Select.HiddenSelect />
+                  <HStack>
+                    <Select.Label>Audio System</Select.Label>
+                    <InfoTip
+                      content="Choose your planetarium's audio setup. Note that using Azimuth as an output parameter requires a 5.1 or 7.1 system, and using Pan requires a stereo system at minimum."
+                      positioning={{ placement: "right" }}
+                      contentProps={{ maxW: "300px" }}
+                    />
+                  </HStack>
+                  <Select.Control>
+                    <Select.Trigger>
+                      <Select.ValueText placeholder="Select audio system" />
+                    </Select.Trigger>
+                    <Select.IndicatorGroup>
+                      <Select.Indicator />
+                    </Select.IndicatorGroup>
+                  </Select.Control>
+                  <Portal>
+                    <Select.Positioner>
+                      <Select.Content>
+                        {audioSystemOptions.items.map((option) => (
+                          <Select.Item item={option} key={option.value}>
+                            {option.label}
+                            <Select.ItemIndicator />
+                          </Select.Item>
+                        ))}
+                      </Select.Content>
+                    </Select.Positioner>
+                  </Portal>
+                </Select.Root>
+                {soniType !== "night_sky" && ra && dec && (
+                  <HStack>
+                    <Tooltip
+                      content="Unavailable for Mono audio systems"
+                      disabled={audioSystem[0] !== "mono"}
+                      openDelay={100}
+                    >
+                      <Button
+                        colorPalette="teal"
+                        variant={observerValues ? "solid" : "subtle"}
+                        disabled={audioSystem[0] === "mono"}
+                        onClick={() => setObserverOpen(true)}
+                      >
+                        <LuLocateFixed />
+                        Place on Dome
+                      </Button>
+                    </Tooltip>
+                    <InfoTip
+                      content="Positions the audio in space to match where this object would appear in the sky from your location. Note: if your chosen style already maps data to Azimuth or Pan, those mappings will be overridden."
+                      positioning={{ placement: "right" }}
+                      contentProps={{ maxW: "300px" }}
                     />
                   </HStack>
                 )}
+              </HStack>
 
-                <Dialog.Root
-                  open={observerOpen}
-                  onOpenChange={(e) => setObserverOpen(e.open)}
-                  placement="center"
-                  motionPreset="slide-in-bottom"
+              {observerValues && (
+                <HStack
+                  bg="teal.subtle"
+                  color="teal.fg"
+                  borderRadius="md"
+                  px={2}
+                  py={1}
+                  fontSize="xs"
+                  flexWrap="wrap"
+                  align="center"
                 >
-                  <Dialog.Backdrop />
-                  <Dialog.Positioner>
-                    <Dialog.Content>
-                      <Dialog.Header>
-                        <Dialog.Title>Place on Dome</Dialog.Title>
-                      </Dialog.Header>
-                      <Dialog.Body>
-                        <VStack gap={4}>
-                          <Text>
-                            Set your location, orientation, and the date and
-                            time of your observation to position the audio at
-                            this object's location.
-                          </Text>
-                          <Text textStyle="xs" color="fg.muted">
-                            This feature will override any spatial audio
-                            mappings (e.g. Azimuth, Pan) in your chosen style.
-                          </Text>
-                          <ObserverSetup
-                            onSubmit={handlePlaceOnDome}
-                            onCancel={() => setObserverOpen(false)}
-                          />
-                        </VStack>
-                      </Dialog.Body>
-                      <Dialog.CloseTrigger asChild>
-                        <CloseButton size="sm" />
-                      </Dialog.CloseTrigger>
-                    </Dialog.Content>
-                  </Dialog.Positioner>
-                </Dialog.Root>
-
-                <Button
-                  type="submit"
-                  colorPalette="teal"
-                  minW="50%"
-                  disabled={invalidLength || length === ""}
-                  loading={loading}
-                >
-                  <LuAudioLines />
-                  Generate
-                </Button>
-
-                <HStack w="100%">
-                  <Separator w="100%" size="lg" />
-                  <Text flexShrink="0">Summary</Text>
-                  <Separator w="100%" size="lg" />
+                  <Text flex="1" whiteSpace="normal">
+                    {observerValues.locationName} (
+                    {formatCoord(observerValues.latitude)},{" "}
+                    {formatCoord(observerValues.longitude)}), facing{" "}
+                    {COMPASS[observerValues.orientation]},{" "}
+                    {observerValues.dateTime}
+                  </Text>
+                  <CloseButton
+                    size="xs"
+                    variant="subtle"
+                    colorPalette="teal"
+                    onClick={() => setObserverValues(null)}
+                  />
                 </HStack>
-
-                <DataList.Root
-                  orientation="horizontal"
-                  divideY="1px"
-                  variant="bold"
-                  w="100%"
-                >
-                  {summaryItems.map((item) => (
-                    <DataList.Item key={item.label} pt="4">
-                      <DataList.ItemLabel fontWeight="bold">
-                        {item.label}
-                      </DataList.ItemLabel>
-                      <DataList.ItemValue>{item.value}</DataList.ItemValue>
-                      {item.downloadable && item.fileRef && (
-                        <DataList.ItemValue>
-                          <IconButton
-                            asChild
-                            colorPalette="teal"
-                            size="sm"
-                            variant="ghost"
-                          >
-                            <a
-                              href={`${coreAPI}/download?file_ref=${encodeURIComponent(item.fileRef)}`}
-                              style={{ color: "inherit" }}
-                            >
-                              <LuDownload />
-                            </a>
-                          </IconButton>
-                        </DataList.ItemValue>
-                      )}
-                    </DataList.Item>
-                  ))}
-                  {altAz && (
-                    <>
-                      <DataList.Item key="altitude" pt="4">
-                        <DataList.ItemLabel fontWeight="bold">
-                          Altitude
-                        </DataList.ItemLabel>
-                        <DataList.ItemValue>
-                          {formatCoord(altAz[0])}°
-                        </DataList.ItemValue>
-                      </DataList.Item>
-                      <DataList.Item key="azimuth" pt="4">
-                        <DataList.ItemLabel fontWeight="bold">
-                          Azimuth
-                        </DataList.ItemLabel>
-                        <DataList.ItemValue>
-                          {formatCoord(altAz[1])}°
-                        </DataList.ItemValue>
-                      </DataList.Item>
-                    </>
-                  )}
-                </DataList.Root>
-              </VStack>
-            </form>
-            <br />
-          </Box>
-          <Box width="50%">
-            {soniReady && (
-              <Flex justify="center" mb={2}>
-                <SegmentGroup.Root
-                  value={activePlot}
-                  onValueChange={(e) =>
-                    setActivePlot(e.value as "data" | "spectrogram")
-                  }
-                  size="sm"
-                >
-                  <SegmentGroup.Indicator />
-                  <SegmentGroup.Item value="data" cursor="pointer">
-                    <SegmentGroup.ItemText>
-                      <HStack>
-                        <LuDatabase /> Data
-                      </HStack>
-                    </SegmentGroup.ItemText>
-                    <SegmentGroup.ItemHiddenInput />
-                  </SegmentGroup.Item>
-                  <SegmentGroup.Item
-                    value="spectrogram"
-                    cursor="pointer"
-                    disabled={!specImage && !specLoading}
-                  >
-                    <SegmentGroup.ItemText>
-                      <HStack>
-                        <LuAudioLines /> Spectrogram
-                      </HStack>
-                    </SegmentGroup.ItemText>
-                    <SegmentGroup.ItemHiddenInput />
-                  </SegmentGroup.Item>
-                </SegmentGroup.Root>
-              </Flex>
-            )}
-
-            {activePlot === "data" &&
-              (imageLoading ? (
-                <LoadingMessage msg="" icon="pulsar" />
-              ) : imageSrc ? (
-                <Image
-                  src={imageSrc}
-                  alt={`A plot of the ${dataName} ${formatSoniType(soniType)}`}
-                  rounded="md"
-                  animation="fade-in 300ms ease-out"
-                />
-              ) : (
-                <ErrorMsg message="Unable to plot data." />
-              ))}
-
-            {activePlot === "spectrogram" &&
-              (specLoading ? (
-                <LoadingMessage msg="Generating spectrogram..." icon="pulsar" />
-              ) : specImage ? (
-                <Image
-                  src={`data:image/png;base64,${specImage}`}
-                  alt="Spectrogram"
-                  rounded="md"
-                  animation="fade-in 300ms ease-out"
-                />
-              ) : (
-                <ErrorMsg message="Unable to generate spectrogram." />
-              ))}
-          </Box>
-        </HStack>
-        <ActionBar.Root open={soniClicked}>
-          <ActionBar.Positioner zIndex={1400}>
-            <ActionBar.Content
-              w={loading ? "20%" : "50%"}
-              justifyContent="center"
-            >
-              {loading && <LoadingMessage msg="Generating Sonification..." />}
-              {errorMessage && <ErrorMsg message={errorMessage} />}
-              {soniReady && (
-                <audio
-                  key={audioKey}
-                  src={`${coreAPI}/audio/${audioFilename}?v=${audioKey}`}
-                  controls
-                  style={{ width: "100%" }}
-                />
               )}
-            </ActionBar.Content>
-          </ActionBar.Positioner>
-        </ActionBar.Root>
-        <Box h="4em" />
-      </Box>
+
+              <Dialog.Root
+                open={observerOpen}
+                onOpenChange={(e) => setObserverOpen(e.open)}
+                placement="center"
+                motionPreset="slide-in-bottom"
+              >
+                <Dialog.Backdrop />
+                <Dialog.Positioner>
+                  <Dialog.Content>
+                    <Dialog.Header>
+                      <Dialog.Title>Place on Dome</Dialog.Title>
+                    </Dialog.Header>
+                    <Dialog.Body>
+                      <VStack gap={4}>
+                        <Text>
+                          Set your location, orientation, and the date and time
+                          of your observation to position the audio at this
+                          object's location.
+                        </Text>
+                        <Text textStyle="xs" color="fg.muted">
+                          This feature will override any spatial audio mappings
+                          (e.g. Azimuth, Pan) in your chosen style.
+                        </Text>
+                        <ObserverSetup
+                          onSubmit={handlePlaceOnDome}
+                          onCancel={() => setObserverOpen(false)}
+                        />
+                      </VStack>
+                    </Dialog.Body>
+                    <Dialog.CloseTrigger asChild>
+                      <CloseButton size="sm" />
+                    </Dialog.CloseTrigger>
+                  </Dialog.Content>
+                </Dialog.Positioner>
+              </Dialog.Root>
+
+              <Button
+                type="submit"
+                colorPalette="teal"
+                minW="50%"
+                disabled={invalidLength || length === ""}
+                loading={loading}
+              >
+                <LuAudioLines />
+                Generate
+              </Button>
+
+              <HStack w="100%">
+                <Separator w="100%" size="lg" />
+                <Text flexShrink="0">Summary</Text>
+                <Separator w="100%" size="lg" />
+              </HStack>
+
+              <DataList.Root
+                orientation="horizontal"
+                divideY="1px"
+                variant="bold"
+                w="100%"
+              >
+                {summaryItems.map((item) => (
+                  <DataList.Item key={item.label} pt="4">
+                    <DataList.ItemLabel fontWeight="bold">
+                      {item.label}
+                    </DataList.ItemLabel>
+                    <DataList.ItemValue>{item.value}</DataList.ItemValue>
+                    {item.downloadable && item.fileRef && (
+                      <DataList.ItemValue>
+                        <IconButton
+                          asChild
+                          colorPalette="teal"
+                          size="sm"
+                          variant="ghost"
+                        >
+                          <a
+                            href={`${coreAPI}/download?file_ref=${encodeURIComponent(item.fileRef)}`}
+                            style={{ color: "inherit" }}
+                          >
+                            <LuDownload />
+                          </a>
+                        </IconButton>
+                      </DataList.ItemValue>
+                    )}
+                  </DataList.Item>
+                ))}
+                {altAz && (
+                  <>
+                    <DataList.Item key="altitude" pt="4">
+                      <DataList.ItemLabel fontWeight="bold">
+                        Altitude
+                      </DataList.ItemLabel>
+                      <DataList.ItemValue>
+                        {formatCoord(altAz[0])}°
+                      </DataList.ItemValue>
+                    </DataList.Item>
+                    <DataList.Item key="azimuth" pt="4">
+                      <DataList.ItemLabel fontWeight="bold">
+                        Azimuth
+                      </DataList.ItemLabel>
+                      <DataList.ItemValue>
+                        {formatCoord(altAz[1])}°
+                      </DataList.ItemValue>
+                    </DataList.Item>
+                  </>
+                )}
+              </DataList.Root>
+            </VStack>
+          </form>
+          <br />
+        </Box>
+        <Box width="50%">
+          {soniReady && (
+            <Flex justify="center" mb={2}>
+              <SegmentGroup.Root
+                value={activePlot}
+                onValueChange={(e) =>
+                  setActivePlot(e.value as "data" | "spectrogram")
+                }
+                size="sm"
+              >
+                <SegmentGroup.Indicator />
+                <SegmentGroup.Item value="data" cursor="pointer">
+                  <SegmentGroup.ItemText>
+                    <HStack>
+                      <LuDatabase /> Data
+                    </HStack>
+                  </SegmentGroup.ItemText>
+                  <SegmentGroup.ItemHiddenInput />
+                </SegmentGroup.Item>
+                <SegmentGroup.Item
+                  value="spectrogram"
+                  cursor="pointer"
+                  disabled={!specImage && !specLoading}
+                >
+                  <SegmentGroup.ItemText>
+                    <HStack>
+                      <LuAudioLines /> Spectrogram
+                    </HStack>
+                  </SegmentGroup.ItemText>
+                  <SegmentGroup.ItemHiddenInput />
+                </SegmentGroup.Item>
+              </SegmentGroup.Root>
+            </Flex>
+          )}
+
+          {activePlot === "data" &&
+            (imageLoading ? (
+              <LoadingMessage msg="" icon="pulsar" />
+            ) : imageSrc ? (
+              <Image
+                src={imageSrc}
+                alt={`A plot of the ${dataName} ${formatSoniType(soniType)}`}
+                rounded="md"
+                animation="fade-in 300ms ease-out"
+              />
+            ) : (
+              <ErrorMsg message="Unable to plot data." />
+            ))}
+
+          {activePlot === "spectrogram" &&
+            (specLoading ? (
+              <LoadingMessage msg="Generating spectrogram..." icon="pulsar" />
+            ) : specImage ? (
+              <Image
+                src={`data:image/png;base64,${specImage}`}
+                alt="Spectrogram"
+                rounded="md"
+                animation="fade-in 300ms ease-out"
+              />
+            ) : (
+              <ErrorMsg message="Unable to generate spectrogram." />
+            ))}
+        </Box>
+      </HStack>
+      <ActionBar.Root open={soniClicked}>
+        <ActionBar.Positioner zIndex={1400}>
+          <ActionBar.Content
+            w={loading ? "20%" : "50%"}
+            justifyContent="center"
+          >
+            {loading && <LoadingMessage msg="Generating Sonification..." />}
+            {errorMessage && <ErrorMsg message={errorMessage} />}
+            {soniReady && (
+              <audio
+                key={audioKey}
+                src={`${coreAPI}/audio/${audioFilename}?v=${audioKey}`}
+                controls
+                style={{ width: "100%" }}
+              />
+            )}
+          </ActionBar.Content>
+        </ActionBar.Positioner>
+      </ActionBar.Root>
+      <Box h="4em" />
     </PageContainer>
   );
 }

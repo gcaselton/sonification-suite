@@ -1,5 +1,15 @@
-import { Box, Flex, Text, Link, Button, Icon, HStack, VStack,  Dialog, CloseButton } from "@chakra-ui/react";
-import { useNavigate } from "react-router-dom";
+import {
+  Box,
+  Flex,
+  Text,
+  Link,
+  Icon,
+  HStack,
+  VStack,
+  Dialog,
+  CloseButton,
+} from "@chakra-ui/react";
+import { useNavigate, NavLink } from "react-router-dom";
 import { CircleQuestionMark, Info } from "lucide-react";
 import { useState } from "react";
 
@@ -10,38 +20,65 @@ export default function PageContainer({
   children: React.ReactNode;
   nav?: boolean;
 }) {
-  const navigate = useNavigate();
   const [licenseOpen, setLicenseOpen] = useState(false);
 
   return (
     <Box maxW="1200px" mx="auto" px={6} py={4} width="100%">
+      {/* Skip Nav */}
+      <Link
+        href="#"
+        position="absolute"
+        top="-40px"
+        left="0"
+        bg="teal.500"
+        color="white"
+        px={4}
+        py={2}
+        zIndex={9999}
+        _focus={{ top: "0" }}
+        transition="top 0.1s"
+        onClick={(e) => {
+          e.preventDefault();
+          const el = document.getElementById("main-content");
+          if (el) {
+            el.focus();
+            el.scrollIntoView({ behavior: "smooth" });
+          }
+        }}
+      >
+        Skip to content
+      </Link>
+
       {nav && (
         <Flex as="header" justify="space-between" align="center" mb={6}>
           <Flex align="center" gap={2} wrap="wrap">
-            <Text
-              fontSize="lg"
-              cursor="pointer"
-              onClick={() => navigate("/")}
-              _hover={{ opacity: 0.8 }}
-              transition="opacity 0.15s ease"
-            >
-              Sonification{" "}
-              <Box as="span" color="teal.500">
-                Suite
-              </Box>
-            </Text>
+            <NavLink to="/">
+              <Text
+                fontSize="lg"
+                cursor="pointer"
+                _hover={{ opacity: 0.8 }}
+                transition="opacity 0.15s ease"
+              >
+                Sonification{" "}
+                <Box as="span" color="teal.500">
+                  Suite
+                </Box>
+              </Text>
+            </NavLink>
 
             <Text opacity={0.35}>/</Text>
-            <Text
-              fontSize="lg"
-              opacity={0.6}
-              cursor="pointer"
-              onClick={() => navigate("/planetaria")}
-              _hover={{ opacity: 1 }}
-              transition="opacity 0.15s ease"
-            >
-              Planetaria
-            </Text>
+
+            <NavLink to='/planetaria'>
+              <Text
+                fontSize="lg"
+                opacity={0.6}
+                cursor="pointer"
+                _hover={{ opacity: 1 }}
+                transition="opacity 0.15s ease"
+              >
+                Planetaria
+              </Text>
+            </NavLink>
           </Flex>
           <Flex gap={5}>
             <Link
@@ -55,7 +92,7 @@ export default function PageContainer({
                 _hover={{ opacity: 1 }}
                 transition="opacity 0.15s ease"
                 cursor="pointer"
-                role="button"
+                role="link"
               >
                 <Icon size="md">
                   <Info />
@@ -85,9 +122,10 @@ export default function PageContainer({
           </Flex>
         </Flex>
       )}
-
-      {children}
-
+      {/* Main Content */}
+      <Box as="main" id="main-content" tabIndex={-1} position='relative'>
+        {children}
+      </Box>
       {/* Footer */}
       <Flex
         as="footer"
@@ -103,6 +141,7 @@ export default function PageContainer({
       >
         <Text
           fontSize="xs"
+          as='button'
           cursor="pointer"
           _hover={{ opacity: 1 }}
           onClick={() => setLicenseOpen(true)}
