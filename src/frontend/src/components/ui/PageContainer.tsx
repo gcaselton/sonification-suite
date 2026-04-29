@@ -4,14 +4,16 @@ import {
   Text,
   Link,
   Icon,
+  IconButton,
   HStack,
   VStack,
   Dialog,
   CloseButton,
 } from "@chakra-ui/react";
 import { useNavigate, NavLink } from "react-router-dom";
-import { CircleQuestionMark, Info } from "lucide-react";
+import { CircleQuestionMark, Info, Menu } from "lucide-react";
 import { useState } from "react";
+import { NavDrawer } from "./NavDrawer";
 
 export default function PageContainer({
   children,
@@ -50,80 +52,93 @@ export default function PageContainer({
       </Link>
 
       {nav && (
-        <Flex as="header" justify="space-between" align="center" mb={6}>
-          <Flex align="center" gap={2} wrap="wrap">
-            <NavLink to="/">
-              <Text
-                fontSize="lg"
-                cursor="pointer"
-                _hover={{ opacity: 0.8 }}
-                transition="opacity 0.15s ease"
-              >
-                Sonification{" "}
-                <Box as="span" color="teal.500">
-                  Suite
-                </Box>
-              </Text>
-            </NavLink>
-
-            <Text opacity={0.35}>/</Text>
-
-            <NavLink to='/planetaria'>
-              <Text
-                fontSize="lg"
-                opacity={0.6}
-                cursor="pointer"
-                _hover={{ opacity: 1 }}
-                transition="opacity 0.15s ease"
-              >
-                Planetaria
-              </Text>
-            </NavLink>
+        <>
+          {/* Mobile Navigation */}
+          <Flex as='header' display={{ base: "flex", md: "none" }} mb={6}>
+            <NavDrawer/>
           </Flex>
-          <Flex gap={5}>
-            <Link
-              href="https://www.audiouniverse.org/sonification-suite/planetaria/about"
-              style={{ textDecoration: "none" }}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <HStack
-                opacity={0.5}
-                _hover={{ opacity: 1 }}
-                transition="opacity 0.15s ease"
-                cursor="pointer"
-                role="link"
+          {/* Desktop Navigation */}
+          <Flex
+            as="header"
+            justify="space-between"
+            align="center"
+            mb={6}
+            display={{ base: "none", md: "flex" }}
+          >
+            <Flex align="center" gap={2} wrap="wrap">
+              <NavLink to="/">
+                <Text
+                  fontSize="lg"
+                  cursor="pointer"
+                  _hover={{ opacity: 0.8 }}
+                  transition="opacity 0.15s ease"
+                >
+                  Sonification{" "}
+                  <Box as="span" color="teal.500">
+                    Suite
+                  </Box>
+                </Text>
+              </NavLink>
+
+              <Text opacity={0.35}>/</Text>
+
+              <NavLink to="/planetaria">
+                <Text
+                  fontSize="lg"
+                  opacity={0.6}
+                  cursor="pointer"
+                  _hover={{ opacity: 1 }}
+                  transition="opacity 0.15s ease"
+                >
+                  Planetaria
+                </Text>
+              </NavLink>
+            </Flex>
+            <Flex gap={5}>
+              <Link
+                href="https://www.audiouniverse.org/sonification-suite/planetaria/about"
+                style={{ textDecoration: "none" }}
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                <Icon size="md">
-                  <Info />
-                </Icon>
-                <Text fontSize="md">About</Text>
-              </HStack>
-            </Link>
-            <Link
-              href="https://www.audiouniverse.org/sonification-suite/planetaria"
-              style={{ textDecoration: "none" }}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <HStack
-                opacity={0.5}
-                _hover={{ opacity: 1 }}
-                transition="opacity 0.15s ease"
-                cursor="pointer"
-                role="button"
+                <HStack
+                  opacity={0.5}
+                  _hover={{ opacity: 1 }}
+                  transition="opacity 0.15s ease"
+                  cursor="pointer"
+                  role="link"
+                >
+                  <Icon size="md">
+                    <Info />
+                  </Icon>
+                  <Text fontSize="md">About</Text>
+                </HStack>
+              </Link>
+              <Link
+                href="https://www.audiouniverse.org/sonification-suite/planetaria"
+                style={{ textDecoration: "none" }}
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                <Icon size="md">
-                  <CircleQuestionMark />
-                </Icon>
-                <Text fontSize="md">Help</Text>
-              </HStack>
-            </Link>
+                <HStack
+                  opacity={0.5}
+                  _hover={{ opacity: 1 }}
+                  transition="opacity 0.15s ease"
+                  cursor="pointer"
+                  role="button"
+                >
+                  <Icon size="md">
+                    <CircleQuestionMark />
+                  </Icon>
+                  <Text fontSize="md">Help</Text>
+                </HStack>
+              </Link>
+            </Flex>
           </Flex>
-        </Flex>
+        </>
       )}
       {/* Main Content */}
-      <Box as="main" id="main-content" tabIndex={-1} position='relative'>
+      <Box as="main" id="main-content" tabIndex={-1} position="relative">
         {children}
       </Box>
       {/* Footer */}
@@ -141,7 +156,7 @@ export default function PageContainer({
       >
         <Text
           fontSize="xs"
-          as='button'
+          as="button"
           cursor="pointer"
           _hover={{ opacity: 1 }}
           onClick={() => setLicenseOpen(true)}
