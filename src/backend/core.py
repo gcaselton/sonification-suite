@@ -30,8 +30,8 @@ LOG = logging.getLogger(__name__)
 
 # Useful constants for '/upload-data/' endpoint
 ACCEPTED_UPLOAD_FORMATS = ['.csv', '.fits']
-SESSION_QUOTA_MB = 100
-SESSION_QUOTA_BYTES = SESSION_QUOTA_MB * 1024 * 1024
+UPLOAD_QUOTA_MB = 50
+UPLOAD_QUOTA_BYTES = UPLOAD_QUOTA_MB * 1024 * 1024
 
 FORMATTED_FILENAMES = {
     'light_curves': 'Light Curve',
@@ -64,12 +64,12 @@ def get_or_create_session(
 
     return {'session_id': session_id}
 
-def get_session_size(session_dir: str) -> int:
-    """Returns total size in bytes of all files in a session directory."""
+def get_uploads_dir_size(uploads_dir: str) -> int:
+    """Returns total size in bytes of all files in a session's uploads directory."""
     try:
         return sum(
             f.stat().st_size
-            for f in Path(session_dir).rglob('*')
+            for f in Path(uploads_dir).rglob('*')
             if f.is_file()
         )
     except Exception as e:
@@ -380,9 +380,15 @@ async def uploadData(file: UploadFile, request: Request):
     session_dir = os.path.join(TMP_DIR, session_id)
     os.makedirs(session_dir, exist_ok=True)
     
-    # Check session quota
-    current_usage = get_session_size(session_dir)
-    if current_usage + len(contents) > SESSION_QUOTA_BYTES:
+    # Ensure uploads directory exists
+    uploads_dir = os.path.join(session_dir, 'uploads')
+    os.makedirs(uploads_dir, exist_ok=True)
+    
+    print(uploads_dir)
+    
+    # Check session's upload quota
+    current_usage = get_uploads_dir_size(uploads_dir)
+    if current_usage + len(contents) > UPLOAD_QUOTA_BYTES:
         LOG.warning(
             "Upload rejected | reason=quota_exceeded | usage=%d | file_size=%d | session=%s | ip=%s",
             current_usage,
@@ -390,9 +396,9 @@ async def uploadData(file: UploadFile, request: Request):
             session_id,
             ip
         )
-        raise HTTPException(429, f"Session storage quota of {SESSION_QUOTA_MB}MB exceeded")
+        raise HTTPException(429, f"Session storage quota of {UPLOAD_QUOTA_MB}MB exceeded")
 
-    filepath = os.path.join(session_dir, new_name)
+    filepath = os.path.join(uploads_dir, new_name)
 
     # Write to new csv file
     df.to_csv(filepath, index=False)
@@ -406,7 +412,7 @@ async def uploadData(file: UploadFile, request: Request):
         ip
     )
 
-    file_ref = f"session:{new_name}"
+    file_ref = f"session:uploads:{new_name}"
 
     return {"file_ref": file_ref, "reduced": reduced}
 

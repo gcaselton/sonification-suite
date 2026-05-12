@@ -7,7 +7,7 @@ def resolve_file(file_ref: str) -> Path:
     """
     Helper function to resolve a file reference to it's full filepath in the backend.
 
-    :param file_ref: The name of the requested file e.g. 'Sci-Fi.yml'
+    :param file_ref: The reference of the requested file e.g. 'suggested_data:light_curves:Sci-Fi.yml'
     :type file_ref: str
   
     :return: The full filepath of the requested file
@@ -22,8 +22,12 @@ def resolve_file(file_ref: str) -> Path:
         
         if not session_id:
             raise HTTPException(status_code=400, detail="No session cookie found")
+        
+        if ref_parts[1] == 'uploads':
+            path = TMP_DIR / session_id / 'uploads' / ref_parts[-1]
+        else:
+            path = TMP_DIR / session_id / ref_parts[-1]
     
-        path = TMP_DIR / session_id / ref_parts[-1]
     else:
         path = BACKEND_DIR / ref_parts[0] / ref_parts[1] / ref_parts[-1]
 
