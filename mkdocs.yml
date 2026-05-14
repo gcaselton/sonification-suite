@@ -2,11 +2,52 @@ site_name: Sonification Suite
 
 nav:
   - Home: index.md
+  - Getting Started: getting-started.md
   - User Guide:
-    - Writing your docs: writing-your-docs.md
-    - Styling your docs: styling-your-docs.md
-  - About:
-    - License: license.md
-    - Release Notes: release-notes.md
+    - User Guide: user-guide/user-guide.md
+    - 'Step 1: Data': user-guide/data.md
+    - 'Step 2: Refine': user-guide/refine.md
+    - 'Step 3: Style': user-guide/style.md
+    - 'Step 4: Sonify': user-guide/sonify.md
 
-theme: material
+  - Developer Guide:
+    - Developer Guide: developer-guide/developer-guide.md
+    - Installation: developer-guide/installation.md
+    - Architecture: developer-guide/architecture.md
+    - API Reference: developer-guide/api-reference.md
+
+  - About:
+    - About: about/about.md
+    - Background: about/background.md
+    - Release Notes: about/release-notes.md
+    - License: about/license.md
+    - Credits: about/credits.md
+
+theme:
+  name: material
+
+  palette:
+
+    # Automatic mode
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference

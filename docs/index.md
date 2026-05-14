@@ -1,23 +1,12 @@
-# Welcome to the Sonification Suite documentation!
+# Sonification Suite
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+An accessible platform for transforming scientific datasets into tangible audio representations.
 
-## Commands
+## Documentation
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
+- Start with the [Getting Started](getting-started.md) guide
+- Explore the [User Guide](user-guide/user-guide.md) for detailed help
+- See the [Developer Guide](developer-guide/developer-guide.md) to learn how to build extensions
+- Read the [About](about/about.md) pages for more information
 
-## Project layout
 
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
-
-## Test
-
-hello
-
-    hello
