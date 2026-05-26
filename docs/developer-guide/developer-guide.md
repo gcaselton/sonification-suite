@@ -7,3 +7,4 @@ The aim of this section is to provide a holistic overview of the code and the in
 - [Installation](installation.md)
 - [Architecture](architecture.md)
 - [API Reference](api-reference.md)
+- [Building Extensions](extensions.md)
