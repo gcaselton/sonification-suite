@@ -13,6 +13,7 @@ from paths import *
 from pydantic import ValidationError
 from night_sky import handle_observer
 from copy import deepcopy
+from utils import resolve_file, write_YAML_file
 
 import lightkurve as lk
 import numpy as np
@@ -23,9 +24,6 @@ from pathlib import Path
 import logging
 
 logger = logging.getLogger(__name__)
-
-
-
 
 
 def read_YAML_file(filepath):
@@ -41,16 +39,26 @@ def read_YAML_file(filepath):
 
 def sonify(data: Path | str | tuple, style_file: Path | str | dict, sonify_type: str, length=15, system='mono', observer=None):
 
-      # Load and validate user style
+      # Load user style
       style_dict = read_YAML_file(style_file) if isinstance(style_file, (Path, str)) else style_file
-
-      # validate input parameters against data headers
-      validate_input_params(style_dict, data)
       
+      # Swap sound asset ref for full filepath if necessary
+      generator_style = style_dict.get('generator', {})
+      sample_name = generator_style.get('sample')
+
+      if isinstance(sample_name, str) and sample_name.startswith('sound_assets:'):
+            sample_path = resolve_file(sample_name)
+            generator_style['sample'] = sample_path
+      
+      # Handle case that 'Place on Dome' feature is requested
       if observer:
             style_dict, alt_az = handle_observer(observer, style_dict)
       else:
             alt_az = None
+            
+      # Write updated style to new YAML file
+      
+      write_YAML_file(style_dict)
             
       # Validate entire style file
       validated_style = BaseStyle.model_validate(style_dict)
@@ -64,56 +72,7 @@ def sonify(data: Path | str | tuple, style_file: Path | str | dict, sonify_type:
       sonification.render()
 
       return sonification, alt_az
-
-def validate_input_params(style: dict, data: Path | str | tuple):
-
-      if isinstance(data, tuple):
-            pass
-      else:
-            data_filepath = str(data)
-
-            if data_filepath.endswith('.csv'):
-
-                  df = pd.read_csv(data_filepath)
-                  
-            elif data_filepath.endswith('.fits'):
-
-                  lc = lk.read(data_filepath)
-                  df = lc.to_pandas()
-                  df['time'] = None
-            else:
-                  raise ValueError('Data file must be a .csv or .fits file.')
-            
-            col_headers = df.columns.tolist()
-            col_headers_lower = [col.lower() for col in col_headers]
-
-            mappings = style['parameters']
-
-            for mapping in mappings:
-                  
-                  if isinstance(mapping['input'], float):
-                        continue
-                
-                  input_param = mapping['input'].lower()
-                  in_min, in_max = mapping.get('input_range', ('0%','100%'))
-
-                  # if input_param not in col_headers_lower:
-                  #       raise ValueError(f'Input parameter "{input_param}" not found in data columns: {col_headers}')
-                  
-                  if isinstance(in_min, str) and in_min.endswith('%'):
-                        # might need to catch if one is % and the other isn't
-                        continue
-                  
-                  col_index = col_headers_lower.index(input_param)
-                  col_data = df.iloc[:, col_index]
-
-                  mapping['input'] = col_headers[col_index]  # Update style with original case-sensitive name from data
-
-                  # How do we check range for absolute values? I.E 20 to 5000 instead of 0 to 1
-
-                  # if col_data.min() < in_min or col_data.max() > in_max:
-                  #       raise ValidationError(f'Input parameter "{input_param}" has data outside specified input_range [{in_min}, {in_max}]. Actual data range: [{col_data.min()}, {col_data.max()}]')
-            
+        
 
 def ensure_array(data):
       return data if isinstance(data, np.ndarray) else np.array(data)

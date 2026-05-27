@@ -2,6 +2,7 @@ from pathlib import Path
 from context import session_id_var
 from paths import TMP_DIR, BACKEND_DIR
 from fastapi import HTTPException
+import os, yaml, uuid
 
 def resolve_file(file_ref: str) -> Path:
     """
@@ -35,6 +36,20 @@ def resolve_file(file_ref: str) -> Path:
     
     
     return path
+
+
+def write_YAML_file(yaml_dict: dict):
+    
+    filename = f'style_{uuid.uuid4()}.yaml'
+    session_id = session_id_var.get()
+    filepath = os.path.join(TMP_DIR, session_id, filename)
+
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    
+    with open(filepath, 'w', encoding='utf-8') as f:
+        yaml.dump(yaml_dict, f, default_flow_style=False)
+        
+    return filepath
 
 
 def is_number(x):

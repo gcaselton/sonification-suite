@@ -6,7 +6,7 @@ from paths import TMP_DIR, STYLE_FILES_DIR, SUGGESTED_DATA_DIR, SAMPLES_DIR, HYG
 from sounds import all_sounds, online_sounds, local_sounds, asset_cache, format_name
 from config import GITHUB_USER, GITHUB_REPO
 from context import session_id_var
-from utils import resolve_file, is_number
+from utils import resolve_file, is_number, write_YAML_file
 from request_models import DataRequest, SoundRequest, CustomStyleSettings, SonificationRequest
 import logging, httpx, yaml, os, uuid, aiofiles, zipfile, traceback, base64, gc
 from param_descriptions import INPUTS, OUTPUTS
@@ -582,15 +582,9 @@ def save_sound_settings(settings: CustomStyleSettings):
     """
     # Save settings to a yaml file and return the filename
     style = format_settings(settings)
+    filepath = write_YAML_file(style)
 
-    yaml_text = yaml.dump(style, default_flow_style=False)
-    filename = f'style_{uuid.uuid4()}.yaml'
-    session_id = session_id_var.get()
-    filepath = os.path.join(TMP_DIR, session_id, filename)
-    f = open(filepath, "x")
-    f.write(yaml_text)
-    f.close()
-
+    # TODO : make this separate filename from path
     file_ref = f'session:{filename}'
 
     # Return the file reference
