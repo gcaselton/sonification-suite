@@ -584,8 +584,7 @@ def save_sound_settings(settings: CustomStyleSettings):
     style = format_settings(settings)
     filepath = write_YAML_file(style)
 
-    # TODO : make this separate filename from path
-    file_ref = f'session:{filename}'
+    file_ref = f'session:{filepath.name}'
 
     # Return the file reference
     return {'file_ref': file_ref}

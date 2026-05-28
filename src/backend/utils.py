@@ -42,12 +42,14 @@ def write_YAML_file(yaml_dict: dict):
     
     filename = f'style_{uuid.uuid4()}.yaml'
     session_id = session_id_var.get()
-    filepath = os.path.join(TMP_DIR, session_id, filename)
+    filepath = Path(TMP_DIR, session_id, filename)
 
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    filepath.parent.makedir(parents=True, exist_ok=True)
     
-    with open(filepath, 'w', encoding='utf-8') as f:
-        yaml.dump(yaml_dict, f, default_flow_style=False)
+    filepath.write_text(
+        yaml.dump(yaml_dict, default_flow_style=False),
+        encoding="utf-8"
+    )
         
     return filepath
 

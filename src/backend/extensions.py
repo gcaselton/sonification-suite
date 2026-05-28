@@ -3,6 +3,7 @@ from strauss.sources import Objects, Events, param_lim_dict
 from strauss.score import Score
 from strauss.generator import Synthesizer, Sampler
 from strauss.notes import notesharps
+from strauss.audio_figure import AudioFigure
 from musical_scales import scale as parse_scale
 from style_schemas import BaseStyle, ParameterMapping
 from settings import load_settings_from_file
@@ -39,35 +40,36 @@ def read_YAML_file(filepath):
 
 def sonify(data: Path | str | tuple, style_file: Path | str | dict, sonify_type: str, length=15, system='mono', observer=None):
 
+      # Check style type
+      is_style_path = isinstance(style_file, (Path, str))
+      
       # Load user style
-      style_dict = read_YAML_file(style_file) if isinstance(style_file, (Path, str)) else style_file
+      style_dict = read_YAML_file(style_file) if is_style_path else style_file
+      
+      updated = False
       
       # Swap sound asset ref for full filepath if necessary
       generator_style = style_dict.get('generator', {})
       sample_name = generator_style.get('sample')
-
+      
       if isinstance(sample_name, str) and sample_name.startswith('sound_assets:'):
             sample_path = resolve_file(sample_name)
             generator_style['sample'] = sample_path
+            updated = True
       
       # Handle case that 'Place on Dome' feature is requested
       if observer:
             style_dict, alt_az = handle_observer(observer, style_dict)
+            updated = True
       else:
             alt_az = None
             
-      # Write updated style to new YAML file
+      # Write updated style to new YAML file if necessary
+      style_filepath = write_YAML_file(style_dict) if (updated or not is_style_path) else Path(style_file)
       
-      write_YAML_file(style_dict)
-            
-      # Validate entire style file
-      validated_style = BaseStyle.model_validate(style_dict)
-        
-      # Set up Sonification elements
-      score, sources, generator = setup_strauss(data, validated_style, sonify_type, length)
-
-      # Render sonification
-      sonification = Sonification(score, sources, generator, system)
+      # Initialise an AudioFigure object and sonify
+      fig = AudioFigure(system=system)
+      sonification = fig.sonfify()
 
       sonification.render()
 
