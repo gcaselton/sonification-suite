@@ -69,9 +69,11 @@ def sonify(data: Path | str | tuple, style_file: Path | str | dict, sonify_type:
       
       # Initialise an AudioFigure object and sonify
       fig = AudioFigure(system=system)
-      sonification = fig.sonfify()
+      
+      # TODO - determine data format (tuple, CSV, .fits) and feed into sonify appropriately
+      sonification = fig.sonify(style=style_filepath)
 
-      sonification.render()
+      
 
       return sonification, alt_az
         
