@@ -38,7 +38,7 @@ def read_YAML_file(filepath):
     
     return YAML_dict
 
-def sonify(data: Path | str | tuple, style_file: Path | str | dict, sonify_type: str, length=15, system='mono', observer=None):
+def sonify(data: Path | str , style_file: Path | str | dict, sonify_type: str, length=15, system='mono', observer=None):
 
       # Check style type
       is_style_path = isinstance(style_file, (Path, str))
@@ -70,10 +70,24 @@ def sonify(data: Path | str | tuple, style_file: Path | str | dict, sonify_type:
       # Initialise an AudioFigure object and sonify
       fig = AudioFigure(system=system)
       
-      # TODO - determine data format (tuple, CSV, .fits) and feed into sonify appropriately
-      sonification = fig.sonify(style=style_filepath)
-
+      # Determine data format (CSV, .fits) and convert to DataFrame
+      data_type = Path(data).suffix.lower()
       
+      if data_type == '.fits':
+            lc = lk.read(str(data))
+            
+            df = pd.DataFrame({
+                  "time": lc.time.value,
+                  "flux": lc.flux.value
+            })
+      elif data_type == '.csv':
+            df = pd.read_csv(str(data))
+      else:
+            raise ValueError(f'{data_type} file type not suitable for sonification, please use .csv or .fits.')
+      
+      # Sonify
+      sonification = fig.sonify(df, style=style_filepath, duration=length)
+      sonification.render()
 
       return sonification, alt_az
         

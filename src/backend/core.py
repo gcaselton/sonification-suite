@@ -591,6 +591,8 @@ def save_sound_settings(settings: CustomStyleSettings):
 
 def format_settings(settings: CustomStyleSettings):
     
+    # TODO - If custom data with no headers e.g. 'Column 1', swap these for col indeces (ints) in the style file inputs
+    
     # Remove null entries
     params = [{k: v for k, v in m.items() if v is not None} for m in settings.map]
         
