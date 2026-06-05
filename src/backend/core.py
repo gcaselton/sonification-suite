@@ -75,6 +75,8 @@ def get_session_size(session_dir: str) -> int:
     except Exception as e:
         LOG.warning("Could not calculate session size: %s", e)
         return 0
+    
+
 
 @router.post('/generate-sonification/')
 def generate_sonification(request: SonificationRequest):
@@ -87,6 +89,9 @@ def generate_sonification(request: SonificationRequest):
         raise HTTPException(status_code=400, detail="Sonification too long, maximum length = 5 minutes.")
 
     try:
+        
+        # First, check if any of the style parameters need re-writing
+        style = update_style(style_filepath, request.observer)
         
         soni, alt_az = sonify(data_filepath, style_filepath, request.category, request.duration, request.system, request.observer)
 

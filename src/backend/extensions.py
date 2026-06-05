@@ -38,17 +38,29 @@ def read_YAML_file(filepath):
     
     return YAML_dict
 
-def sonify(data: Path | str , style_file: Path | str | dict, sonify_type: str, length=15, system='mono', observer=None):
+def update_style(style_filepath: Path | str, observer: dict | None = None):
+      """ This loads the style file into a dictionary, and checks if anything needs re-writing into the format that
+            STRAUSS expects. These criteria are as follows:
+            1. Swap sample file reference to the sample's filepath, if using
+            2. Swap 'time' for 'time_evo' if using Objects
+            3. Swap 'pitch' for 'pitch_shift' if using Objects, or if Events with no musical notes given.
+            4. 
 
-      # Check style type
-      is_style_path = isinstance(style_file, (Path, str))
+      Args:
+          style_filepath (Path | str): The path to the Style file
+          observer (dict | None, optional): The dictionary of parameters if 'Place on Dome' feature is being used. Defaults to None.
+
+      Returns:
+          _type_: _description_
+      """      
       
-      # Load user style
-      style_dict = read_YAML_file(style_file) if is_style_path else style_file
-      
+      # Track whether we need to re-write the style file or not
       updated = False
       
-      # Swap sound asset ref for full filepath if necessary
+      # Load user style
+      style_dict = read_YAML_file(style_filepath)
+      
+      # 1. Swap sound asset ref for full filepath if necessary
       generator_style = style_dict.get('generator', {})
       sample_name = generator_style.get('sample')
       
@@ -56,8 +68,31 @@ def sonify(data: Path | str , style_file: Path | str | dict, sonify_type: str, l
             sample_path = resolve_file(sample_name)
             generator_style['sample'] = sample_path
             updated = True
+            
+      # 2. Swap out 'time' for 'time_evo' if using Objects
+      # 3. Swap out 'pitch' for 'pitch_shift' if necessary
+      sources = style_dict.get('sources')
       
-      # Handle case that 'Place on Dome' feature is requested
+      if sources == 'objects':
+            
+            param_swaps = {
+                  'time': 'time_evo',
+                  'pitch': 'pitch_shift'
+            }
+            
+            for m in style_dict.get('map', {}):
+                  if m.get('output') in param_swaps:
+                        m['output'] = param_swaps[m['output']]
+                        updated = True
+                  
+      elif sources == 'events' and style_dict.get('notes') is None:
+            for m in style_dict.get('map', {}):
+                  if m.get('output') == 'pitch':
+                        m['output'] = 'pitch_shift'
+                        updated = True
+
+      
+      # 3. Handle case that 'Place on Dome' feature is requested
       if observer:
             style_dict, alt_az = handle_observer(observer, style_dict)
             updated = True
@@ -65,8 +100,12 @@ def sonify(data: Path | str , style_file: Path | str | dict, sonify_type: str, l
             alt_az = None
             
       # Write updated style to new YAML file if necessary
-      style_filepath = write_YAML_file(style_dict) if (updated or not is_style_path) else Path(style_file)
+      updated_style = write_YAML_file(style_dict) if updated else Path(style_filepath)
       
+      return updated_style, alt_az
+
+def sonify(data: Path | str , style_file: Path | str, length=15, system='mono'):
+
       # Initialise an AudioFigure object and sonify
       fig = AudioFigure(system=system)
       
@@ -86,10 +125,10 @@ def sonify(data: Path | str , style_file: Path | str | dict, sonify_type: str, l
             raise ValueError(f'{data_type} file type not suitable for sonification, please use .csv or .fits.')
       
       # Sonify
-      sonification = fig.sonify(df, style=style_filepath, duration=length)
+      sonification = fig.sonify(df, style=style_file, duration=length)
       sonification.render()
 
-      return sonification, alt_az
+      return sonification
         
 
 def ensure_array(data):

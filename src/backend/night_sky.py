@@ -87,32 +87,15 @@ def handle_observer(observer: dict, style: dict):
     # Convert observing direction to radians
     direction = COMPASS_MAP[observer['orientation']]
     
-    az_rads = (az.radians - direction + np.pi) % (2*np.pi) - np.pi
-    polar_degs = 90 - alt.degrees
+    # Corrected for STRAUSS, so 0 and 360 are behind, 90 degs is left, 180 straight ahead etc.
+    azimuth = (az.degrees - np.degrees(direction) + 180) % 360
     
-    # Normalise
-    azimuth = (az_rads + np.pi) / (2*np.pi)
-    polar = polar_degs / 180
+    # Fixed polar values in STRAUSS go from 0 (nadir) to 180 (zenith)
+    polar = 90 + alt.degrees
     
-    params = style['parameters']
+    # TODO - return polar/az values and display values
     
-    params = [p for p in params if p['output'] not in ('azimuth', 'polar', 'pan')]
-    
-    params.append({
-        'input': azimuth,
-        'input_range': ('0%', '100%'),
-        'output': 'azimuth'
-    })
-    
-    params.append({
-        'input': polar,
-        'input_range': ('0%', '100%'),
-        'output': 'polar'
-    })
-    
-    style['parameters'] = params
-    
-    return style, [alt.degrees, az.degrees]
+    return [alt.degrees, az.degrees]
     
     
 def position_observer(lat, lon, date_time):
