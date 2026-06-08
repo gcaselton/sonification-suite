@@ -69,7 +69,7 @@ LOG.info("Ephemeris loaded")
 TF = TimezoneFinder()
 
 
-def handle_observer(observer: dict, style: dict):
+def handle_observer(observer: dict):
         
     lat = float(observer['latitude'])
     lon = float(observer['longitude'])
@@ -93,9 +93,16 @@ def handle_observer(observer: dict, style: dict):
     # Fixed polar values in STRAUSS go from 0 (nadir) to 180 (zenith)
     polar = 90 + alt.degrees
     
-    # TODO - return polar/az values and display values
-    
-    return [alt.degrees, az.degrees]
+    return {
+        'STRAUSS_inputs': {
+            'azimuth': azimuth,
+            'polar': polar
+        },
+        'display_values': {
+            'azimuth': az.degrees,
+            'altitude': alt.degrees
+        }
+    }
     
     
 def position_observer(lat, lon, date_time):
