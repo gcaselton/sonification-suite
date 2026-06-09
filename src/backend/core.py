@@ -11,6 +11,7 @@ import logging, httpx, yaml, os, uuid, aiofiles, zipfile, traceback, base64, gc
 from param_descriptions import INPUTS, OUTPUTS
 from night_sky import handle_observer
 from strauss.audio_figure import AudioFigure
+from strauss.score import Score
 
 import numpy as np
 import pandas as pd
@@ -134,6 +135,9 @@ def generate_sonification(request: SonificationRequest):
         
         # Sonify!
         sonification = fig.sonify(df, **kwargs)
+        
+        # TODO - Manually overwrite Score to use correct pitch bin mode
+        sonification.score = Score()
         sonification.render()
 
         session_id = session_id_var.get()
