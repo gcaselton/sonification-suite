@@ -136,8 +136,10 @@ def generate_sonification(request: SonificationRequest):
         # Sonify!
         sonification = fig.sonify(df, **kwargs)
         
-        # TODO - Manually overwrite Score to use correct pitch bin mode
-        sonification.score = Score()
+        # Manually overwrite Score to use correct pitch bin mode
+        pitch_bin_mode = 
+        notes = sonification.score.note_sequence
+        sonification.score = Score(notes, request.duration, )
         sonification.render()
 
         session_id = session_id_var.get()
