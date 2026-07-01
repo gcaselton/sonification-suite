@@ -54,6 +54,76 @@ def write_YAML_file(yaml_dict: dict):
     return filepath
 
 
+def read_YAML_file(filepath):
+    
+    filepath = Path(filepath)
+    with filepath.open(mode='r') as fdata:
+        try:
+            YAML_dict = yaml.safe_load(fdata)
+        except yaml.YAMLError as err:
+              raise ValueError("Error reading YAML file, please check the filepath and ensure correct YAML syntax.") from err
+    
+    return YAML_dict
+
+
+def update_style(style_filepath: Path | str, observer: dict | None = None):
+    """ This loads the style file into a dictionary, and checks if anything needs re-writing into the format that
+            STRAUSS expects. These criteria are as follows:
+            1. Swap sample file reference to the sample's filepath, if using
+            2. Swap 'time' for 'time_evo' if using Objects
+            3. Swap 'pitch' for 'pitch_shift' if using Objects, or if Events with no musical notes given.
+
+    Args:
+        style_filepath (Path | str): The path to the Style file
+        observer (dict | None, optional): The dictionary of parameters if 'Place on Dome' feature is being used. Defaults to None.
+
+    Returns:
+        _type_: _description_
+    """      
+    
+    # Track whether we need to re-write the style file or not
+    updated = False
+    
+    # Load user style
+    style_dict = read_YAML_file(style_filepath)
+    
+    # 1. Swap sound asset ref for full filepath if necessary
+    generator_style = style_dict.get('generator', {})
+    sample_name = generator_style.get('sample')
+    
+    if isinstance(sample_name, str) and sample_name.startswith('sound_assets:'):
+            sample_path = resolve_file(sample_name)
+            generator_style['sample'] = sample_path
+            updated = True
+            
+    # 2. Swap out 'time' for 'time_evo' if using Objects
+    # 3. Swap out 'pitch' for 'pitch_shift' if necessary
+    sources = style_dict.get('sources')
+    
+    if sources == 'objects':
+            
+            param_swaps = {
+                'time': 'time_evo',
+                'pitch': 'pitch_shift'
+            }
+            
+            for m in style_dict.get('map', {}):
+                if m.get('output') in param_swaps:
+                        m['output'] = param_swaps[m['output']]
+                        updated = True
+                
+    elif sources == 'events' and style_dict.get('notes') is None:
+            for m in style_dict.get('map', {}):
+                if m.get('output') == 'pitch':
+                        m['output'] = 'pitch_shift'
+                        updated = True
+            
+    # Write updated style to new YAML file if necessary
+    updated_style = write_YAML_file(style_dict) if updated else Path(style_filepath)
+    
+    return updated_style
+
+
 def is_number(x):
     try:
         float(x)

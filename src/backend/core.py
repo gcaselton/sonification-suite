@@ -1,15 +1,17 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Cookie, Response, Request
 from fastapi.responses import FileResponse
-from extensions import sonify
 from pathlib import Path
 from paths import TMP_DIR, STYLE_FILES_DIR, SUGGESTED_DATA_DIR, SAMPLES_DIR, HYG_DATA
 from sounds import all_sounds, online_sounds, local_sounds, asset_cache, format_name
 from config import GITHUB_USER, GITHUB_REPO
 from context import session_id_var
-from utils import resolve_file, is_number, write_YAML_file
+from utils import resolve_file, is_number, write_YAML_file, update_style
 from request_models import DataRequest, SoundRequest, CustomStyleSettings, SonificationRequest
 import logging, httpx, yaml, os, uuid, aiofiles, zipfile, traceback, base64, gc
 from param_descriptions import INPUTS, OUTPUTS
+from night_sky import handle_observer
+from strauss.audio_figure import AudioFigure
+from strauss.score import Score
 
 import numpy as np
 import pandas as pd
@@ -19,6 +21,7 @@ from matplotlib.figure import Figure
 from scipy.io import wavfile
 from scipy.signal import spectrogram, resample_poly
 from io import BytesIO
+import lightkurve as lk
 from astropy.io import fits
 from astropy.table import Table
 
@@ -76,19 +79,68 @@ def get_session_size(session_dir: str) -> int:
         LOG.warning("Could not calculate session size: %s", e)
         return 0
 
+
 @router.post('/generate-sonification/')
 def generate_sonification(request: SonificationRequest):
+    
+    if int(request.duration) > 300:
+        raise HTTPException(status_code=400, detail="Sonification too long, maximum length = 5 minutes.")
         
     # Resolve data and style file names to actual paths in backend
     data_filepath = resolve_file(request.data_ref)
     style_filepath = resolve_file(request.style_ref)
-
-    if int(request.duration) > 300:
-        raise HTTPException(status_code=400, detail="Sonification too long, maximum length = 5 minutes.")
-
+    
     try:
         
-        soni, alt_az = sonify(data_filepath, style_filepath, request.category, request.duration, request.system, request.observer)
+        # First, check if any of the style parameters need re-writing, 
+        style = update_style(style_filepath, request.observer)
+        
+        # Initialise an AudioFigure object and sonify
+        fig = AudioFigure(system=request.system)
+        
+        # Determine data format (CSV, .fits) and convert to DataFrame
+        data_type = data_filepath.suffix.lower()
+        
+        if data_type == '.fits':
+                lc = lk.read(str(data_filepath))
+                
+                df = pd.DataFrame({
+                    "time": lc.time.value,
+                    "flux": lc.flux.value
+                })
+        elif data_type == '.csv':
+                df = pd.read_csv(str(data_filepath))
+        else:
+                raise ValueError(f'{data_type} file type not suitable for sonification, please use .csv or .fits.')
+        
+        
+        # Build dict with keyword arguments for sonification function
+        kwargs = {
+            'duration': request.duration,
+            'style': style
+        }
+        
+        # Handle case that 'Place on Dome' feature is used
+        if request.observer:
+            position_info = handle_observer(request.observer)
+            
+            # Add fixed values to kwargs
+            for param in ['azimuth', 'polar']:
+                kwargs[f'fix_{param}'] = position_info['STRAUSS_inputs'][param]
+            
+            # Get altitude and azimuth values in degrees to send to the frontend to display    
+            alt_az = [position_info['display_values'][value] for value in ['altitude', 'azimuth']]
+        else:
+            alt_az = None
+        
+        # Sonify!
+        sonification = fig.sonify(df, **kwargs)
+        
+        # Manually overwrite Score to use correct pitch bin mode
+        pitch_bin_mode = 
+        notes = sonification.score.note_sequence
+        sonification.score = Score(notes, request.duration, )
+        sonification.render()
 
         session_id = session_id_var.get()
 
@@ -99,7 +151,7 @@ def generate_sonification(request: SonificationRequest):
         ext = '.wav'
         filename = f'{request.data_name} {category}{ext}'
         filepath = TMP_DIR / session_id / filename
-        soni.save(filepath, master_volume=MASTER_VOL)
+        sonification.save(filepath, master_volume=MASTER_VOL)
 
         file_ref = f'session:{filename}'
 
@@ -590,6 +642,8 @@ def save_sound_settings(settings: CustomStyleSettings):
     return {'file_ref': file_ref}
 
 def format_settings(settings: CustomStyleSettings):
+    
+    # TODO - If custom data with no headers e.g. 'Column 1', swap these for col indeces (ints) in the style file inputs
     
     # Remove null entries
     params = [{k: v for k, v in m.items() if v is not None} for m in settings.map]

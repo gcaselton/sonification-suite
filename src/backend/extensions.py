@@ -27,53 +27,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def read_YAML_file(filepath):
-    
-    filepath = Path(filepath)
-    with filepath.open(mode='r') as fdata:
-        try:
-            YAML_dict = yaml.safe_load(fdata)
-        except yaml.YAMLError as err:
-              raise ValueError("Error reading YAML file, please check the filepath and ensure correct YAML syntax.") from err
-    
-    return YAML_dict
 
-def sonify(data: Path | str | tuple, style_file: Path | str | dict, sonify_type: str, length=15, system='mono', observer=None):
-
-      # Check style type
-      is_style_path = isinstance(style_file, (Path, str))
-      
-      # Load user style
-      style_dict = read_YAML_file(style_file) if is_style_path else style_file
-      
-      updated = False
-      
-      # Swap sound asset ref for full filepath if necessary
-      generator_style = style_dict.get('generator', {})
-      sample_name = generator_style.get('sample')
-      
-      if isinstance(sample_name, str) and sample_name.startswith('sound_assets:'):
-            sample_path = resolve_file(sample_name)
-            generator_style['sample'] = sample_path
-            updated = True
-      
-      # Handle case that 'Place on Dome' feature is requested
-      if observer:
-            style_dict, alt_az = handle_observer(observer, style_dict)
-            updated = True
-      else:
-            alt_az = None
-            
-      # Write updated style to new YAML file if necessary
-      style_filepath = write_YAML_file(style_dict) if (updated or not is_style_path) else Path(style_file)
-      
-      # Initialise an AudioFigure object and sonify
-      fig = AudioFigure(system=system)
-      sonification = fig.sonfify()
-
-      sonification.render()
-
-      return sonification, alt_az
         
 
 def ensure_array(data):
