@@ -90,10 +90,16 @@ export default function CustomStyleMenu({
     key: string;
   }
 
+  const isEvents = ["constellations", "night_sky"].includes(soniType);
+
   const [styleName, setStyleName] = useState("");
   const [styleDescription, setStyleDescription] = useState("");
 
   const [errorMessage, setErrorMessage] = useState("");
+
+  const [dataMode, setDataMode] = useState<"continuous" | "discrete">(
+    isEvents ? "discrete" : "continuous",
+  );
 
   const [sound, setSound] = useState<BaseSound>(defaultSound);
   const [parameterMappings, setParameterMappings] = useState<
@@ -341,8 +347,9 @@ export default function CustomStyleMenu({
   };
 
   const saveSoundSettings = async () => {
-    const url = `${coreAPI}/save-sound-settings/`;
+    const url = `${coreAPI}/save-style-settings/`;
     const data = {
+      dataMode,
       sound: sound.name.replace(/\s*🎹$/, ""),
       map: parameterMappings.map((m) => ({
         ...m,
@@ -496,6 +503,34 @@ export default function CustomStyleMenu({
                   </FileUpload.Trigger>
                 </FileUpload.Root>
               </HStack>
+
+              <Field.Root>
+                <HStack mb={2}>
+                  <Field.Label>Data Mode</Field.Label>
+                  <InfoTip
+                    content="Choose whether the data should be heard as a continuous stream or as individual discrete events."
+                    positioning={{ placement: "right" }}
+                  />
+                </HStack>
+                <SegmentGroup.Root
+                  disabled={isEvents}
+                  value={dataMode}
+                  onValueChange={(e) =>
+                    setDataMode(e.value as "continuous" | "discrete")
+                  }
+                  colorPalette="teal"
+                  size="sm"
+                >
+                  <SegmentGroup.Indicator />
+                  <SegmentGroup.Items
+                    items={[
+                      { label: "Continuous", value: "continuous" },
+                      { label: "Discrete", value: "discrete" },
+                    ]}
+                  />
+                </SegmentGroup.Root>
+              </Field.Root>
+
               <Select.Root
                 size="sm"
                 collection={soundOptions}
@@ -767,7 +802,7 @@ export default function CustomStyleMenu({
                                 <VStack align="flex-start" gap={1}>
                                   <HStack>
                                     <Text fontSize="xs" fontWeight="medium">
-                                      Output Range
+                                      {mapping.output} Range
                                     </Text>
                                     <InfoTip
                                       content="Use this to adjust the limits of the output sound parameter. E.g. setting this at 0.3 - 1 on a Volume mapping would mean that the lowest data point would be played at 30% volume, instead of 0% volume."

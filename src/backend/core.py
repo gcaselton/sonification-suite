@@ -572,7 +572,7 @@ def preview_style_settings(request: DataRequest, category: str):
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
     
-@router.post('/save-sound-settings/')
+@router.post('/save-style-settings/')
 def save_sound_settings(settings: CustomStyleSettings):
     """
     Save sound settings for the sonification.
@@ -596,7 +596,7 @@ def format_settings(settings: CustomStyleSettings):
         
     style = {
         "sound": settings.sound,
-        "parameters": params
+        "map": params
     }
 
     if settings.chordMode:

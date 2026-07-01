@@ -9,6 +9,7 @@ class DataRequest(BaseModel):
     file_ref: str
 
 class CustomStyleSettings(BaseModel):
+    dataMode: str
     sound: str
     map: list[dict]
     chordMode: bool
