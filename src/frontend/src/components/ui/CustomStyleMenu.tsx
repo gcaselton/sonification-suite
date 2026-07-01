@@ -43,6 +43,7 @@ import {
   Select,
   Stack,
   Switch,
+  TagsInput,
   Text,
 } from "@chakra-ui/react";
 import { apiRequest } from "../../utils/requests";
