@@ -51,7 +51,17 @@ Participating institutions are:
 
 We also thank the following individuals for their contributions during the testing and development:
 
-- TBC
+- Matt Williamson - Tayside Planetarium
+- Lauren McNaughton - Life Science Centre
+- Kristy Henscheid and Prisco Blanco - CPCCo Planetarium, Columbia Basin College
+- Carol Davenport - Northumbria University
+- Jessica Lee
+- Ed Bloomer - Royal Observatory Greenwich
+- Patricia Skelton - Royal Observatory Greenwich
+- Colin Hutcheson - Birmingham Museums
+- Alex Shepard - INTUITIVE Planetarium, at the US Space & Rocket Center, Home of Space Camp
+- Matthew Nutter - Sherwood Observatory
+- Claire Greenwell
 
 ## Data and Archives
 
