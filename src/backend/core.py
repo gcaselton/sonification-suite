@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, Cookie, Response
 from fastapi.responses import FileResponse
 from pathlib import Path
 from paths import TMP_DIR, STYLE_FILES_DIR, SUGGESTED_DATA_DIR, SAMPLES_DIR, HYG_DATA
-from sounds import all_sounds, online_sounds, local_sounds, asset_cache, format_name
+from sounds import get_sounds
 from config import GITHUB_USER, GITHUB_REPO
 from context import session_id_var
 from utils import resolve_file, is_number, write_YAML_file, update_style
@@ -582,7 +582,7 @@ def get_styles(category: str):
 
 @router.get('/sound_info/')
 def get_sound_info():
-    return all_sounds()
+    return get_sounds()
 
 @router.post('/preview-style-settings/{category}')
 def preview_style_settings(request: DataRequest, category: str):

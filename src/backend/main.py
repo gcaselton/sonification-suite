@@ -16,7 +16,6 @@ from night_sky import router as night_sky_router
 from core import router as core_router
 from settings import router as settings_router
 from paths import SYNTHS_DIR, SAMPLES_DIR, TMP_DIR, ROOT_DIR
-from sounds import cache_online_assets
 from contextlib import asynccontextmanager
 from config import GITHUB_USER, GITHUB_REPO
 from StorageManager import StorageManager
@@ -27,14 +26,6 @@ import asyncio, os, httpx, psutil, tracemalloc, time, threading, shutil, sys, tr
 # fcntl package is only available on unix systems
 if sys.platform != "win32":
     import fcntl
-
-
-async def safe_cache_assets():
-    try:
-        await cache_online_assets()
-        print("Cache complete")
-    except Exception as e:
-        print("Error caching assets:", e)
 
 
 # Initialize storage/cleanup manager
