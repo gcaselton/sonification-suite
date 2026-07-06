@@ -35,6 +35,7 @@ import {
   IconButton,
   Portal,
   Field,
+  Slider,
   NumberInput,
   Link,
   LinkBox,
@@ -66,7 +67,6 @@ export default function CustomStyleMenu({
   userUpload,
   onStyleCreated,
 }: CustomStyleMenuProps) {
-
   type DataMode = "continuous" | "discrete";
 
   interface BaseSound {
@@ -78,7 +78,7 @@ export default function CustomStyleMenu({
   const defaultSound: BaseSound = {
     name: "Default Synth 🎹",
     composable: true,
-    data_modes: ['discrete', 'continuous'],
+    data_modes: ["discrete", "continuous"],
   };
 
   interface ParameterMapping {
@@ -114,7 +114,7 @@ export default function CustomStyleMenu({
   const filteredSounds = allSounds.filter((sound) =>
     sound.data_modes.includes(dataMode),
   );
-  
+
   // Display information for each sound
   const soundOptions = createListCollection({
     items: filteredSounds.map((sound) => ({
@@ -123,7 +123,7 @@ export default function CustomStyleMenu({
       value: sound.name,
     })),
   });
-  
+
   // The selected sound
   const [sound, setSound] = useState<BaseSound>(defaultSound);
 
@@ -150,9 +150,8 @@ export default function CustomStyleMenu({
   const [scale, setScale] = useState("None");
   const [quality, setQuality] = useState("maj");
 
-  const [notes, setNotes] = useState<string[]>([])
-
-  
+  const [notes, setNotes] = useState<string[]>([]);
+  const [octaveRange, setOctaveRange] = useState<[number, number]>([2,3])
 
   const [inputOptions, setInputOptions] = useState(
     createListCollection<{
@@ -182,11 +181,6 @@ export default function CustomStyleMenu({
   const [loadingOutputs, setLoadingOutputs] = useState(true);
   const [loadingCustomPreview, setLoadingCustomPreview] = useState(false);
   const [autoMappedTime, setAutoMappedTime] = useState(false);
-
-
-  
-
-  
 
   const rootNoteOptions = createListCollection({
     items: [
@@ -223,14 +217,76 @@ export default function CustomStyleMenu({
       { label: "Add9", value: "add9", category: "Chords" },
 
       // Scales
-      { label: "Major Scale", value: "major scale", category: "Scales" },
-      { label: "Harmonic Minor", value: "harmonic minor", category: "Scales" },
-      { label: "Pentatonic", value: "pentatonic minor", category: "Scales" },
+      { label: "Major Scale", value: "majorScale", category: "Scales" },
+      { label: "Harmonic Minor", value: "harmonicMinor", category: "Scales" },
+      { label: "Pentatonic", value: "pentatonic", category: "Scales" },
       { label: "Blues", value: "blues", category: "Scales" },
       { label: "Chromatic", value: "chromatic", category: "Scales" },
       { label: "Hirajoshi", value: "hirajoshi", category: "Scales" },
     ],
   });
+
+  const harmonyIntervals: Record<string, number[]> = {
+    // Chords
+    maj: [0, 4, 7],
+    min: [0, 3, 7],
+    maj7: [0, 4, 7, 11],
+    maj9: [0, 4, 7, 11, 14],
+    "5": [0, 7],
+    "6": [0, 4, 7, 9],
+    "7": [0, 4, 7, 10],
+    m7: [0, 3, 7, 10],
+    m9: [0, 3, 7, 10, 14],
+    sus2: [0, 2, 7],
+    sus4: [0, 5, 7],
+    "7sus4": [0, 5, 7, 10],
+    add9: [0, 4, 7, 14],
+
+    // Scales
+    majorScale: [0, 2, 4, 5, 7, 9, 11],
+    harmonicMinor: [0, 2, 3, 5, 7, 8, 11],
+    pentatonic: [0, 3, 5, 7, 10],
+    blues: [0, 3, 5, 6, 7, 10],
+    chromatic: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    hirajoshi: [0, 2, 3, 7, 8],
+  };
+
+  const noteNames = [
+    "C",
+    "C#",
+    "D",
+    "D#",
+    "E",
+    "F",
+    "F#",
+    "G",
+    "G#",
+    "A",
+    "A#",
+    "B",
+  ];
+
+  function generateNotes(
+    root: string,
+    harmony: string,
+    octaveLow: number,
+    octaveHigh: number,
+  ): string[] {
+    let notes: string[] = [];
+
+    const rootIndex = noteNames.indexOf(root);
+
+    for (let octave = octaveLow; octave < octaveHigh; octave++) {
+      for (const interval of harmonyIntervals[harmony]) {
+        const noteIndex = (rootIndex + interval) % 12;
+        const octaveOffset = Math.floor((rootIndex + interval) / 12);
+
+        const note = `${noteNames[noteIndex]}${octave + octaveOffset}`;
+        notes.push(note);
+      }
+    }
+    return notes;
+  }
 
   const harmonyCategories = Object.entries(
     groupBy(harmonyOptions.items, (item) => item.category),
@@ -416,7 +472,9 @@ export default function CustomStyleMenu({
       previewRef.current = preview;
       preview.play();
     } catch (err) {
-      setErrorMessage("Error generating preview. Please try different style settings.")
+      setErrorMessage(
+        "Error generating preview. Please try different style settings.",
+      );
       console.error("Error previewing style settings:", err);
     } finally {
       setLoadingCustomPreview(false);
@@ -428,10 +486,9 @@ export default function CustomStyleMenu({
     if (!open && previewRef.current) {
       previewRef.current.pause();
       previewRef.current.currentTime = 0;
-      previewRef.current = null; 
+      previewRef.current = null;
     }
   }, [open]);
-  
 
   const handleStyleUpload = async (files: File[]) => {
     const file = files[0];
@@ -467,7 +524,7 @@ export default function CustomStyleMenu({
       previewRef.current.currentTime = 0;
       previewRef.current = null;
     }
-    
+
     onStyleCreated(styleRef);
     setApplyLoading(false);
   };
@@ -835,7 +892,7 @@ export default function CustomStyleMenu({
               </VStack>
 
               <Field.Root>
-                <HStack mb={2}>
+                <HStack>
                   <Field.Label>Data Mode</Field.Label>
                   <InfoTip
                     content="Choose whether the data should be heard as a continuous stream or as individual discrete events."
@@ -848,7 +905,6 @@ export default function CustomStyleMenu({
                   onValueChange={(e) =>
                     setDataMode(e.value as "continuous" | "discrete")
                   }
-                  colorPalette="teal"
                   size="sm"
                 >
                   <SegmentGroup.Indicator />
@@ -904,86 +960,126 @@ export default function CustomStyleMenu({
               </Select.Root>
 
               {sound.composable && (
-                <HStack>
-                  <Select.Root
-                    collection={rootNoteOptions}
-                    value={[rootNote]}
-                    size="sm"
-                    width="320px"
-                    onValueChange={(e) => setRootNote(e.value[0])}
-                    mb={3}
-                  >
-                    <Select.HiddenSelect />
-                    <Select.Label>Root Note</Select.Label>
-                    <Select.Control>
-                      <Select.Trigger>
-                        <Select.ValueText placeholder={rootNote} />
-                      </Select.Trigger>
-                      <Select.IndicatorGroup>
-                        <Select.Indicator />
-                      </Select.IndicatorGroup>
-                    </Select.Control>
-                    <Portal>
-                      <Select.Positioner>
-                        <Select.Content>
-                          {rootNoteOptions.items.map((option) => (
-                            <Select.Item item={option} key={option.value}>
-                              {option.label}
-                              <Select.ItemIndicator />
-                            </Select.Item>
-                          ))}
-                        </Select.Content>
-                      </Select.Positioner>
-                    </Portal>
-                  </Select.Root>
+                <>
+                  <HStack>
+                    <Select.Root
+                      collection={rootNoteOptions}
+                      value={[rootNote]}
+                      size="sm"
+                      onValueChange={(e) => setRootNote(e.value[0])}
+                    >
+                      <Select.HiddenSelect />
+                      <Select.Label>Root Note</Select.Label>
+                      <Select.Control>
+                        <Select.Trigger>
+                          <Select.ValueText placeholder={rootNote} />
+                        </Select.Trigger>
+                        <Select.IndicatorGroup>
+                          <Select.Indicator />
+                        </Select.IndicatorGroup>
+                      </Select.Control>
+                      <Portal>
+                        <Select.Positioner>
+                          <Select.Content>
+                            {rootNoteOptions.items.map((option) => (
+                              <Select.Item item={option} key={option.value}>
+                                {option.label}
+                                <Select.ItemIndicator />
+                              </Select.Item>
+                            ))}
+                          </Select.Content>
+                        </Select.Positioner>
+                      </Portal>
+                    </Select.Root>
 
-                  <Select.Root
-                    collection={harmonyOptions}
-                    size="sm"
-                    width="320px"
-                    value={[quality]}
-                    onValueChange={(e) => setQuality(e.value[0])}
-                    mb={3}
+                    <Select.Root
+                      collection={harmonyOptions}
+                      size="sm"
+                      value={[quality]}
+                      onValueChange={(e) => setQuality(e.value[0])}
+                    >
+                      <Select.HiddenSelect />
+                      <Select.Label>Harmony</Select.Label>
+                      <Select.Control>
+                        <Select.Trigger>
+                          <Select.ValueText placeholder={"Major"} />
+                        </Select.Trigger>
+                        <Select.IndicatorGroup>
+                          <Select.Indicator />
+                        </Select.IndicatorGroup>
+                      </Select.Control>
+                      <Portal>
+                        <Select.Positioner>
+                          <Select.Content>
+                            {harmonyCategories.map(([category, items]) => (
+                              <Select.ItemGroup key={category}>
+                                <Select.ItemGroupLabel
+                                  fontWeight="bold"
+                                  fontSize="xs"
+                                  color="teal.500"
+                                  textTransform="uppercase"
+                                  letterSpacing="widest"
+                                  pt={2}
+                                  pb={1}
+                                >
+                                  {category}
+                                </Select.ItemGroupLabel>
+                                {items.map((item) => (
+                                  <Select.Item item={item} key={item.value}>
+                                    {item.label}
+                                    <Select.ItemIndicator />
+                                  </Select.Item>
+                                ))}
+                              </Select.ItemGroup>
+                            ))}
+                          </Select.Content>
+                        </Select.Positioner>
+                      </Portal>
+                    </Select.Root>
+                  </HStack>
+                  <Field.Root>
+                    <TagsInput.Root
+                      editable
+                      defaultValue={["React", "Chakra", "TypeScript"]}
+                    >
+                      <TagsInput.Label>Notes</TagsInput.Label>
+                      <TagsInput.Control>
+                        <TagsInput.Items />
+                        <TagsInput.Input placeholder="Add or edit notes..." />
+                      </TagsInput.Control>
+                    </TagsInput.Root>
+                    <Field.HelperText>
+                      Add emails separated by commas
+                    </Field.HelperText>
+                  </Field.Root>
+                  <Slider.Root
+                    w="100%"
+                    step={0.01}
+                    colorPalette="teal"
+                    min={1}
+                    max={6}
+                    value={octaveRange}
+                    minStepsBetweenThumbs={0.1}
+                    animation="fade-in 300ms ease-out"
+                    thumbCollisionBehavior="push"
+                    onValueChange={(e) => {
+                      setOctaveRange(e.value as [number, number]);
+                      // setStartText(String(e.value[0]));
+                      // setEndText(String(e.value[1]));
+                    }}
+                    onValueChangeEnd={(e) => {
+                      // fetchPreviewPlot(e.value as [number, number], sigma); // only runs on mouse release
+                    }}
                   >
-                    <Select.HiddenSelect />
-                    <Select.Label>Harmony</Select.Label>
-                    <Select.Control>
-                      <Select.Trigger>
-                        <Select.ValueText placeholder={"Major"} />
-                      </Select.Trigger>
-                      <Select.IndicatorGroup>
-                        <Select.Indicator />
-                      </Select.IndicatorGroup>
-                    </Select.Control>
-                    <Portal>
-                      <Select.Positioner>
-                        <Select.Content>
-                          {harmonyCategories.map(([category, items]) => (
-                            <Select.ItemGroup key={category}>
-                              <Select.ItemGroupLabel
-                                fontWeight="bold"
-                                fontSize="xs"
-                                color="teal.500"
-                                textTransform="uppercase"
-                                letterSpacing="widest"
-                                pt={2}
-                                pb={1}
-                              >
-                                {category}
-                              </Select.ItemGroupLabel>
-                              {items.map((item) => (
-                                <Select.Item item={item} key={item.value}>
-                                  {item.label}
-                                  <Select.ItemIndicator />
-                                </Select.Item>
-                              ))}
-                            </Select.ItemGroup>
-                          ))}
-                        </Select.Content>
-                      </Select.Positioner>
-                    </Portal>
-                  </Select.Root>
-                </HStack>
+                    <Slider.Control>
+                      <Slider.Track>
+                        <Slider.Range />
+                      </Slider.Track>
+                      <Slider.Thumbs />
+                      {/* <Slider.Marks marks={sliderMarks} /> */}
+                    </Slider.Control>
+                  </Slider.Root>
+                </>
               )}
             </VStack>
           </Dialog.Body>
