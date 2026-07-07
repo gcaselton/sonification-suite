@@ -12,7 +12,7 @@ import PageContainer from "../ui/PageContainer";
 import { ToggleTip, InfoTip } from "../ui/ToggleTip";
 import { Tooltip } from "../ui/Tooltip";
 import { apiUrl, lightCurvesAPI, coreAPI } from "../../apiConfig";
-import { LuUpload, LuX, LuPlus, LuVolume2 } from "react-icons/lu";
+import { LuUpload, LuX, LuPlus, LuVolume2, LuDices } from "react-icons/lu";
 import ErrorMsg from "./ErrorMsg";
 
 import {
@@ -147,11 +147,9 @@ export default function CustomStyleMenu({
   );
 
   const [rootNote, setRootNote] = useState("C");
-  const [scale, setScale] = useState("None");
-  const [quality, setQuality] = useState("maj");
-
+  const [harmony, setHarmony] = useState("maj");
   const [notes, setNotes] = useState<string[]>([]);
-  const [octaveRange, setOctaveRange] = useState<[number, number]>([2,3])
+  const [octaveRange, setOctaveRange] = useState<[number, number]>([2, 3]);
 
   const [inputOptions, setInputOptions] = useState(
     createListCollection<{
@@ -199,32 +197,63 @@ export default function CustomStyleMenu({
     ],
   });
 
-  const harmonyOptions = createListCollection({
-    items: [
-      // Chords
-      { label: "Major Chord", value: "maj", category: "Chords" },
-      { label: "Minor Chord", value: "min", category: "Chords" },
-      { label: "Major 7", value: "maj7", category: "Chords" },
-      { label: "Major 9", value: "maj9", category: "Chords" },
-      { label: "5", value: "5", category: "Chords" },
-      { label: "6", value: "6", category: "Chords" },
-      { label: "7", value: "7", category: "Chords" },
-      { label: "Minor 7", value: "m7", category: "Chords" },
-      { label: "Minor 9", value: "m9", category: "Chords" },
-      { label: "Sus2", value: "sus2", category: "Chords" },
-      { label: "Sus4", value: "sus4", category: "Chords" },
-      { label: "7sus4", value: "7sus4", category: "Chords" },
-      { label: "Add9", value: "add9", category: "Chords" },
+  const harmonyItems = [
+    // Chords
+    { label: "Major Chord", value: "maj", category: "Chords" },
+    { label: "Minor Chord", value: "min", category: "Chords" },
+    { label: "Major 7", value: "maj7", category: "Chords" },
+    { label: "Major 9", value: "maj9", category: "Chords" },
+    { label: "5", value: "5", category: "Chords" },
+    { label: "6", value: "6", category: "Chords" },
+    { label: "7", value: "7", category: "Chords" },
+    { label: "Minor 7", value: "m7", category: "Chords" },
+    { label: "Minor 9", value: "m9", category: "Chords" },
+    { label: "Sus2", value: "sus2", category: "Chords" },
+    { label: "Sus4", value: "sus4", category: "Chords" },
+    { label: "7sus4", value: "7sus4", category: "Chords" },
+    { label: "Add9", value: "add9", category: "Chords" },
 
-      // Scales
-      { label: "Major Scale", value: "majorScale", category: "Scales" },
-      { label: "Harmonic Minor", value: "harmonicMinor", category: "Scales" },
-      { label: "Pentatonic", value: "pentatonic", category: "Scales" },
-      { label: "Blues", value: "blues", category: "Scales" },
-      { label: "Chromatic", value: "chromatic", category: "Scales" },
-      { label: "Hirajoshi", value: "hirajoshi", category: "Scales" },
-    ],
+    // Scales
+    { label: "Major Scale", value: "majorScale", category: "Scales" },
+    { label: "Harmonic Minor", value: "harmonicMinor", category: "Scales" },
+    { label: "Pentatonic", value: "pentatonic", category: "Scales" },
+    { label: "Blues", value: "blues", category: "Scales" },
+    { label: "Chromatic", value: "chromatic", category: "Scales" },
+    { label: "Hirajoshi", value: "hirajoshi", category: "Scales" },
+  ];
+
+  const filteredHarmonyItems = harmonyItems.filter((item) => {
+    // Only display chords if continuous data mode is selected
+    if (dataMode === "continuous") {
+      return item.category === "Chords";
+    }
+
+    return true; // discrete: show everything
   });
+
+  const harmonyOptions = createListCollection({
+    items: filteredHarmonyItems,
+  });
+
+  const randomiseHarmony = () => {
+    // Filter out current root note
+    const rootNotes = rootNoteOptions.items
+      .map((item) => item.value)
+      .filter((note) => note !== rootNote);
+
+    // Filter out current harmony
+    const harmonies = harmonyOptions.items
+      .map((item) => item.value)
+      .filter((h) => h !== harmony);
+
+    // Get randoms
+    const randomRoot = rootNotes[Math.floor(Math.random() * rootNotes.length)];
+    const randomHarmony =
+      harmonies[Math.floor(Math.random() * harmonies.length)];
+
+    setRootNote(randomRoot);
+    setHarmony(randomHarmony);
+  };
 
   const harmonyIntervals: Record<string, number[]> = {
     // Chords
@@ -251,6 +280,10 @@ export default function CustomStyleMenu({
     hirajoshi: [0, 2, 3, 7, 8],
   };
 
+  const harmonyCategories = Object.entries(
+    groupBy(harmonyOptions.items, (item) => item.category),
+  );
+
   const noteNames = [
     "C",
     "C#",
@@ -266,17 +299,13 @@ export default function CustomStyleMenu({
     "B",
   ];
 
-  function generateNotes(
-    root: string,
-    harmony: string,
-    octaveLow: number,
-    octaveHigh: number,
-  ): string[] {
+  const generateNotes = (): string[] => {
     let notes: string[] = [];
 
-    const rootIndex = noteNames.indexOf(root);
+    const rootIndex = noteNames.indexOf(rootNote);
+    const [lowOctave, highOctave] = octaveRange;
 
-    for (let octave = octaveLow; octave < octaveHigh; octave++) {
+    for (let octave = lowOctave; octave < highOctave; octave++) {
       for (const interval of harmonyIntervals[harmony]) {
         const noteIndex = (rootIndex + interval) % 12;
         const octaveOffset = Math.floor((rootIndex + interval) / 12);
@@ -285,12 +314,40 @@ export default function CustomStyleMenu({
         notes.push(note);
       }
     }
-    return notes;
-  }
 
-  const harmonyCategories = Object.entries(
-    groupBy(harmonyOptions.items, (item) => item.category),
-  );
+    // Finally, add root note from upper octave range to complete the set
+    notes.push(`${rootNote}${highOctave}`);
+
+    return notes;
+  };
+
+  const isValidNote = (input: string): boolean => {
+    const note = input.trim();
+    return /^[A-Ga-g](#|b)?[1-6]$/.test(note);
+  };
+
+  const normaliseNote = (note: string): string =>
+    note
+      .trim()
+      .replace(
+        /^([a-g])([#b]?)(\d)$/,
+        (_, letter, accidental, octave) =>
+          `${letter.toUpperCase()}${accidental}${octave}`,
+      );
+
+  const octaveSliderMarks = [
+    { value: 1, label: "1" },
+    { value: 2, label: "2" },
+    { value: 3, label: "3" },
+    { value: 4, label: "4" },
+    { value: 5, label: "5" },
+    { value: 6, label: "6" },
+  ];
+
+  // Updates the notes displayed any time root, harmony, or octaveRange changes
+  useEffect(() => {
+    setNotes(generateNotes());
+  }, [rootNote, harmony, octaveRange]);
 
   useEffect(() => {
     setLoadingInputs(true);
@@ -433,9 +490,7 @@ export default function CustomStyleMenu({
           outputOptions.items.find((o) => o.value === m.output)?.key ??
           m.output.toLowerCase(),
       })),
-      rootNote: rootNote,
-      scale: scale,
-      quality: quality,
+      notes: notes,
     };
 
     const response = await apiRequest(url, data);
@@ -511,6 +566,13 @@ export default function CustomStyleMenu({
 
     const result = await res.json();
     onStyleCreated(result.file_ref);
+  };
+
+  const handleNotesChange = (newNotes: string[]) => {
+    // Capitalize notes and remove whitespace
+    const normalised = newNotes.map(normaliseNote);
+
+    setNotes(normalised);
   };
 
   const handleApply = async () => {
@@ -961,12 +1023,14 @@ export default function CustomStyleMenu({
 
               {sound.composable && (
                 <>
-                  <HStack>
+                  <HStack gap={5}>
                     <Select.Root
                       collection={rootNoteOptions}
                       value={[rootNote]}
                       size="sm"
-                      onValueChange={(e) => setRootNote(e.value[0])}
+                      onValueChange={(e) => {
+                        setRootNote(e.value[0]);
+                      }}
                     >
                       <Select.HiddenSelect />
                       <Select.Label>Root Note</Select.Label>
@@ -980,7 +1044,7 @@ export default function CustomStyleMenu({
                       </Select.Control>
                       <Portal>
                         <Select.Positioner>
-                          <Select.Content>
+                          <Select.Content maxH="200px">
                             {rootNoteOptions.items.map((option) => (
                               <Select.Item item={option} key={option.value}>
                                 {option.label}
@@ -995,8 +1059,10 @@ export default function CustomStyleMenu({
                     <Select.Root
                       collection={harmonyOptions}
                       size="sm"
-                      value={[quality]}
-                      onValueChange={(e) => setQuality(e.value[0])}
+                      value={[harmony]}
+                      onValueChange={(e) => {
+                        setHarmony(e.value[0]);
+                      }}
                     >
                       <Select.HiddenSelect />
                       <Select.Label>Harmony</Select.Label>
@@ -1010,7 +1076,7 @@ export default function CustomStyleMenu({
                       </Select.Control>
                       <Portal>
                         <Select.Positioner>
-                          <Select.Content>
+                          <Select.Content maxH="200px">
                             {harmonyCategories.map(([category, items]) => (
                               <Select.ItemGroup key={category}>
                                 <Select.ItemGroupLabel
@@ -1036,11 +1102,27 @@ export default function CustomStyleMenu({
                         </Select.Positioner>
                       </Portal>
                     </Select.Root>
+                    <IconButton
+                      aria-label="Randomise"
+                      colorPalette="teal"
+                      size="sm"
+                      variant="subtle"
+                      alignSelf="end"
+                      onClick={randomiseHarmony}
+                    >
+                      <LuDices />
+                    </IconButton>
                   </HStack>
                   <Field.Root>
                     <TagsInput.Root
                       editable
-                      defaultValue={["React", "Chakra", "TypeScript"]}
+                      validate={(e) => isValidNote(e.inputValue)}
+                      maxLength={3}
+                      value={notes}
+                      onValueChange={(details) => {
+                        handleNotesChange(details.value);
+                      }}
+                      colorPalette="teal"
                     >
                       <TagsInput.Label>Notes</TagsInput.Label>
                       <TagsInput.Control>
@@ -1048,35 +1130,30 @@ export default function CustomStyleMenu({
                         <TagsInput.Input placeholder="Add or edit notes..." />
                       </TagsInput.Control>
                     </TagsInput.Root>
-                    <Field.HelperText>
-                      Add emails separated by commas
-                    </Field.HelperText>
+                    {/* <Field.HelperText>
+                      Double-click on a note or use keyboard navigation to edit
+                    </Field.HelperText> */}
                   </Field.Root>
                   <Slider.Root
-                    w="100%"
-                    step={0.01}
+                    size="sm"
+                    step={1}
                     colorPalette="teal"
                     min={1}
                     max={6}
                     value={octaveRange}
-                    minStepsBetweenThumbs={0.1}
-                    animation="fade-in 300ms ease-out"
+                    minStepsBetweenThumbs={0}
                     thumbCollisionBehavior="push"
                     onValueChange={(e) => {
                       setOctaveRange(e.value as [number, number]);
-                      // setStartText(String(e.value[0]));
-                      // setEndText(String(e.value[1]));
-                    }}
-                    onValueChangeEnd={(e) => {
-                      // fetchPreviewPlot(e.value as [number, number], sigma); // only runs on mouse release
                     }}
                   >
+                    <Slider.Label>Octave Range</Slider.Label>
                     <Slider.Control>
                       <Slider.Track>
                         <Slider.Range />
                       </Slider.Track>
                       <Slider.Thumbs />
-                      {/* <Slider.Marks marks={sliderMarks} /> */}
+                      <Slider.Marks marks={octaveSliderMarks} />
                     </Slider.Control>
                   </Slider.Root>
                 </>
