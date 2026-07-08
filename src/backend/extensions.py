@@ -27,27 +27,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-
-        
-
 def ensure_array(data):
       return data if isinstance(data, np.ndarray) else np.array(data)
 
 
-def find_sound(sound_name):
 
-    # Search for any file starting with 'sound_name'
-    synth_matches = list(SYNTHS_DIR.glob(f"{sound_name}.*"))
-    samples_matches = list(SAMPLES_DIR.glob(f"{sound_name}*"))
-
-    if synth_matches and samples_matches:
-          raise ValueError(f'The name "{sound_name}" is present in both /synths and /samples directories.')
-    elif synth_matches:
-        return "synths", synth_matches[0]
-    elif samples_matches:
-        return "samples", samples_matches[0]
-    else:
-        raise ValueError(f'"{sound_name}" not found in the sound_assets directory.')
 
 
 def get_filepath(directory):

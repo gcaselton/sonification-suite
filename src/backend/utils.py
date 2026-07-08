@@ -1,6 +1,6 @@
 from pathlib import Path
 from context import session_id_var
-from paths import TMP_DIR, BACKEND_DIR
+from paths import TMP_DIR, BACKEND_DIR, SYNTHS_DIR, SAMPLES_DIR
 from fastapi import HTTPException
 import os, yaml, uuid
 
@@ -38,13 +38,29 @@ def resolve_file(file_ref: str) -> Path:
     return path
 
 
+def is_synth(sound_name):
+
+    # Search for any file starting with 'sound_name'
+    synth_matches = list(SYNTHS_DIR.glob(f"{sound_name}.*"))
+    samples_matches = list(SAMPLES_DIR.glob(f"{sound_name}*"))
+
+    if synth_matches and samples_matches:
+          raise ValueError(f'The name "{sound_name}" is present in both /synths and /samples directories.')
+    elif synth_matches:
+        return True
+    elif samples_matches:
+        return False
+    else:
+        raise ValueError(f'"{sound_name}" not found in the sound_assets directory.')
+
+
 def write_YAML_file(yaml_dict: dict):
     
     filename = f'style_{uuid.uuid4()}.yaml'
     session_id = session_id_var.get()
     filepath = Path(TMP_DIR, session_id, filename)
 
-    filepath.parent.makedir(parents=True, exist_ok=True)
+    filepath.parent.mkdir(parents=True, exist_ok=True)
     
     filepath.write_text(
         yaml.dump(yaml_dict, default_flow_style=False),

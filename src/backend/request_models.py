@@ -12,10 +12,7 @@ class CustomStyleSettings(BaseModel):
     dataMode: str
     sound: str
     map: list[dict]
-    chordMode: bool
-    rootNote: str
-    scale: str
-    quality: str
+    notes: list[str]
 
 class SoundRequest(BaseModel):
     sound_name: str

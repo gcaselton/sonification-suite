@@ -12,7 +12,7 @@ import PageContainer from "../ui/PageContainer";
 import { ToggleTip, InfoTip } from "../ui/ToggleTip";
 import { Tooltip } from "../ui/Tooltip";
 import { apiUrl, lightCurvesAPI, coreAPI } from "../../apiConfig";
-import { LuUpload, LuX, LuPlus, LuVolume2, LuDices } from "react-icons/lu";
+import { LuUpload, LuX, LuPlus, LuVolume2, LuDices, LuChartSpline, LuChartScatter } from "react-icons/lu";
 import ErrorMsg from "./ErrorMsg";
 
 import {
@@ -476,20 +476,22 @@ export default function CustomStyleMenu({
     );
   };
 
-  const saveSoundSettings = async () => {
+  const saveStyleSettings = async () => {
     const url = `${coreAPI}/save-style-settings/`;
     const data = {
       dataMode,
       sound: sound.name.replace(/\s*🎹$/, ""),
-      map: parameterMappings.map((m) => ({
-        ...m,
-        input:
-          inputOptions.items.find((i) => i.value === m.input)?.key ??
-          m.input.toLowerCase(),
-        output:
-          outputOptions.items.find((o) => o.value === m.output)?.key ??
-          m.output.toLowerCase(),
-      })),
+      map: parameterMappings
+        .filter((m) => m.input.trim() !== "" && m.output.trim() !== "") // remove empty mappings
+        .map((m) => ({
+          ...m,
+          input:
+            inputOptions.items.find((i) => i.value === m.input)?.key ??
+            m.input.toLowerCase(),
+          output:
+            outputOptions.items.find((o) => o.value === m.output)?.key ??
+            m.output.toLowerCase(),
+        })),
       notes: notes,
     };
 
@@ -512,7 +514,7 @@ export default function CustomStyleMenu({
       }
 
       // Save sound settings and get filepath
-      const fileRef = await saveSoundSettings();
+      const fileRef = await saveStyleSettings();
       console.log(fileRef);
 
       const preview_endpoint = `${coreAPI}/preview-style-settings/${soniType}`;
@@ -571,14 +573,13 @@ export default function CustomStyleMenu({
   const handleNotesChange = (newNotes: string[]) => {
     // Capitalize notes and remove whitespace
     const normalised = newNotes.map(normaliseNote);
-
     setNotes(normalised);
   };
 
   const handleApply = async () => {
     setApplyLoading(true);
 
-    const styleRef = await saveSoundSettings();
+    const styleRef = await saveStyleSettings();
 
     // Stop any preview audio
     if (previewRef.current) {
@@ -959,6 +960,7 @@ export default function CustomStyleMenu({
                   <InfoTip
                     content="Choose whether the data should be heard as a continuous stream or as individual discrete events."
                     positioning={{ placement: "right" }}
+                    contentProps={{ maxW: "300px" }}
                   />
                 </HStack>
                 <SegmentGroup.Root
@@ -972,8 +974,24 @@ export default function CustomStyleMenu({
                   <SegmentGroup.Indicator />
                   <SegmentGroup.Items
                     items={[
-                      { label: "Continuous", value: "continuous" },
-                      { label: "Discrete", value: "discrete" },
+                      {
+                        label: (
+                          <HStack>
+                            <LuChartSpline />
+                            Continuous
+                          </HStack>
+                        ),
+                        value: "continuous",
+                      },
+                      {
+                        label: (
+                          <HStack>
+                            <LuChartScatter />
+                            Discrete
+                          </HStack>
+                        ),
+                        value: "discrete",
+                      },
                     ]}
                   />
                 </SegmentGroup.Root>
@@ -1102,16 +1120,18 @@ export default function CustomStyleMenu({
                         </Select.Positioner>
                       </Portal>
                     </Select.Root>
-                    <IconButton
-                      aria-label="Randomise"
-                      colorPalette="teal"
-                      size="sm"
-                      variant="subtle"
-                      alignSelf="end"
-                      onClick={randomiseHarmony}
-                    >
-                      <LuDices />
-                    </IconButton>
+                    <Tooltip content="Randomise harmony">
+                      <IconButton
+                        aria-label="Randomise"
+                        colorPalette="teal"
+                        size="sm"
+                        variant="subtle"
+                        alignSelf="end"
+                        onClick={randomiseHarmony}
+                      >
+                        <LuDices />
+                      </IconButton>
+                    </Tooltip>
                   </HStack>
                   <Field.Root>
                     <TagsInput.Root

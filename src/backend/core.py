@@ -7,7 +7,7 @@ from config import GITHUB_USER, GITHUB_REPO
 from context import session_id_var
 from utils import resolve_file, is_number, write_YAML_file, update_style
 from request_models import DataRequest, SoundRequest, CustomStyleSettings, SonificationRequest
-import logging, httpx, yaml, os, uuid, aiofiles, zipfile, traceback, base64, gc
+import logging, httpx, yaml, os, uuid, aiofiles, zipfile, traceback, base64, gc, re
 from param_descriptions import INPUTS, OUTPUTS
 from night_sky import handle_observer
 from strauss.audio_figure import AudioFigure
@@ -43,6 +43,10 @@ FORMATTED_FILENAMES = {
 }
 
 MASTER_VOL = 0.5
+
+SAMPLE_MODS = {
+    'Nuclear Crackle': None
+}
 
 
 @router.get('/session/')
@@ -633,7 +637,7 @@ def save_sound_settings(settings: CustomStyleSettings):
     - Returns: A filename of the saved settings.
     """
     # Save settings to a yaml file and return the filename
-    style = format_settings(settings)
+    style = format_style(settings)
     filepath = write_YAML_file(style)
 
     file_ref = f'session:{filepath.name}'
@@ -641,79 +645,52 @@ def save_sound_settings(settings: CustomStyleSettings):
     # Return the file reference
     return {'file_ref': file_ref}
 
-def format_settings(settings: CustomStyleSettings):
+def format_style(settings: CustomStyleSettings):
     
     # TODO - If custom data with no headers e.g. 'Column 1', swap these for col indeces (ints) in the style file inputs
+    isObjects = settings.dataMode == 'continuous'
     
-    # Remove null entries
-    params = [{k: v for k, v in m.items() if v is not None} for m in settings.map]
+    map = settings.map
+    
+    param_swaps = {
+                'time': 'time_evo',
+                'pitch': 'pitch_shift'
+            }
+    
+    for m in map:
         
+        # If using custom data, swap 'column 1' etc for 0-indexed column index
+        if re.fullmatch(r"column \d+", m["input"]):
+            col_number = int(m['input'].split(' ')[-1])
+            m['input'] =  col_number-1
+        
+        if isObjects:
+            # Swap time for time_evo and pitch for pitch_shift for Objects
+            m['output'] = param_swaps.get(m['output'], m['output'])
+        elif not settings.notes:
+            # Use pitch shift for Events if no notes given (atonal)
+            m['output'] = 'pitch_shift' if m['output'] == 'pitch' else m['output']
+            
+        m['input_range'] = ['0%', '100%'] if isObjects else ['0%', '110%']
+        
+    generator = {}
+    
+    
+        
+    
+    
     style = {
+        "sources": "objects" if isObjects else "events",
         "sound": settings.sound,
-        "map": params
+        "map": map,
+        "notes": settings.notes
     }
-
-    if settings.chordMode:
-        style['harmony'] = f"{settings.rootNote}{settings.quality}"
-    else:
-        if settings.scale != 'None':
-            style['harmony'] = f"{settings.rootNote} {settings.scale}"
+    
+    if not isObjects:
+        style['max_notes_per_sec'] = 15
+        style['pitch_binning'] = 'uniform'
     
     return style
-
-
-async def download_online_asset(target_name: str):
-
-    target_asset = None
-
-    for asset in asset_cache:
-        asset_name = asset.get('name', '')
-        asset_name = format_name(asset_name)
-
-        if asset_name.lower() == target_name.lower():
-            target_asset = asset
-            break
-
-    if not target_asset:
-        return {"status": "error", "message": "Asset not found in online cache."}
-    
-    
-    file_name = target_asset['name']
-    local_path = Path(SAMPLES_DIR) / target_name
-
-    # Skip download if file exists
-    if local_path.exists():
-        return {"status": "skipped", "message": "File already exists locally."}
-    
-    # Define local path
-    session_id = session_id_var.get()
-    write_path = TMP_DIR / session_id / file_name
-    
-    # Download the file
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(target_asset["url"], follow_redirects=True)
-        resp.raise_for_status()
-        async with aiofiles.open(write_path, "wb") as f:
-            await f.write(resp.content)
-    
-    if file_name.endswith('.zip'):
-        with zipfile.ZipFile(write_path, 'r') as zip_ref:
-            zip_ref.extractall(SAMPLES_DIR)
-
-    # Delete the zip file after extraction
-    write_path.unlink(missing_ok=True)
-
-    return {"status": "success", "message": f"Downloaded and extracted {file_name}"}
-
-
-
-@router.post('/ensure-sound-available/')
-async def ensure_sound_available(request: SoundRequest):
-
-    if request.sound_name not in [s.name for s in local_sounds()]:
-        await download_online_asset(request.sound_name)
-    else: print('Sound already exists in local dir')
-
 
 @router.post("/upload-style/")
 async def upload_style(file: UploadFile = File(...), request: Request = None):
