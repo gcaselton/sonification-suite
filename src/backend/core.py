@@ -6,6 +6,7 @@ from sounds import get_sounds
 from config import GITHUB_USER, GITHUB_REPO
 from context import session_id_var
 from utils import resolve_file, is_number, write_YAML_file, update_style
+from generator_mods import GENERATOR_MODS
 from request_models import DataRequest, SoundRequest, CustomStyleSettings, SonificationRequest
 import logging, httpx, yaml, os, uuid, aiofiles, zipfile, traceback, base64, gc, re
 from param_descriptions import INPUTS, OUTPUTS
@@ -43,10 +44,6 @@ FORMATTED_FILENAMES = {
 }
 
 MASTER_VOL = 0.5
-
-SAMPLE_MODS = {
-    'Nuclear Crackle': None
-}
 
 
 @router.get('/session/')
