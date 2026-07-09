@@ -344,11 +344,12 @@ export default function CustomStyleMenu({
     { value: 6, label: "6" },
   ];
 
-  // Updates the notes displayed any time root, harmony, or octaveRange changes
+  // Update the notes displayed any time root, harmony, or octaveRange changes
   useEffect(() => {
     setNotes(generateNotes());
   }, [rootNote, harmony, octaveRange]);
 
+  // Get input and output options on first load
   useEffect(() => {
     setLoadingInputs(true);
     setLoadingOutputs(true);
@@ -415,6 +416,7 @@ export default function CustomStyleMenu({
     fetchParams();
   }, []);
 
+  // Fetch sound options from backend on first load
   useEffect(() => {
     setLoadingSounds(true);
 
@@ -438,6 +440,7 @@ export default function CustomStyleMenu({
     fetchSounds();
   }, []);
 
+  // Check if time is mapped (necessary to save custom style)
   useEffect(() => {
     const hasTimeMapping = parameterMappings.some(
       (m) =>
@@ -492,7 +495,7 @@ export default function CustomStyleMenu({
             outputOptions.items.find((o) => o.value === m.output)?.key ??
             m.output.toLowerCase(),
         })),
-      notes: notes,
+      notes: sound.composable? notes : ['A3'], // Use A3 as the note for non-composable sounds
     };
 
     const response = await apiRequest(url, data);
@@ -517,7 +520,7 @@ export default function CustomStyleMenu({
       const fileRef = await saveStyleSettings();
       console.log(fileRef);
 
-      const preview_endpoint = `${coreAPI}/preview-style-settings/${soniType}`;
+      const preview_endpoint = `${coreAPI}/preview-style-settings/`;
       const response = await apiRequest(preview_endpoint, {
         file_ref: fileRef,
       });

@@ -1,18 +1,16 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Cookie, Response, Request
 from fastapi.responses import FileResponse
 from pathlib import Path
-from paths import TMP_DIR, STYLE_FILES_DIR, SUGGESTED_DATA_DIR, SAMPLES_DIR, HYG_DATA
+from paths import TMP_DIR, STYLE_FILES_DIR, SUGGESTED_DATA_DIR
 from sounds import get_sounds
-from config import GITHUB_USER, GITHUB_REPO
 from context import session_id_var
-from utils import resolve_file, is_number, write_YAML_file, update_style
+from utils import resolve_file, is_number, read_YAML_file, write_YAML_file, is_synth, write_sound_to_style
 from generator_mods import GENERATOR_MODS
-from request_models import DataRequest, SoundRequest, CustomStyleSettings, SonificationRequest
-import logging, httpx, yaml, os, uuid, aiofiles, zipfile, traceback, base64, gc, re
+from request_models import DataRequest, CustomStyleSettings, SonificationRequest
+import logging, yaml, os, uuid, traceback, base64, gc, re
 from param_descriptions import INPUTS, OUTPUTS
 from night_sky import handle_observer
-from strauss.audio_figure import AudioFigure
-from strauss.score import Score
+from strauss import AudioFigure
 
 import numpy as np
 import pandas as pd
@@ -93,13 +91,10 @@ def generate_sonification(request: SonificationRequest):
     
     try:
         
-        # First, check if any of the style parameters need re-writing, 
-        style = update_style(style_filepath, request.observer)
+        # First, replace base sound name with filepath to the sound
+        updated_style = str(write_sound_to_style(style_filepath))
         
-        # Initialise an AudioFigure object and sonify
-        fig = AudioFigure(system=request.system)
-        
-        # Determine data format (CSV, .fits) and convert to DataFrame
+        # Next, determine data format (CSV, .fits) and convert to DataFrame
         data_type = data_filepath.suffix.lower()
         
         if data_type == '.fits':
@@ -118,7 +113,7 @@ def generate_sonification(request: SonificationRequest):
         # Build dict with keyword arguments for sonification function
         kwargs = {
             'duration': request.duration,
-            'style': style
+            'style': updated_style
         }
         
         # Handle case that 'Place on Dome' feature is used
@@ -134,14 +129,9 @@ def generate_sonification(request: SonificationRequest):
         else:
             alt_az = None
         
-        # Sonify!
+        # Initialise an AudioFigure and sonify
+        fig = AudioFigure(system=request.system)
         sonification = fig.sonify(df, **kwargs)
-        
-        # Manually overwrite Score to use correct pitch bin mode
-        pitch_bin_mode = None
-        notes = sonification.score.note_sequence
-        sonification.score = Score(notes, request.duration)
-        sonification.render()
 
         session_id = session_id_var.get()
 
@@ -585,36 +575,40 @@ def get_styles(category: str):
 def get_sound_info():
     return get_sounds()
 
-@router.post('/preview-style-settings/{category}')
-def preview_style_settings(request: DataRequest, category: str):
+@router.post('/preview-style-settings/')
+def preview_style_settings(request: DataRequest):
 
+    # Resolve style ref to path and swap sound name for full filepath
     style = resolve_file(request.file_ref)
+    style_dict = write_sound_to_style(style, write_to_yml=False)
     
-    duration = 5
-
-    if category == 'light_curves':
-        
-        n_samples = 100
-        cycles = 2
-
-        x = np.linspace(0, duration, n_samples, endpoint=False)
-        freq = cycles / duration
-
-        # Generate sine wave for light curve-like data
-        y = np.sin(2 * np.pi * freq * x)
-        
-        data = (x, y)
-    else:
-        data = SUGGESTED_DATA_DIR / category / 'preview.csv'
+    # Generate synthetic data for previews
+    N = 100 if style_dict["sources"] == "objects" else 20
     
+    args = []
+    
+    for mapping in style_dict["map"]:
+        output = mapping["output"]
+
+        if output == "time":
+            # Use linear function for time
+            args.append(np.linspace(0, 1, N))
+        else:
+            # Sine wave for all other parameters
+            x = np.linspace(0, np.pi, N)
+            args.append(np.sin(x))
+    
+    
+    style_file = str(write_YAML_file(style_dict))
 
     try:
+        fig = AudioFigure()
     
-        soni, alt_az = sonify(data, style, category, length=5,  system='mono')
+        soni = fig.sonify(args, style=style_file, duration=5)
 
         id = str(uuid.uuid4().hex)
         ext = '.wav'
-        filename = f'{category}_{id}{ext}'
+        filename = f'preview_{id}{ext}'
         session_id = session_id_var.get()
         filepath = os.path.join(TMP_DIR, session_id, filename)
         soni.save(filepath, master_volume=MASTER_VOL)
@@ -643,47 +637,58 @@ def save_sound_settings(settings: CustomStyleSettings):
     return {'file_ref': file_ref}
 
 def format_style(settings: CustomStyleSettings):
-    
-    # TODO - If custom data with no headers e.g. 'Column 1', swap these for col indeces (ints) in the style file inputs
-    isObjects = settings.dataMode == 'continuous'
-    
-    map = settings.map
+
+    sources = 'objects' if settings.dataMode == 'continuous' else 'events'
     
     param_swaps = {
                 'time': 'time_evo',
                 'pitch': 'pitch_shift'
             }
     
-    for m in map:
+    for m in settings.map:
         
         # If using custom data, swap 'column 1' etc for 0-indexed column index
         if re.fullmatch(r"column \d+", m["input"]):
-            col_number = int(m['input'].split(' ')[-1])
-            m['input'] =  col_number-1
+            m["input"] = int(m["input"].split()[-1]) - 1
         
-        if isObjects:
+        if sources == 'objects':
             # Swap time for time_evo and pitch for pitch_shift for Objects
             m['output'] = param_swaps.get(m['output'], m['output'])
         elif not settings.notes:
             # Use pitch shift for Events if no notes given (atonal)
             m['output'] = 'pitch_shift' if m['output'] == 'pitch' else m['output']
             
-        m['input_range'] = ['0%', '100%'] if isObjects else ['0%', '110%']
+        # Add extra time for Events to play out
+        m['input_range'] = ['0%', '110%'] if sources == 'events' else ['0%', '100%']
         
-    generator = {}
-    
-    
+    # Set up Generator dictionary
+    gen_type, sound_key = (
+        ("synthesizer", "preset")
+        if is_synth(settings.sound)
+        else ("sampler", "sample")
+    )
         
+    generator = {
+        'type': gen_type,
+        sound_key: settings.sound
+    }
+
+    mods = GENERATOR_MODS.get(settings.sound)
+    if mods:
+        generator["mods"] = mods
     
     
+    # Build final style dict
     style = {
-        "sources": "objects" if isObjects else "events",
-        "sound": settings.sound,
-        "map": map,
+        "name": "Custom",
+        "sources": sources,
+        "generator": generator,
+        "map": settings.map,
         "notes": settings.notes
     }
     
-    if not isObjects:
+    # Add additional fields for Events
+    if sources == 'events':
         style['max_notes_per_sec'] = 15
         style['pitch_binning'] = 'uniform'
     

@@ -81,6 +81,23 @@ def read_YAML_file(filepath):
     
     return YAML_dict
 
+def write_sound_to_style(style_filepath: Path | str, write_to_yml=True):
+    
+    style_dict = read_YAML_file(style_filepath)
+        
+    sound_key, ext, dir = (
+        ('sample', '', 'samples') 
+        if style_dict['generator']['type'] == 'sampler' 
+        else ('preset', '.yml', 'synths')
+        )
+    
+    sound_name = style_dict['generator'][sound_key] + ext
+    sound_path = resolve_file(f'sound_assets:{dir}:{sound_name}')
+    
+    style_dict['generator'][sound_key] = str(sound_path)
+    
+    return write_YAML_file(style_dict) if write_to_yml else style_dict
+
 
 def update_style(style_filepath: Path | str, observer: dict | None = None):
     """ This loads the style file into a dictionary, and checks if anything needs re-writing into the format that

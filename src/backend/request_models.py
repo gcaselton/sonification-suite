@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, Literal
 
-# Define BaseModels for expected request types
+# Define BaseModels for expected API request types
 
 #---------- Core ----------#
 
