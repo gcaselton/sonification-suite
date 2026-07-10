@@ -131,7 +131,7 @@ def generate_sonification(request: SonificationRequest):
         
         # Initialise an AudioFigure and sonify
         fig = AudioFigure(system=request.system)
-        sonification = fig.sonify(df, **kwargs)
+        fig.sonify(df, **kwargs)
 
         session_id = session_id_var.get()
 
@@ -142,7 +142,7 @@ def generate_sonification(request: SonificationRequest):
         ext = '.wav'
         filename = f'{request.data_name} {category}{ext}'
         filepath = TMP_DIR / session_id / filename
-        sonification.save(filepath, master_volume=MASTER_VOL)
+        fig.save(filepath)
 
         file_ref = f'session:{filename}'
 
@@ -583,41 +583,40 @@ def preview_style_settings(request: DataRequest):
     style_dict = write_sound_to_style(style, write_to_yml=False)
     
     # Generate synthetic data for previews
-    N = 100 if style_dict["sources"] == "objects" else 20
+    N = 100 if style_dict["sources"] == "objects" else 50
     
     args = []
     
     for mapping in style_dict["map"]:
         output = mapping["output"]
 
-        if output == "time":
+        if output in ["time", "time_evo"]:
             # Use linear function for time
             args.append(np.linspace(0, 1, N))
         else:
-            # Sine wave for all other parameters
-            x = np.linspace(0, np.pi, N)
+            # Sine wave for all other parameters 
+            x = np.linspace(0, np.pi, N) 
             args.append(np.sin(x))
-    
     
     style_file = str(write_YAML_file(style_dict))
 
     try:
         fig = AudioFigure()
-    
-        soni = fig.sonify(args, style=style_file, duration=5)
+        fig.sonify(*args, style=style_file, duration=5)
 
         id = str(uuid.uuid4().hex)
         ext = '.wav'
         filename = f'preview_{id}{ext}'
         session_id = session_id_var.get()
         filepath = os.path.join(TMP_DIR, session_id, filename)
-        soni.save(filepath, master_volume=MASTER_VOL)
+        fig.save(filepath)
 
         file_ref = f'session:{filename}'
 
         return {'file_ref': file_ref}
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    except Exception:
+        traceback.print_exc()
+        raise
     
 @router.post('/save-style-settings/')
 def save_sound_settings(settings: CustomStyleSettings):

@@ -12,7 +12,15 @@ import PageContainer from "../ui/PageContainer";
 import { ToggleTip, InfoTip } from "../ui/ToggleTip";
 import { Tooltip } from "../ui/Tooltip";
 import { apiUrl, lightCurvesAPI, coreAPI } from "../../apiConfig";
-import { LuUpload, LuX, LuPlus, LuVolume2, LuDices, LuChartSpline, LuChartScatter } from "react-icons/lu";
+import {
+  LuUpload,
+  LuX,
+  LuPlus,
+  LuVolume2,
+  LuDices,
+  LuChartSpline,
+  LuChartScatter,
+} from "react-icons/lu";
 import ErrorMsg from "./ErrorMsg";
 
 import {
@@ -138,10 +146,6 @@ export default function CustomStyleMenu({
     ParameterMapping[]
   >([]);
 
-  const pitchMapped = parameterMappings.some(
-    (m) => m.output.toLowerCase() === "pitch",
-  );
-
   const hasTimeMapping = parameterMappings.some(
     (m) => m.input && m.output.toLowerCase() === "time",
   );
@@ -149,7 +153,7 @@ export default function CustomStyleMenu({
   const [rootNote, setRootNote] = useState("C");
   const [harmony, setHarmony] = useState("maj");
   const [notes, setNotes] = useState<string[]>([]);
-  const [octaveRange, setOctaveRange] = useState<[number, number]>([2, 3]);
+  const [octaveRange, setOctaveRange] = useState<[number, number]>([3, 4]);
 
   const [inputOptions, setInputOptions] = useState(
     createListCollection<{
@@ -495,8 +499,10 @@ export default function CustomStyleMenu({
             outputOptions.items.find((o) => o.value === m.output)?.key ??
             m.output.toLowerCase(),
         })),
-      notes: sound.composable? notes : ['A3'], // Use A3 as the note for non-composable sounds
+      notes: sound.composable ? notes : ["A3"], // Use A3 as the note for non-composable sounds
     };
+
+    console.log(notes)
 
     const response = await apiRequest(url, data);
 
@@ -772,18 +778,31 @@ export default function CustomStyleMenu({
                                       overflowY="auto"
                                     >
                                       {outputOptions.items.map((option) => {
+                                        const selectedOutputs =
+                                          parameterMappings
+                                            .filter((_, i) => i !== index)
+                                            .map((m) => m.output);
+
+                                        // Disable outputs that are already selected
                                         const isUsedElsewhere =
-                                          parameterMappings.some(
-                                            (m, i) =>
-                                              m.output === option.value &&
-                                              i !== index,
+                                          selectedOutputs.includes(
+                                            option.value,
                                           );
+
+                                        // Disable 'pan' if Azimuth is selected and vice versa (both spatial parameters)
+                                        const isSpatialConflict =
+                                          (option.value === "Pan" &&
+                                            selectedOutputs.includes(
+                                              "Azimuth",
+                                            )) ||
+                                          (option.value === "Azimuth" &&
+                                            selectedOutputs.includes("Pan"));
 
                                         return (
                                           <Select.Item
                                             item={{
                                               ...option,
-                                              disabled: isUsedElsewhere,
+                                              disabled: isUsedElsewhere || isSpatialConflict,
                                             }}
                                             key={option.value}
                                           >

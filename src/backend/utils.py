@@ -91,8 +91,8 @@ def write_sound_to_style(style_filepath: Path | str, write_to_yml=True):
         else ('preset', '.yml', 'synths')
         )
     
-    sound_name = style_dict['generator'][sound_key] + ext
-    sound_path = resolve_file(f'sound_assets:{dir}:{sound_name}')
+    sound_name = style_dict['generator'][sound_key]
+    sound_path = resolve_file(f'sound_assets:{dir}:{sound_name}{ext}')
     
     style_dict['generator'][sound_key] = str(sound_path)
     
