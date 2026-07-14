@@ -2,18 +2,24 @@ name: "Japanese Harp"
 
 description: "Harp plays a Japanese hirajoshi scale, where pitch increases with brightness."
 
-sound: "Harp"
-preset: 'staccato'
-mods: 
-  volume_envelope: 
-    use: 'on'
-    R: 1
+generator:
+  type: "sampler"
+  sample: "Harp"
+  preset: "staccato"
+  mods:
+    volume_envelope:
+      use: "on"
+      R: 1
 
-parameters:
+map:
+  - input: "time"
+    output: "time"
+
   - input: "flux"
     output: "pitch"
 
-  - input: 'time'
-    output: 'time'
+notes: ["C3", "D3", "D#3", "G3", "G#3", "C4", "D4", "D#4", "G4", "G#4", "C5"]
 
-harmony: 'C hirajoshi'
+sources: "events"
+max_notes_per_sec: 15
+pitch_binning: "uniform"

@@ -99,11 +99,17 @@ def generate_sonification(request: SonificationRequest):
         
         if data_type == '.fits':
                 lc = lk.read(str(data_filepath))
+                time = lc.time.value
+                flux = lc.flux.value
                 
                 df = pd.DataFrame({
-                    "time": lc.time.value,
-                    "flux": lc.flux.value
+                    "time": np.asarray(time, dtype=np.float64),
+                    "flux": np.asarray(flux, dtype=np.float64)
                 })
+                
+                # Interpolate across NaNs for light curves, and fill in empty start and end values
+                df['flux'] = df['flux'].interpolate().bfill().ffill()
+                
         elif data_type == '.csv':
                 df = pd.read_csv(str(data_filepath))
         else:
@@ -639,26 +645,24 @@ def format_style(settings: CustomStyleSettings):
 
     sources = 'objects' if settings.dataMode == 'continuous' else 'events'
     
-    param_swaps = {
-                'time': 'time_evo',
-                'pitch': 'pitch_shift'
-            }
-    
     for m in settings.map:
         
-        # If using custom data, swap 'column 1' etc for 0-indexed column index
+        # If using custom data, swap 'column 1' etc for 0-indexed column index (e.g. 'column 1' -> 0)
         if re.fullmatch(r"column \d+", m["input"]):
             m["input"] = int(m["input"].split()[-1]) - 1
-        
-        if sources == 'objects':
-            # Swap time for time_evo and pitch for pitch_shift for Objects
-            m['output'] = param_swaps.get(m['output'], m['output'])
-        elif not settings.notes:
-            # Use pitch shift for Events if no notes given (atonal)
-            m['output'] = 'pitch_shift' if m['output'] == 'pitch' else m['output']
             
-        # Add extra time for Events to play out
-        m['input_range'] = ['0%', '110%'] if sources == 'events' else ['0%', '100%']
+        if m['output'] == 'time':
+            if sources == 'objects':
+                # Swap time for time_evo if using Objects
+                m['output'] = 'time_evo'
+            else:
+                # Add extra time for Events to play out
+                m['input_range'] = ['0%', '110%']
+                
+        elif m['output'] == 'pitch':
+            # Swap pitch for pitch_shift if Objects, or Events with no notes given
+            m['output'] = 'pitch_shift' if sources == 'objects' or not settings.notes else m['output']
+        
         
     # Set up Generator dictionary
     gen_type, sound_key = (

@@ -91,7 +91,6 @@ export default function CustomStyleMenu({
 
   interface ParameterMapping {
     input: string;
-    input_range: [number, number] | null;
     output: string;
     output_range: [number, number] | null;
     function: string | null;
@@ -400,7 +399,6 @@ export default function CustomStyleMenu({
           setParameterMappings([
             {
               input: "Time",
-              input_range: null,
               output: "Time",
               output_range: null,
               function: null,
@@ -461,7 +459,6 @@ export default function CustomStyleMenu({
       ...prev,
       {
         input: "",
-        input_range: null,
         output: "",
         output_range: null,
         function: null,
