@@ -1,12 +1,11 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Cookie, Response, Request
 from fastapi.responses import FileResponse
 from pathlib import Path
-from paths import TMP_DIR, STYLE_FILES_DIR, SUGGESTED_DATA_DIR
-from sounds import get_sounds
+from paths import TMP_DIR, STYLE_FILES_DIR, SUGGESTED_DATA_DIR, SYNTHS_DIR, SAMPLES_DIR
 from context import session_id_var
 from utils import resolve_file, is_number, read_YAML_file, write_YAML_file, is_synth, write_sound_to_style
 from generator_mods import GENERATOR_MODS
-from request_models import DataRequest, CustomStyleSettings, SonificationRequest
+from request_models import DataRequest, CustomStyleSettings, SonificationRequest, SoundInfo
 import logging, yaml, os, uuid, traceback, base64, gc, re
 from param_descriptions import INPUTS, OUTPUTS
 from night_sky import handle_observer
@@ -576,6 +575,43 @@ def get_styles(category: str):
         styles.append(style)
 
     return styles
+
+def get_sounds():
+      
+    local_sounds = []
+    
+    for f in SYNTHS_DIR.iterdir():
+        if f.is_file():
+            composable = f.stem != 'White Noise'
+            data_modes = ['continuous', 'discrete']
+            sound = SoundInfo(name=f.stem, composable=composable, data_modes=data_modes)
+            local_sounds.append(sound)
+            
+    # List of sound names that are only suitable for Events (discrete) sonifications
+    SHORT_SAMPLES = ['Glockenspiel', 'Mallets', 'Harp']
+
+    for f in SAMPLES_DIR.iterdir():
+        if f.is_dir():
+            name = f.stem
+    
+            files = [file for file in f.iterdir() if file.is_file()]
+
+            # Composable if:
+            # 1) The directory contains a .sf2 file
+            # 2) OR the directory contains multiple files
+            composable = (
+                any(file.suffix == ".sf2" for file in files)
+                or len(files) > 1
+            )
+
+            # We are essentially hardcoding which sounds are suitable for Events vs Objects,
+            # so if more sounds are added in the future, this categorisation may need to change.
+            data_modes = ['discrete'] if name in SHORT_SAMPLES else ['continuous']
+          
+            sound = SoundInfo(name=name, composable=composable, data_modes=data_modes)
+            local_sounds.append(sound)
+      
+    return local_sounds
 
 @router.get('/sound_info/')
 def get_sound_info():

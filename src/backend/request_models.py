@@ -16,6 +16,11 @@ class CustomStyleSettings(BaseModel):
 
 class SoundRequest(BaseModel):
     sound_name: str
+    
+class SoundInfo(BaseModel):
+    name: str
+    composable: bool
+    data_modes: list[str]
 
 class SonificationRequest(BaseModel):
     category: str

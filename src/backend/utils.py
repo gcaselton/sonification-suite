@@ -2,7 +2,10 @@ from pathlib import Path
 from context import session_id_var
 from paths import TMP_DIR, BACKEND_DIR, SYNTHS_DIR, SAMPLES_DIR
 from fastapi import HTTPException
-import os, yaml, uuid
+from pychord import Chord
+from pychord.utils import transpose_note
+from strauss.notes import notesharps
+import os, yaml, uuid, random
 
 def resolve_file(file_ref: str) -> Path:
     """
@@ -163,4 +166,59 @@ def is_number(x):
         return True
     except ValueError:
         return False
+    
+    
+def voice_chord(chord_name: str):
+
+      # This will raise a ValueError if chord_name is invalid.
+      chord = Chord(chord_name)
+      notes = chord.components()
+      root = chord.root
+      fifth = transpose_note(root, 7, root)
+    
+
+      # Chord needs a fifth to be voiced pleasantly
+      if not fifth in notes:
+            raise ValueError('Chord must have a perfect fifth')
+      else:
+            remaining_notes = [note for note in notes if note not in [root, fifth]]
+      
+      # Voice the chord depending on which notes it has
+      if len(remaining_notes) == 1:
+            # Likely a major or minor triad
+            third_note = remaining_notes[0]
+            fourth_note = root
+      elif len(remaining_notes) == 2:
+            third_note = remaining_notes[0]
+            fourth_note = remaining_notes[1]
+      elif len(remaining_notes) == 3:
+            # NOTE - Need to allow for 5+ notes in a chord e.g. Cmaj9
+            fifth = remaining_notes[0]
+            third_note = remaining_notes[1]
+            fourth_note = remaining_notes[2]
+      elif len(remaining_notes) == 0:
+            third_note = root
+            fourth_note = fifth
+      else:
+            raise ValueError(f'{chord_name} is too complex, maximum of 5 notes allowed.')
+      
+      notes = [root + '2', fifth + '3', third_note + '4', fourth_note + '5']
+
+      return notes
+
+
+def random_chord():
+      
+      root_note = random.choice(notesharps)
+      fifth = transpose_note(root_note, 7)
+      
+      interval_pairs = [[11,2],[4,2],[4,11],[10,5]]
+      
+      chosen_pair = random.choice(interval_pairs)
+      random.shuffle(chosen_pair)
+      
+      third_note = transpose_note(root_note, chosen_pair[0])
+      fourth_note = transpose_note(root_note, chosen_pair[1])
+
+      return [[root_note + '2', fifth + '3', third_note + '4', fourth_note + '5']]
 
