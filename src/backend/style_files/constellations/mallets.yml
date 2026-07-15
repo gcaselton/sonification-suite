@@ -4,16 +4,19 @@ description: >
   Mallets play the stars from left to right, with bluer/hotter stars playing a higher pitch,
   and redder/cooler stars playing lower pitches.
 
-sound: 'Mallets'
+generator:
+  type: 'sampler'
+  sample: 'Mallets'
 
-parameters:
+map:
     
   - input: 'magnitude'
     output: 'volume'
-    output_range: [0.05, 1]
+    output_range: [0.2, 1]
     function: 'invert'
 
   - input: 'ra_corrected'
+    input_range: ['0%', '110%']
     output: 'time'
     function: 'invert'
 
@@ -22,4 +25,6 @@ parameters:
     output_range: [0.1, 1]
     function: 'invert'
 
-harmony: C blues
+sources: 'events'
+
+notes: ['C3','D#3','F3','F#3','G3','A#3','C4']

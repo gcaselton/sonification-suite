@@ -4,15 +4,16 @@ description: >
   Uses a library of orchestral sounds to provide a mixed sonic texture.
   Brightest stars appear first, and their colour is mapped to pitch (higher pitch = bluer star).
 
-sound: 'Orchestra'
-preset: 'sustain'
-mods: 
-  looping: 'forwardback'
-  note_length: 120
-  loop_start: 0.8
-  loop_end: 3.
+generator:
+  type: 'sampler'
+  sample: 'Orchestra'
+  mods: 
+    looping: 'forwardback'
+    note_length: 120
+    loop_start: 0.8
+    loop_end: 3.
 
-parameters:
+map:
     
   - input: 'magnitude'
     input_range: ['0%', '150%']
@@ -28,12 +29,11 @@ parameters:
     function: 'invert'
 
   - input: 'ra_corrected'
-    output: 'azimuth'
-    output_range: [0.25, 0.75]
+    output: 'pan'
     function: 'invert'
 
-
-harmony: ['C3', 'D3', 'E3', 'G3', 'A3', 'B3', 'C4', 'D4', 'E4', 'G4']
+sources: 'events'
+notes: ['C3', 'D3', 'E3', 'G3', 'A3', 'B3', 'C4', 'D4', 'E4', 'G4']
   
 
 

@@ -19,5 +19,12 @@ GENERATOR_MODS = {
             'note_length': 120,
             'loop_start': 0.8,
             'loop_end': 3.
+      },
+      'Harp': {
+            'note_length': 0.03,
+            'volume_envelope': {
+                  'use': "on",
+                  'R': 1
+                  }
       }
 }
