@@ -9,6 +9,7 @@ interface StyleCardProps {
   description: string;
   gradientClass: string;
   isCustom?: boolean;
+  onActivate: () => void;
 }
 
 // Shared state for all cards
@@ -20,6 +21,7 @@ export default function StyleCard({
   description,
   gradientClass,
   isCustom = false,
+  onActivate,
 }: StyleCardProps) {
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -122,7 +124,20 @@ export default function StyleCard({
           </VStack>
         )}
         {isCustom && <Settings className="icon" size={48} />}
-        <Text className="style-title">{title}</Text>
+        <Text
+          className="style-title"
+          tabIndex={0}
+          role="button"
+          aria-label={`Select ${title} style`}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onActivate();
+            }
+          }}
+        >
+          {title}
+        </Text>
       </div>
       <Dialog.Root
         open={infoOpen}

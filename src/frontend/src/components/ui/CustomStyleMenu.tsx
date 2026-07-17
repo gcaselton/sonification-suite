@@ -238,6 +238,13 @@ export default function CustomStyleMenu({
     items: filteredHarmonyItems,
   });
 
+  // Swap the currently selected harmony for a compatible one if data mode changes
+  useEffect(() => {
+    if (!filteredHarmonyItems.some((item) => item.value === harmony)) {
+      setHarmony(filteredHarmonyItems[0]?.value ?? "maj");
+    }
+  }, [filteredHarmonyItems, harmony]);
+
   const randomiseHarmony = () => {
     // Filter out current root note
     const rootNotes = rootNoteOptions.items
@@ -499,7 +506,7 @@ export default function CustomStyleMenu({
       notes: sound.composable ? notes : ["A3"], // Use A3 as the note for non-composable sounds
     };
 
-    console.log(notes)
+    console.log(notes);
 
     const response = await apiRequest(url, data);
 
@@ -696,6 +703,11 @@ export default function CustomStyleMenu({
                                   updateMapping(index, "input", e.value[0])
                                 }
                                 size="sm"
+                                positioning={{
+                                  strategy: "fixed",
+                                  hideWhenDetached: true,
+                                  sameWidth: true,
+                                }}
                               >
                                 <Select.HiddenSelect />
                                 <Select.Control>
@@ -706,36 +718,31 @@ export default function CustomStyleMenu({
                                     <Select.Indicator />
                                   </Select.IndicatorGroup>
                                 </Select.Control>
-                                <Portal>
-                                  <Select.Positioner>
-                                    <Select.Content
-                                      maxH="200px"
-                                      overflowY="auto"
-                                    >
-                                      {inputOptions.items.map((option) => (
-                                        <Select.Item
-                                          item={option}
-                                          key={option.value}
-                                        >
-                                          <Stack>
-                                            <Select.ItemText>
-                                              {option.label}
-                                            </Select.ItemText>
-                                            {option.description && (
-                                              <Span
-                                                color="fg.muted"
-                                                textStyle="xs"
-                                              >
-                                                {option.description}
-                                              </Span>
-                                            )}
-                                          </Stack>
-                                          <Select.ItemIndicator />
-                                        </Select.Item>
-                                      ))}
-                                    </Select.Content>
-                                  </Select.Positioner>
-                                </Portal>
+                                <Select.Positioner>
+                                  <Select.Content maxH="200px" overflowY="auto">
+                                    {inputOptions.items.map((option) => (
+                                      <Select.Item
+                                        item={option}
+                                        key={option.value}
+                                      >
+                                        <Stack>
+                                          <Select.ItemText>
+                                            {option.label}
+                                          </Select.ItemText>
+                                          {option.description && (
+                                            <Span
+                                              color="fg.muted"
+                                              textStyle="xs"
+                                            >
+                                              {option.description}
+                                            </Span>
+                                          )}
+                                        </Stack>
+                                        <Select.ItemIndicator />
+                                      </Select.Item>
+                                    ))}
+                                  </Select.Content>
+                                </Select.Positioner>
                               </Select.Root>
                             </Field.Root>
 
@@ -758,6 +765,11 @@ export default function CustomStyleMenu({
                                   updateMapping(index, "output", e.value[0])
                                 }
                                 size="sm"
+                                positioning={{
+                                  strategy: "fixed",
+                                  hideWhenDetached: true,
+                                  sameWidth: true,
+                                }}
                               >
                                 <Select.HiddenSelect />
                                 <Select.Control>
@@ -768,61 +780,55 @@ export default function CustomStyleMenu({
                                     <Select.Indicator />
                                   </Select.IndicatorGroup>
                                 </Select.Control>
-                                <Portal>
-                                  <Select.Positioner>
-                                    <Select.Content
-                                      maxH="200px"
-                                      overflowY="auto"
-                                    >
-                                      {outputOptions.items.map((option) => {
-                                        const selectedOutputs =
-                                          parameterMappings
-                                            .filter((_, i) => i !== index)
-                                            .map((m) => m.output);
+                                <Select.Positioner>
+                                  <Select.Content maxH="200px" overflowY="auto">
+                                    {outputOptions.items.map((option) => {
+                                      const selectedOutputs = parameterMappings
+                                        .filter((_, i) => i !== index)
+                                        .map((m) => m.output);
 
-                                        // Disable outputs that are already selected
-                                        const isUsedElsewhere =
+                                      // Disable outputs that are already selected
+                                      const isUsedElsewhere =
+                                        selectedOutputs.includes(option.value);
+
+                                      // Disable 'pan' if Azimuth is selected and vice versa (both spatial parameters)
+                                      const isSpatialConflict =
+                                        (option.value === "Pan" &&
                                           selectedOutputs.includes(
-                                            option.value,
-                                          );
+                                            "Azimuth",
+                                          )) ||
+                                        (option.value === "Azimuth" &&
+                                          selectedOutputs.includes("Pan"));
 
-                                        // Disable 'pan' if Azimuth is selected and vice versa (both spatial parameters)
-                                        const isSpatialConflict =
-                                          (option.value === "Pan" &&
-                                            selectedOutputs.includes(
-                                              "Azimuth",
-                                            )) ||
-                                          (option.value === "Azimuth" &&
-                                            selectedOutputs.includes("Pan"));
-
-                                        return (
-                                          <Select.Item
-                                            item={{
-                                              ...option,
-                                              disabled: isUsedElsewhere || isSpatialConflict,
-                                            }}
-                                            key={option.value}
-                                          >
-                                            <Stack gap="0">
-                                              <Select.ItemText>
-                                                {option.label}
-                                              </Select.ItemText>
-                                              {option.description && (
-                                                <Span
-                                                  color="fg.muted"
-                                                  textStyle="xs"
-                                                >
-                                                  {option.description}
-                                                </Span>
-                                              )}
-                                            </Stack>
-                                            <Select.ItemIndicator />
-                                          </Select.Item>
-                                        );
-                                      })}
-                                    </Select.Content>
-                                  </Select.Positioner>
-                                </Portal>
+                                      return (
+                                        <Select.Item
+                                          item={{
+                                            ...option,
+                                            disabled:
+                                              isUsedElsewhere ||
+                                              isSpatialConflict,
+                                          }}
+                                          key={option.value}
+                                        >
+                                          <Stack gap="0">
+                                            <Select.ItemText>
+                                              {option.label}
+                                            </Select.ItemText>
+                                            {option.description && (
+                                              <Span
+                                                color="fg.muted"
+                                                textStyle="xs"
+                                              >
+                                                {option.description}
+                                              </Span>
+                                            )}
+                                          </Stack>
+                                          <Select.ItemIndicator />
+                                        </Select.Item>
+                                      );
+                                    })}
+                                  </Select.Content>
+                                </Select.Positioner>
                               </Select.Root>
                             </Field.Root>
                             <Tooltip content="Remove Mapping">
@@ -869,6 +875,7 @@ export default function CustomStyleMenu({
                                   <HStack gap={10}>
                                     <HStack>
                                       <NumberInput.Root
+                                        aria-label={`${mapping.output} range minimum`}
                                         value={
                                           mapping.output_range?.[0]?.toString() ??
                                           "0"
@@ -892,11 +899,15 @@ export default function CustomStyleMenu({
                                         size="sm"
                                         width="80px"
                                       >
-                                        <NumberInput.Input placeholder="0" />
+                                        <NumberInput.Input
+                                          placeholder="0"
+                                          aria-valuetext={`${(mapping.output_range?.[0] ?? 0).toFixed(2)}`}
+                                        />
                                         <NumberInput.Control />
                                       </NumberInput.Root>
                                       <Text fontSize="sm">–</Text>
                                       <NumberInput.Root
+                                        aria-label={`${mapping.output} range maximum`}
                                         value={
                                           mapping.output_range?.[1]?.toString() ??
                                           "1"
@@ -920,7 +931,10 @@ export default function CustomStyleMenu({
                                         size="sm"
                                         width="80px"
                                       >
-                                        <NumberInput.Input placeholder="1" />
+                                        <NumberInput.Input
+                                          placeholder="1"
+                                          aria-valuetext={`${(mapping.output_range?.[1] ?? 1).toFixed(2)}`}
+                                        />
                                         <NumberInput.Control />
                                       </NumberInput.Root>
                                     </HStack>
@@ -1018,6 +1032,11 @@ export default function CustomStyleMenu({
 
               <Select.Root
                 size="sm"
+                positioning={{
+                  strategy: "fixed",
+                  hideWhenDetached: true,
+                  sameWidth: true,
+                }}
                 collection={soundOptions}
                 value={[sound.name]}
                 onValueChange={(e) => {
@@ -1044,18 +1063,16 @@ export default function CustomStyleMenu({
                     <Select.Indicator />
                   </Select.IndicatorGroup>
                 </Select.Control>
-                <Portal>
-                  <Select.Positioner>
-                    <Select.Content maxH="200px">
-                      {soundOptions.items.map((option) => (
-                        <Select.Item item={option} key={option.value}>
-                          {option.label}
-                          <Select.ItemIndicator />
-                        </Select.Item>
-                      ))}
-                    </Select.Content>
-                  </Select.Positioner>
-                </Portal>
+                <Select.Positioner>
+                  <Select.Content maxH="200px">
+                    {soundOptions.items.map((option) => (
+                      <Select.Item item={option} key={option.value}>
+                        {option.label}
+                        <Select.ItemIndicator />
+                      </Select.Item>
+                    ))}
+                  </Select.Content>
+                </Select.Positioner>
               </Select.Root>
 
               {sound.composable && (
@@ -1065,6 +1082,11 @@ export default function CustomStyleMenu({
                       collection={rootNoteOptions}
                       value={[rootNote]}
                       size="sm"
+                      positioning={{
+                        strategy: "fixed",
+                        hideWhenDetached: true,
+                        sameWidth: true,
+                      }}
                       onValueChange={(e) => {
                         setRootNote(e.value[0]);
                       }}
@@ -1079,23 +1101,26 @@ export default function CustomStyleMenu({
                           <Select.Indicator />
                         </Select.IndicatorGroup>
                       </Select.Control>
-                      <Portal>
-                        <Select.Positioner>
-                          <Select.Content maxH="200px">
-                            {rootNoteOptions.items.map((option) => (
-                              <Select.Item item={option} key={option.value}>
-                                {option.label}
-                                <Select.ItemIndicator />
-                              </Select.Item>
-                            ))}
-                          </Select.Content>
-                        </Select.Positioner>
-                      </Portal>
+                      <Select.Positioner>
+                        <Select.Content maxH="200px">
+                          {rootNoteOptions.items.map((option) => (
+                            <Select.Item item={option} key={option.value}>
+                              {option.label}
+                              <Select.ItemIndicator />
+                            </Select.Item>
+                          ))}
+                        </Select.Content>
+                      </Select.Positioner>
                     </Select.Root>
 
                     <Select.Root
                       collection={harmonyOptions}
                       size="sm"
+                      positioning={{
+                        strategy: "fixed",
+                        hideWhenDetached: true,
+                        sameWidth: true,
+                      }}
                       value={[harmony]}
                       onValueChange={(e) => {
                         setHarmony(e.value[0]);
@@ -1111,33 +1136,31 @@ export default function CustomStyleMenu({
                           <Select.Indicator />
                         </Select.IndicatorGroup>
                       </Select.Control>
-                      <Portal>
-                        <Select.Positioner>
-                          <Select.Content maxH="200px">
-                            {harmonyCategories.map(([category, items]) => (
-                              <Select.ItemGroup key={category}>
-                                <Select.ItemGroupLabel
-                                  fontWeight="bold"
-                                  fontSize="xs"
-                                  color="teal.500"
-                                  textTransform="uppercase"
-                                  letterSpacing="widest"
-                                  pt={2}
-                                  pb={1}
-                                >
-                                  {category}
-                                </Select.ItemGroupLabel>
-                                {items.map((item) => (
-                                  <Select.Item item={item} key={item.value}>
-                                    {item.label}
-                                    <Select.ItemIndicator />
-                                  </Select.Item>
-                                ))}
-                              </Select.ItemGroup>
-                            ))}
-                          </Select.Content>
-                        </Select.Positioner>
-                      </Portal>
+                      <Select.Positioner>
+                        <Select.Content maxH="200px">
+                          {harmonyCategories.map(([category, items]) => (
+                            <Select.ItemGroup key={category}>
+                              <Select.ItemGroupLabel
+                                fontWeight="bold"
+                                fontSize="xs"
+                                color="teal.500"
+                                textTransform="uppercase"
+                                letterSpacing="widest"
+                                pt={2}
+                                pb={1}
+                              >
+                                {category}
+                              </Select.ItemGroupLabel>
+                              {items.map((item) => (
+                                <Select.Item item={item} key={item.value}>
+                                  {item.label}
+                                  <Select.ItemIndicator />
+                                </Select.Item>
+                              ))}
+                            </Select.ItemGroup>
+                          ))}
+                        </Select.Content>
+                      </Select.Positioner>
                     </Select.Root>
                     <Tooltip content="Randomise harmony">
                       <IconButton

@@ -555,16 +555,7 @@ export default function Lightcurves() {
                 _hover={{ transform: "scale(1.05)" }}
                 transition="transform 0.2s ease"
                 cursor="pointer"
-                tabIndex={0}
-                role="button"
-                aria-label={`Sonify ${star.name}: ${star.description}`}
                 onClick={() => handleClickSuggested(star)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleClickSuggested(star);
-                  }
-                }}
               >
                 <Box position="relative" bg="black" borderRadius="8px">
                   <img
@@ -584,13 +575,13 @@ export default function Lightcurves() {
                     left="0.5rem"
                     zIndex={10}
                     onClick={(e) => {
-                      e.stopPropagation(); // prevent the card click
+                      e.stopPropagation();
                       handleClickPlot(star);
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
-                        e.stopPropagation(); // prevent the card's keyboard handler
+                        e.stopPropagation();
                         handleClickPlot(star);
                       }
                     }}
@@ -598,6 +589,7 @@ export default function Lightcurves() {
                     <Tooltip content="View plot">
                       <Button
                         size="xs"
+                        tabIndex={0}
                         aria-label={`View plot for ${star.name}`}
                       >
                         <LuChartSpline />
@@ -605,7 +597,19 @@ export default function Lightcurves() {
                     </Tooltip>
                   </Box>
                 </Box>
-                <Card.Body>
+
+                <Card.Body
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Sonify ${star.name}: ${star.description}`}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleClickSuggested(star);
+                    }
+                  }}
+                  mb="2"
+                >
                   <Card.Title mb="2">{star.name}</Card.Title>
                   <Card.Description>{star.description}</Card.Description>
                 </Card.Body>

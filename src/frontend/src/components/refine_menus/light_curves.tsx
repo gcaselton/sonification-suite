@@ -1,34 +1,26 @@
 import {
   Box,
   Button,
-  createListCollection,
-  Checkbox,
   Code,
-  Field,
-  Heading,
   Image,
-  Input,
   Text,
-  Flex,
   NumberInput,
   VStack,
   Stack,
-  Select,
   Slider,
   Skeleton,
   HStack
 } from "@chakra-ui/react";
 import { RefineMenuProps } from "./RefineMenu";
-import React, { useState, useEffect } from "react";
-import { useLocation } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback } from "react";
 import LoadingMessage from "../ui/LoadingMessage";
 import ErrorMsg from "../ui/ErrorMsg";
-import { apiUrl, lightCurvesAPI, coreAPI } from "../../apiConfig";
+import { lightCurvesAPI } from "../../apiConfig";
 import { apiRequest } from "../../utils/requests";
 import { InfoTip } from "../ui/ToggleTip";
 import { LuArrowRight } from "react-icons/lu";
 import { plotData } from "../../utils/plot";
-import Sonify from "../pages/Sonify";
+import { debounce } from "es-toolkit";
 
 export default function LightCurves({ dataName, dataRef, onApply }: RefineMenuProps) {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
@@ -111,28 +103,42 @@ export default function LightCurves({ dataName, dataRef, onApply }: RefineMenuPr
   
 
   // preview function
-  const fetchPreviewPlot = async (range: [number, number] | null, sigmaVal: number) => {
-    if (!range) return;
-    setImageLoading(true);
+  const fetchPreviewPlot = useCallback(
+    async (range: [number, number] | null, sigmaVal: number) => {
+      if (!range) return;
+      setImageLoading(true);
 
-    const endpoint = `${lightCurvesAPI}/preview-refined/`;
-    const payload = {
-      data_name: dataName,
-      file_ref: dataRef,
-      new_range: range,
-      sigma: sigmaVal,
+      const endpoint = `${lightCurvesAPI}/preview-refined/`;
+      const payload = {
+        data_name: dataName,
+        file_ref: dataRef,
+        new_range: range,
+        sigma: sigmaVal,
+      };
+
+      try {
+        const result = await apiRequest(endpoint, payload);
+        setImageSrc(`data:image/svg+xml;base64,${result.image}`);
+      } catch (err) {
+        console.error("Error previewing plot:", err);
+      } finally {
+        setImageLoading(false);
+      }
+    },
+    [dataName, dataRef],
+  );
+
+  // Wrapper which delays fetching the plot by 300ms - this prevents spamming the backend every time a slider moves
+  const debouncedFetchPreviewPlot = useMemo(
+    () => debounce(fetchPreviewPlot, 300),
+    [fetchPreviewPlot],
+  );
+
+  useEffect(() => {
+    return () => {
+      debouncedFetchPreviewPlot.cancel();
     };
-
-    try {
-      const result = await apiRequest(endpoint, payload);
-      setImageSrc(`data:image/svg+xml;base64,${result.image}`);
-    } catch (err) {
-      console.error("Error previewing plot:", err);
-    } finally {
-      setImageLoading(false);
-    }
-  };
-
+  }, [debouncedFetchPreviewPlot]);
 
   const handleClickApply = async () => {
 
@@ -179,8 +185,6 @@ export default function LightCurves({ dataName, dataRef, onApply }: RefineMenuPr
           {!slidersLoading && cropRange && cropValues ? (
             <VStack>
               <HStack align="center">
-                <Text textStyle="md">Trim start</Text>
-
                 <NumberInput.Root
                   value={startText}
                   min={cropRange[0]}
@@ -201,11 +205,11 @@ export default function LightCurves({ dataName, dataRef, onApply }: RefineMenuPr
                     }
                   }}
                 >
-                  <NumberInput.Input />
+                  <HStack>
+                    <NumberInput.Label whiteSpace='nowrap'>Trim start</NumberInput.Label>
+                    <NumberInput.Input aria-valuetext={startText} />
+                  </HStack>
                 </NumberInput.Root>
-
-                <Text textStyle="md">and end</Text>
-
                 <NumberInput.Root
                   value={endText}
                   min={cropValues[0]}
@@ -226,7 +230,10 @@ export default function LightCurves({ dataName, dataRef, onApply }: RefineMenuPr
                     }
                   }}
                 >
-                  <NumberInput.Input />
+                  <HStack>
+                    <NumberInput.Label whiteSpace='nowrap'>and end</NumberInput.Label>
+                    <NumberInput.Input aria-valuetext={endText} />
+                  </HStack>
                 </NumberInput.Root>
 
                 <Text textStyle="md">points</Text>
@@ -244,9 +251,7 @@ export default function LightCurves({ dataName, dataRef, onApply }: RefineMenuPr
                   setCropValues(e.value as [number, number]);
                   setStartText(String(e.value[0]));
                   setEndText(String(e.value[1]));
-                }}
-                onValueChangeEnd={(e) => {
-                  fetchPreviewPlot(e.value as [number, number], sigma); // only runs on mouse release
+                  debouncedFetchPreviewPlot(e.value as [number, number], sigma);
                 }}
               >
                 <Slider.Control>
@@ -273,9 +278,7 @@ export default function LightCurves({ dataName, dataRef, onApply }: RefineMenuPr
               animation="fade-in 300ms ease-out"
               onValueChange={(e) => {
                 setSigma(e.value[0]);
-              }}
-              onValueChangeEnd={(e) => {
-                fetchPreviewPlot(cropValues, e.value[0]);
+                debouncedFetchPreviewPlot(cropValues, e.value[0]);
               }}
             >
               <HStack>

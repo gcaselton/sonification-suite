@@ -14,10 +14,8 @@ from light_curves import router as light_curve_router
 from constellations import router as constellations_router
 from night_sky import router as night_sky_router
 from core import router as core_router
-from settings import router as settings_router
 from paths import SYNTHS_DIR, SAMPLES_DIR, TMP_DIR, ROOT_DIR
 from contextlib import asynccontextmanager
-from config import GITHUB_USER, GITHUB_REPO
 from StorageManager import StorageManager
 from context import session_id_var
 from datetime import datetime
@@ -122,7 +120,7 @@ async def session_middleware(request: Request, call_next):
 
 
 # Import API endpoints
-for router in [light_curve_router, constellations_router, night_sky_router, core_router, settings_router]:
+for router in [light_curve_router, constellations_router, night_sky_router, core_router]:
     app.include_router(router)
 
 @app.get("/")

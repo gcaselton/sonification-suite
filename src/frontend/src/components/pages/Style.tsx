@@ -134,24 +134,17 @@ export default function Style() {
           return (
             <Box
               key={style.name}
-              onClick={(e) => {
+              onClick={() => {
                 handleClick(style);
               }}
-              style={{ cursor: "pointer", width: 200 }}
-              tabIndex={0}
-              role="button"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  handleClick(style);
-                }
-              }}
+              style={{ cursor: "pointer", width: 250 }}
             >
               <StyleCard
                 title={style.name}
                 description={style.description}
                 gradientClass={gradientClass}
                 isCustom={style.name === "Custom"}
+                onActivate={() => handleClick(style)}
               />
             </Box>
           );

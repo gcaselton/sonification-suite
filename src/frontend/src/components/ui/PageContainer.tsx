@@ -66,7 +66,7 @@ export default function PageContainer({
             display={{ base: "none", md: "flex" }}
           >
             <Flex align="center" gap={2} wrap="wrap">
-              <NavLink to="/">
+              <NavLink to="/" aria-label="Go to landing page">
                 <Text
                   fontSize="lg"
                   cursor="pointer"
@@ -82,7 +82,7 @@ export default function PageContainer({
 
               <Text opacity={0.35}>/</Text>
 
-              <NavLink to="/planetaria">
+              <NavLink to="/planetaria" aria-label="Go to Planetaria home page">
                 <Text
                   fontSize="lg"
                   opacity={0.6}
@@ -100,6 +100,7 @@ export default function PageContainer({
                 style={{ textDecoration: "none" }}
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Go to about page in new tab"
               >
                 <HStack
                   opacity={0.5}
@@ -119,6 +120,7 @@ export default function PageContainer({
                 style={{ textDecoration: "none" }}
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Go to help page in new tab"
               >
                 <HStack
                   opacity={0.5}
@@ -155,6 +157,7 @@ export default function PageContainer({
         opacity={0.5}
       >
         <Text
+          aria-label="Open software license"
           fontSize="xs"
           as="button"
           cursor="pointer"
@@ -166,6 +169,7 @@ export default function PageContainer({
         <Text fontSize="xs">
           Powered by{" "}
           <Link
+            aria-label='Go to STRAUSS repository on GitHub'
             href="https://github.com/james-trayford/strauss"
             colorPalette="teal"
             target="_blank"

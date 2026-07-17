@@ -330,7 +330,7 @@ export default function Sonify() {
                     max={defaults.max_length}
                   >
                     <NumberInput.Control />
-                    <NumberInput.Input />
+                    <NumberInput.Input aria-valuetext={`${length} seconds`} />
                   </NumberInput.Root>
                   {Number(length) > 30 && Number(length) <= 120 && (
                     <Field.HelperText>
@@ -358,7 +358,7 @@ export default function Sonify() {
                       </HStack>
 
                       <NumberInput.Root
-                        value={String(daysPerSec)}
+                        value={daysPerSec}
                         onValueChange={(e) => {
                           handleDaysPerSecChange(e.value);
                         }}
@@ -367,7 +367,9 @@ export default function Sonify() {
                         max={totalDays}
                       >
                         <NumberInput.Control />
-                        <NumberInput.Input />
+                        <NumberInput.Input
+                          aria-valuetext={`${daysPerSec} days per second`}
+                        />
                       </NumberInput.Root>
                     </Field.Root>
                   </>

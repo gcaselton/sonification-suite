@@ -157,8 +157,8 @@ export default function Constellations({
       justify="center"
       direction={{ base: "column", md: "row" }}
     >
-      <Box flex='1'>
-        <VStack align="center" justify="center" gap={{md: "10"}} w="auto">
+      <Box flex="1">
+        <VStack align="center" justify="center" gap={{ md: "10" }} w="auto">
           <RadioCard.Root
             value={filterType}
             colorPalette="teal"
@@ -201,10 +201,14 @@ export default function Constellations({
                     inputMode="numeric"
                   >
                     <NumberInput.Control />
-                    <NumberInput.Input />
+                    <NumberInput.Input aria-valuetext={`${nStars} stars`} />
                   </NumberInput.Root>
-                  { (Number(nStars) > 100) &&
-                    <Field.HelperText>Warning: Sonification may take significantly longer to generate for large numbers of stars</Field.HelperText>}
+                  {Number(nStars) > 100 && (
+                    <Field.HelperText>
+                      Warning: Sonification may take significantly longer to
+                      generate for large numbers of stars
+                    </Field.HelperText>
+                  )}
                 </Field.Root>
               </HStack>
             </Collapsible.Content>
@@ -223,7 +227,7 @@ export default function Constellations({
         </VStack>
       </Box>
 
-      <Box flex='1'>
+      <Box flex="1">
         {imageLoading ? (
           <LoadingMessage msg="" icon="pulsar" />
         ) : imageSrc ? (
@@ -231,7 +235,7 @@ export default function Constellations({
             src={imageSrc}
             alt={`A plot of the ${nStars} brightest stars in ${dataName}.`}
             animation="fade-in 300ms ease-out"
-            rounded='md'
+            rounded="md"
           />
         ) : (
           <ErrorMsg message="Unable to plot data." />
