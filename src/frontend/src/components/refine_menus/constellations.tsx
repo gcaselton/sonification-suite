@@ -200,7 +200,6 @@ export default function Constellations({
                     }}
                     inputMode="numeric"
                   >
-                    <NumberInput.Control />
                     <NumberInput.Input aria-valuetext={`${nStars} stars`} />
                   </NumberInput.Root>
                   {Number(nStars) > 100 && (

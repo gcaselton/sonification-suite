@@ -175,7 +175,7 @@ export default function Lightcurves() {
       },
     };
 
-    const url_search = `${lightCurvesAPI}/search-lightcurves`;
+    const url_search = `${lightCurvesAPI}/search-lightcurves/`;
     const data = {
       star_name: selectedStar,
       filters: filters,
@@ -189,10 +189,6 @@ export default function Lightcurves() {
       setLightcurves(response.results);
       setRa(response.ra);
       setDec(response.dec);
-      console.log("ra: " + response.ra);
-      console.log("dec: " + response.dec);
-
-      console.log("Search results:", response.results);
     } catch (error: any) {
       console.log(error.name);
 
@@ -223,7 +219,6 @@ export default function Lightcurves() {
     const data = { data_uri: dataURI };
     try {
       const result = await apiRequest(url_selectlightcurve, data);
-      console.log("Select Lightcurve API response:", result);
       return result.file_ref;
     } catch (error) {
       console.error("Error fetching sonification:", error);
@@ -655,18 +650,30 @@ export default function Lightcurves() {
       )}
       {lightcurves.length > 0 && !loading && (
         <>
-          <Heading>Search results for {searchTerm}:</Heading>
+          <Heading>Search results for {searchTerm}</Heading>
           <br />
-          <Table.Root size="sm" interactive>
+          <Table.Root size="md" interactive stickyHeader>
             <Table.Header>
               <Table.Row>
-                <Table.ColumnHeader>Mission</Table.ColumnHeader>
-                <Table.ColumnHeader>Exposure</Table.ColumnHeader>
-                <Table.ColumnHeader>Pipeline</Table.ColumnHeader>
-                <Table.ColumnHeader>Year</Table.ColumnHeader>
-                <Table.ColumnHeader>Period</Table.ColumnHeader>
-                <Table.ColumnHeader></Table.ColumnHeader>
-                <Table.ColumnHeader></Table.ColumnHeader>
+                <Table.ColumnHeader fontWeight="bold">
+                  Mission
+                </Table.ColumnHeader>
+                <Table.ColumnHeader fontWeight="bold">
+                  Exposure
+                </Table.ColumnHeader>
+                <Table.ColumnHeader fontWeight="bold">
+                  Pipeline
+                </Table.ColumnHeader>
+                <Table.ColumnHeader fontWeight="bold">
+                  Year</Table.ColumnHeader>
+                <Table.ColumnHeader fontWeight="bold">
+                  Period
+                </Table.ColumnHeader>
+                <Table.ColumnHeader fontWeight="bold">
+                  Plot</Table.ColumnHeader>
+                <Table.ColumnHeader fontWeight="bold">
+                  Sonify
+                </Table.ColumnHeader>
               </Table.Row>
             </Table.Header>
             <Table.Body>

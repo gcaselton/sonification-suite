@@ -329,7 +329,7 @@ export default function Sonify() {
                     min={1}
                     max={defaults.max_length}
                   >
-                    <NumberInput.Control />
+                 
                     <NumberInput.Input aria-valuetext={`${length} seconds`} />
                   </NumberInput.Root>
                   {Number(length) > 30 && Number(length) <= 120 && (
@@ -366,7 +366,6 @@ export default function Sonify() {
                         min={0}
                         max={totalDays}
                       >
-                        <NumberInput.Control />
                         <NumberInput.Input
                           aria-valuetext={`${daysPerSec} days per second`}
                         />

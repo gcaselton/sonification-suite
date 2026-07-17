@@ -605,6 +605,9 @@ export default function CustomStyleMenu({
     setApplyLoading(false);
   };
 
+  // Round to 2 decimal places
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+
   return (
     <Dialog.Root
       open={open}
@@ -674,6 +677,7 @@ export default function CustomStyleMenu({
                       </Alert.Description>
                     </Alert.Content>
                     <CloseButton
+                      aria-label="close help tag"
                       variant="subtle"
                       size="2xs"
                       my="auto"
@@ -880,30 +884,30 @@ export default function CustomStyleMenu({
                                           mapping.output_range?.[0]?.toString() ??
                                           "0"
                                         }
-                                        onValueChange={(e) =>
+                                        onValueChange={(e) => {
+                                          const n = parseFloat(e.value);
+                                          if (Number.isNaN(n)) return; // don't commit while the field is empty/mid-edit
                                           updateMapping(index, "output_range", [
-                                            Math.min(
-                                              parseFloat(e.value),
+                                            round2(Math.min(
+                                              n,
                                               (mapping.output_range?.[1] ?? 1) -
                                                 0.01,
-                                            ),
+                                            )),
                                             mapping.output_range?.[1] ?? 1,
-                                          ])
-                                        }
+                                          ]);
+                                        }}
                                         min={0}
                                         max={
                                           (mapping.output_range?.[1] ?? 1) -
                                           0.01
                                         }
-                                        step={0.1}
                                         size="sm"
                                         width="80px"
                                       >
                                         <NumberInput.Input
                                           placeholder="0"
-                                          aria-valuetext={`${(mapping.output_range?.[0] ?? 0).toFixed(2)}`}
+                                          aria-valuetext={`${(mapping.output_range?.[0] ?? 0)}`}
                                         />
-                                        <NumberInput.Control />
                                       </NumberInput.Root>
                                       <Text fontSize="sm">–</Text>
                                       <NumberInput.Root
@@ -912,30 +916,30 @@ export default function CustomStyleMenu({
                                           mapping.output_range?.[1]?.toString() ??
                                           "1"
                                         }
-                                        onValueChange={(e) =>
+                                        onValueChange={(e) => {
+                                          const n = parseFloat(e.value);
+                                          if (Number.isNaN(n)) return;
                                           updateMapping(index, "output_range", [
                                             mapping.output_range?.[0] ?? 0,
-                                            Math.max(
-                                              parseFloat(e.value),
+                                            round2(Math.max(
+                                              n,
                                               (mapping.output_range?.[0] ?? 0) +
                                                 0.01,
-                                            ),
-                                          ])
-                                        }
+                                            )),
+                                          ]);
+                                        }}
                                         min={
                                           (mapping.output_range?.[0] ?? 0) +
                                           0.01
                                         }
                                         max={1}
-                                        step={0.1}
                                         size="sm"
                                         width="80px"
                                       >
                                         <NumberInput.Input
                                           placeholder="1"
-                                          aria-valuetext={`${(mapping.output_range?.[1] ?? 1).toFixed(2)}`}
+                                          aria-valuetext={`${(mapping.output_range?.[1] ?? 1)}`}
                                         />
-                                        <NumberInput.Control />
                                       </NumberInput.Root>
                                     </HStack>
 
