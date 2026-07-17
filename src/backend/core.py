@@ -1,15 +1,15 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Cookie, Response, Request
 from fastapi.responses import FileResponse
-from extensions import sonify
 from pathlib import Path
-from paths import TMP_DIR, STYLE_FILES_DIR, SUGGESTED_DATA_DIR, SAMPLES_DIR, HYG_DATA
-from sounds import all_sounds, online_sounds, local_sounds, asset_cache, format_name
-from config import GITHUB_USER, GITHUB_REPO
+from paths import TMP_DIR, STYLE_FILES_DIR, SUGGESTED_DATA_DIR, SYNTHS_DIR, SAMPLES_DIR
 from context import session_id_var
-from utils import resolve_file, is_number
-from request_models import DataRequest, SoundRequest, CustomStyleSettings, SonificationRequest
-import logging, httpx, yaml, os, uuid, aiofiles, zipfile, traceback, base64, gc
+from utils import resolve_file, is_number, read_YAML_file, write_YAML_file, is_synth, write_sound_to_style
+from generator_mods import GENERATOR_MODS
+from request_models import DataRequest, CustomStyleSettings, SonificationRequest, SoundInfo
+import logging, yaml, os, uuid, traceback, base64, gc, re
 from param_descriptions import INPUTS, OUTPUTS
+from night_sky import handle_observer
+from strauss import AudioFigure
 
 import numpy as np
 import pandas as pd
@@ -19,6 +19,7 @@ from matplotlib.figure import Figure
 from scipy.io import wavfile
 from scipy.signal import spectrogram, resample_poly
 from io import BytesIO
+import lightkurve as lk
 from astropy.io import fits
 from astropy.table import Table
 
@@ -76,19 +77,66 @@ def get_uploads_dir_size(uploads_dir: str) -> int:
         LOG.warning("Could not calculate session size: %s", e)
         return 0
 
+
 @router.post('/generate-sonification/')
 def generate_sonification(request: SonificationRequest):
+    
+    if int(request.duration) > 300:
+        raise HTTPException(status_code=400, detail="Sonification too long, maximum length = 5 minutes.")
         
     # Resolve data and style file names to actual paths in backend
     data_filepath = resolve_file(request.data_ref)
     style_filepath = resolve_file(request.style_ref)
-
-    if int(request.duration) > 300:
-        raise HTTPException(status_code=400, detail="Sonification too long, maximum length = 5 minutes.")
-
+    
     try:
         
-        soni, alt_az = sonify(data_filepath, style_filepath, request.category, request.duration, request.system, request.observer)
+        # First, replace base sound name with filepath to the sound
+        updated_style = str(write_sound_to_style(style_filepath))
+        
+        # Next, determine data format (CSV, .fits) and convert to DataFrame
+        data_type = data_filepath.suffix.lower()
+        
+        if data_type == '.fits':
+                lc = lk.read(str(data_filepath))
+                time = lc.time.value
+                flux = lc.flux.value
+                
+                df = pd.DataFrame({
+                    "time": np.asarray(time, dtype=np.float64),
+                    "flux": np.asarray(flux, dtype=np.float64)
+                })
+                
+                # Interpolate across NaNs for light curves, and fill in empty start and end values
+                df['flux'] = df['flux'].interpolate().bfill().ffill()
+                
+        elif data_type == '.csv':
+                df = pd.read_csv(str(data_filepath))
+        else:
+                raise ValueError(f'{data_type} file type not suitable for sonification, please use .csv or .fits.')
+        
+        
+        # Build dict with keyword arguments for sonification function
+        kwargs = {
+            'duration': request.duration,
+            'style': updated_style
+        }
+        
+        # Handle case that 'Place on Dome' feature is used
+        if request.observer:
+            position_info = handle_observer(request.observer)
+            
+            # Add fixed values to kwargs
+            for param in ['azimuth', 'polar']:
+                kwargs[f'fix_{param}'] = position_info['STRAUSS_inputs'][param]
+            
+            # Get altitude and azimuth values in degrees to send to the frontend to display    
+            alt_az = [position_info['display_values'][value] for value in ['altitude', 'azimuth']]
+        else:
+            alt_az = None
+        
+        # Initialise an AudioFigure and sonify
+        fig = AudioFigure(system=request.system)
+        fig.sonify(df, **kwargs)
 
         session_id = session_id_var.get()
 
@@ -99,7 +147,7 @@ def generate_sonification(request: SonificationRequest):
         ext = '.wav'
         filename = f'{request.data_name} {category}{ext}'
         filepath = TMP_DIR / session_id / filename
-        soni.save(filepath, master_volume=MASTER_VOL)
+        fig.save(filepath)
 
         file_ref = f'session:{filename}'
 
@@ -534,51 +582,91 @@ def get_styles(category: str):
 
     return styles
 
+def get_sounds():
+      
+    local_sounds = []
+    
+    for f in SYNTHS_DIR.iterdir():
+        if f.is_file():
+            composable = f.stem != 'White Noise'
+            data_modes = ['continuous', 'discrete']
+            sound = SoundInfo(name=f.stem, composable=composable, data_modes=data_modes)
+            local_sounds.append(sound)
+            
+    # List of sound names that are only suitable for Events (discrete) sonifications
+    SHORT_SAMPLES = ['Glockenspiel', 'Mallets', 'Harp']
+
+    for f in SAMPLES_DIR.iterdir():
+        if f.is_dir():
+            name = f.stem
+    
+            files = [file for file in f.iterdir() if file.is_file()]
+
+            # Composable if:
+            # 1) The directory contains a .sf2 file
+            # 2) OR the directory contains multiple files
+            composable = (
+                any(file.suffix == ".sf2" for file in files)
+                or len(files) > 1
+            )
+
+            # We are essentially hardcoding which sounds are suitable for Events vs Objects,
+            # so if more sounds are added in the future, this categorisation may need to change.
+            data_modes = ['discrete'] if name in SHORT_SAMPLES else ['continuous']
+          
+            sound = SoundInfo(name=name, composable=composable, data_modes=data_modes)
+            local_sounds.append(sound)
+      
+    return local_sounds
+
 @router.get('/sound_info/')
 def get_sound_info():
-    return all_sounds()
+    return get_sounds()
 
-@router.post('/preview-style-settings/{category}')
-def preview_style_settings(request: DataRequest, category: str):
+@router.post('/preview-style-settings/')
+def preview_style_settings(request: DataRequest):
 
+    # Resolve style ref to path and swap sound name for full filepath
     style = resolve_file(request.file_ref)
+    style_dict = write_sound_to_style(style, write_to_yml=False)
     
-    duration = 5
-
-    if category == 'light_curves':
-        
-        n_samples = 100
-        cycles = 2
-
-        x = np.linspace(0, duration, n_samples, endpoint=False)
-        freq = cycles / duration
-
-        # Generate sine wave for light curve-like data
-        y = np.sin(2 * np.pi * freq * x)
-        
-        data = (x, y)
-    else:
-        data = SUGGESTED_DATA_DIR / category / 'preview.csv'
+    # Generate synthetic data for previews
+    N = 100 if style_dict["sources"] == "objects" else 50
     
+    args = []
+    
+    for mapping in style_dict["map"]:
+        output = mapping["output"]
+
+        if output in ["time", "time_evo"]:
+            # Use linear function for time
+            args.append(np.linspace(0, 1, N))
+        else:
+            # Sine wave for all other parameters 
+            x = np.linspace(0, np.pi, N) 
+            args.append(np.sin(x))
+    
+    style_file = str(write_YAML_file(style_dict))
 
     try:
-    
-        soni, alt_az = sonify(data, style, category, length=5,  system='mono')
+        fig = AudioFigure()
+        fig.sonify(*args, style=style_file, duration=5)
 
         id = str(uuid.uuid4().hex)
         ext = '.wav'
-        filename = f'{category}_{id}{ext}'
+        filename = f'preview_{id}{ext}'
         session_id = session_id_var.get()
         filepath = os.path.join(TMP_DIR, session_id, filename)
-        soni.save(filepath, master_volume=MASTER_VOL)
+        fig.save(filepath)
 
         file_ref = f'session:{filename}'
 
         return {'file_ref': file_ref}
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    except Exception:
+        traceback.print_exc()
+        raise
     
-@router.post('/save-sound-settings/')
+@router.post('/save-style-settings/')
 def save_sound_settings(settings: CustomStyleSettings):
     """
     Save sound settings for the sonification.
@@ -587,92 +675,69 @@ def save_sound_settings(settings: CustomStyleSettings):
     - Returns: A filename of the saved settings.
     """
     # Save settings to a yaml file and return the filename
-    style = format_settings(settings)
+    style = format_style(settings)
+    filepath = write_YAML_file(style)
 
-    yaml_text = yaml.dump(style, default_flow_style=False)
-    filename = f'style_{uuid.uuid4()}.yaml'
-    session_id = session_id_var.get()
-    filepath = os.path.join(TMP_DIR, session_id, filename)
-    f = open(filepath, "x")
-    f.write(yaml_text)
-    f.close()
-
-    file_ref = f'session:{filename}'
+    file_ref = f'session:{filepath.name}'
 
     # Return the file reference
     return {'file_ref': file_ref}
 
-def format_settings(settings: CustomStyleSettings):
+def format_style(settings: CustomStyleSettings):
+
+    sources = 'objects' if settings.dataMode == 'continuous' else 'events'
     
-    # Remove null entries
-    params = [{k: v for k, v in m.items() if v is not None} for m in settings.map]
+    for m in settings.map:
         
-    style = {
-        "sound": settings.sound,
-        "parameters": params
+        # If using custom data, swap 'column 1' etc for 0-indexed column index (e.g. 'column 1' -> 0)
+        if re.fullmatch(r"column \d+", m["input"]):
+            m["input"] = int(m["input"].split()[-1]) - 1
+            
+        if m['output'] == 'time':
+            if sources == 'objects':
+                # Swap time for time_evo if using Objects
+                m['output'] = 'time_evo'
+            else:
+                # Add extra time for Events to play out
+                m['input_range'] = ['0%', '110%']
+                
+        elif m['output'] == 'pitch':
+            # Swap pitch for pitch_shift if Objects, or Events with no notes given
+            m['output'] = 'pitch_shift' if sources == 'objects' or not settings.notes else m['output']
+        
+        
+    # Set up Generator dictionary
+    gen_type, sound_key = (
+        ("synthesizer", "preset")
+        if is_synth(settings.sound)
+        else ("sampler", "sample")
+    )
+        
+    generator = {
+        'type': gen_type,
+        sound_key: settings.sound
     }
 
-    if settings.chordMode:
-        style['harmony'] = f"{settings.rootNote}{settings.quality}"
-    else:
-        if settings.scale != 'None':
-            style['harmony'] = f"{settings.rootNote} {settings.scale}"
+    mods = GENERATOR_MODS.get(settings.sound)
+    if mods:
+        generator["mods"] = mods
+    
+    
+    # Build final style dict
+    style = {
+        "name": "Custom",
+        "sources": sources,
+        "generator": generator,
+        "map": settings.map,
+        "notes": settings.notes
+    }
+    
+    # Add additional fields for Events
+    if sources == 'events':
+        style['max_notes_per_sec'] = 15
+        style['pitch_binning'] = 'uniform'
     
     return style
-
-
-async def download_online_asset(target_name: str):
-
-    target_asset = None
-
-    for asset in asset_cache:
-        asset_name = asset.get('name', '')
-        asset_name = format_name(asset_name)
-
-        if asset_name.lower() == target_name.lower():
-            target_asset = asset
-            break
-
-    if not target_asset:
-        return {"status": "error", "message": "Asset not found in online cache."}
-    
-    
-    file_name = target_asset['name']
-    local_path = Path(SAMPLES_DIR) / target_name
-
-    # Skip download if file exists
-    if local_path.exists():
-        return {"status": "skipped", "message": "File already exists locally."}
-    
-    # Define local path
-    session_id = session_id_var.get()
-    write_path = TMP_DIR / session_id / file_name
-    
-    # Download the file
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(target_asset["url"], follow_redirects=True)
-        resp.raise_for_status()
-        async with aiofiles.open(write_path, "wb") as f:
-            await f.write(resp.content)
-    
-    if file_name.endswith('.zip'):
-        with zipfile.ZipFile(write_path, 'r') as zip_ref:
-            zip_ref.extractall(SAMPLES_DIR)
-
-    # Delete the zip file after extraction
-    write_path.unlink(missing_ok=True)
-
-    return {"status": "success", "message": f"Downloaded and extracted {file_name}"}
-
-
-
-@router.post('/ensure-sound-available/')
-async def ensure_sound_available(request: SoundRequest):
-
-    if request.sound_name not in [s.name for s in local_sounds()]:
-        await download_online_asset(request.sound_name)
-    else: print('Sound already exists in local dir')
-
 
 @router.post("/upload-style/")
 async def upload_style(file: UploadFile = File(...), request: Request = None):

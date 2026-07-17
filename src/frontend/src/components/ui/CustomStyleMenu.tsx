@@ -12,7 +12,15 @@ import PageContainer from "../ui/PageContainer";
 import { ToggleTip, InfoTip } from "../ui/ToggleTip";
 import { Tooltip } from "../ui/Tooltip";
 import { apiUrl, lightCurvesAPI, coreAPI } from "../../apiConfig";
-import { LuUpload, LuX, LuPlus, LuVolume2 } from "react-icons/lu";
+import {
+  LuUpload,
+  LuX,
+  LuPlus,
+  LuVolume2,
+  LuDices,
+  LuChartSpline,
+  LuChartScatter,
+} from "react-icons/lu";
 import ErrorMsg from "./ErrorMsg";
 
 import {
@@ -35,6 +43,7 @@ import {
   IconButton,
   Portal,
   Field,
+  Slider,
   NumberInput,
   Link,
   LinkBox,
@@ -43,9 +52,11 @@ import {
   Select,
   Stack,
   Switch,
+  TagsInput,
   Text,
 } from "@chakra-ui/react";
 import { apiRequest } from "../../utils/requests";
+import { groupBy } from "es-toolkit";
 
 interface CustomStyleMenuProps {
   open: boolean;
@@ -64,21 +75,22 @@ export default function CustomStyleMenu({
   userUpload,
   onStyleCreated,
 }: CustomStyleMenuProps) {
+  type DataMode = "continuous" | "discrete";
+
   interface BaseSound {
     name: string;
     composable: boolean;
-    downloaded: boolean;
+    data_modes: DataMode[];
   }
 
   const defaultSound: BaseSound = {
     name: "Default Synth 🎹",
     composable: true,
-    downloaded: true,
+    data_modes: ["discrete", "continuous"],
   };
 
   interface ParameterMapping {
     input: string;
-    input_range: [number, number] | null;
     output: string;
     output_range: [number, number] | null;
     function: string | null;
@@ -90,34 +102,57 @@ export default function CustomStyleMenu({
     key: string;
   }
 
+  // Determine whether we need to force 'Discrete' data mode or not
+  const isEvents = ["constellations", "night_sky"].includes(soniType);
+
   const [styleName, setStyleName] = useState("");
   const [styleDescription, setStyleDescription] = useState("");
 
   const [errorMessage, setErrorMessage] = useState("");
 
+  const [dataMode, setDataMode] = useState<DataMode>(
+    isEvents ? "discrete" : "continuous",
+  );
+
+  // All sounds fetched from backend
+  const [allSounds, setAllSounds] = useState<BaseSound[]>([]);
+
+  // The list of sounds to display depending on which data mode is selected
+  const filteredSounds = allSounds.filter((sound) =>
+    sound.data_modes.includes(dataMode),
+  );
+
+  // Display information for each sound
+  const soundOptions = createListCollection({
+    items: filteredSounds.map((sound) => ({
+      ...sound,
+      label: `${sound.name}${sound.composable ? " 🎹" : ""}`,
+      value: sound.name,
+    })),
+  });
+
+  // The selected sound
   const [sound, setSound] = useState<BaseSound>(defaultSound);
+
+  // Swap the currently selected sound for a compatible one if data mode changes
+  useEffect(() => {
+    if (!filteredSounds.some((s) => s.name === sound.name)) {
+      setSound(filteredSounds[0] ?? defaultSound);
+    }
+  }, [filteredSounds, sound]);
+
   const [parameterMappings, setParameterMappings] = useState<
     ParameterMapping[]
   >([]);
-
-  const pitchMapped = parameterMappings.some(
-    (m) => m.output.toLowerCase() === "pitch",
-  );
 
   const hasTimeMapping = parameterMappings.some(
     (m) => m.input && m.output.toLowerCase() === "time",
   );
 
-  const [chordMode, setChordMode] = useState(false);
   const [rootNote, setRootNote] = useState("C");
-  const [scale, setScale] = useState("None");
-  const [quality, setQuality] = useState("maj");
-
-  const [soundOptions, setSoundOptions] = useState(
-    createListCollection<BaseSound & { label: string; value: string }>({
-      items: [],
-    }),
-  );
+  const [harmony, setHarmony] = useState("maj");
+  const [notes, setNotes] = useState<string[]>([]);
+  const [octaveRange, setOctaveRange] = useState<[number, number]>([3, 4]);
 
   const [inputOptions, setInputOptions] = useState(
     createListCollection<{
@@ -165,42 +200,159 @@ export default function CustomStyleMenu({
     ],
   });
 
-  const scaleOptions = createListCollection({
-    items: [
-      { label: "None", value: "None" },
-      { label: "Major", value: "major" },
-      { label: "Harmonic Minor", value: "harmonic minor" },
-      { label: "Pentatonic", value: "pentatonic minor" },
-      { label: "Blues", value: "blues" },
-      { label: "Chromatic", value: "chromatic" },
-      { label: "Flamenco", value: "flamenco" },
-      { label: "Romani", value: "romani" },
-      { label: "Hirajoshi", value: "hijaroshi" },
-      { label: "Persian", value: "persian" },
-      { label: "Phrygian Dominant", value: "phrygian dominant" },
-    ],
+  const harmonyItems = [
+    // Chords
+    { label: "Major Chord", value: "maj", category: "Chords" },
+    { label: "Minor Chord", value: "min", category: "Chords" },
+    { label: "Major 7", value: "maj7", category: "Chords" },
+    { label: "Major 9", value: "maj9", category: "Chords" },
+    { label: "5", value: "5", category: "Chords" },
+    { label: "6", value: "6", category: "Chords" },
+    { label: "7", value: "7", category: "Chords" },
+    { label: "Minor 7", value: "m7", category: "Chords" },
+    { label: "Minor 9", value: "m9", category: "Chords" },
+    { label: "Sus2", value: "sus2", category: "Chords" },
+    { label: "Sus4", value: "sus4", category: "Chords" },
+    { label: "7sus4", value: "7sus4", category: "Chords" },
+    { label: "Add9", value: "add9", category: "Chords" },
+
+    // Scales
+    { label: "Major Scale", value: "majorScale", category: "Scales" },
+    { label: "Harmonic Minor", value: "harmonicMinor", category: "Scales" },
+    { label: "Pentatonic", value: "pentatonic", category: "Scales" },
+    { label: "Blues", value: "blues", category: "Scales" },
+    { label: "Chromatic", value: "chromatic", category: "Scales" },
+    { label: "Hirajoshi", value: "hirajoshi", category: "Scales" },
+  ];
+
+  const filteredHarmonyItems = harmonyItems.filter((item) => {
+    // Only display chords if continuous data mode is selected
+    if (dataMode === "continuous") {
+      return item.category === "Chords";
+    }
+
+    return true; // discrete: show everything
   });
 
-  const qualityOptions = createListCollection({
-    items: [
-      { label: "Major", value: "maj" },
-      { label: "Minor", value: "min" },
-      { label: "Major 7", value: "maj7" },
-      { label: "Major 9", value: "maj9" },
-      { label: "5", value: "5" },
-      { label: "6", value: "6" },
-      { label: "7", value: "7" },
-      { label: "9", value: "9" },
-      { label: "Minor 7", value: "m7" },
-      { label: "Minor 9", value: "m9" },
-      { label: "Sus2", value: "sus2" },
-      { label: "Sus4", value: "sus4" },
-      { label: "7sus4", value: "7sus4" },
-      { label: "Add9", value: "add9" },
-      { label: "Minor Add9", value: "madd9" },
-    ],
+  const harmonyOptions = createListCollection({
+    items: filteredHarmonyItems,
   });
 
+  const randomiseHarmony = () => {
+    // Filter out current root note
+    const rootNotes = rootNoteOptions.items
+      .map((item) => item.value)
+      .filter((note) => note !== rootNote);
+
+    // Filter out current harmony
+    const harmonies = harmonyOptions.items
+      .map((item) => item.value)
+      .filter((h) => h !== harmony);
+
+    // Get randoms
+    const randomRoot = rootNotes[Math.floor(Math.random() * rootNotes.length)];
+    const randomHarmony =
+      harmonies[Math.floor(Math.random() * harmonies.length)];
+
+    setRootNote(randomRoot);
+    setHarmony(randomHarmony);
+  };
+
+  const harmonyIntervals: Record<string, number[]> = {
+    // Chords
+    maj: [0, 4, 7],
+    min: [0, 3, 7],
+    maj7: [0, 4, 7, 11],
+    maj9: [0, 4, 7, 11, 14],
+    "5": [0, 7],
+    "6": [0, 4, 7, 9],
+    "7": [0, 4, 7, 10],
+    m7: [0, 3, 7, 10],
+    m9: [0, 3, 7, 10, 14],
+    sus2: [0, 2, 7],
+    sus4: [0, 5, 7],
+    "7sus4": [0, 5, 7, 10],
+    add9: [0, 4, 7, 14],
+
+    // Scales
+    majorScale: [0, 2, 4, 5, 7, 9, 11],
+    harmonicMinor: [0, 2, 3, 5, 7, 8, 11],
+    pentatonic: [0, 3, 5, 7, 10],
+    blues: [0, 3, 5, 6, 7, 10],
+    chromatic: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    hirajoshi: [0, 2, 3, 7, 8],
+  };
+
+  const harmonyCategories = Object.entries(
+    groupBy(harmonyOptions.items, (item) => item.category),
+  );
+
+  const noteNames = [
+    "C",
+    "C#",
+    "D",
+    "D#",
+    "E",
+    "F",
+    "F#",
+    "G",
+    "G#",
+    "A",
+    "A#",
+    "B",
+  ];
+
+  const generateNotes = (): string[] => {
+    let notes: string[] = [];
+
+    const rootIndex = noteNames.indexOf(rootNote);
+    const [lowOctave, highOctave] = octaveRange;
+
+    for (let octave = lowOctave; octave < highOctave; octave++) {
+      for (const interval of harmonyIntervals[harmony]) {
+        const noteIndex = (rootIndex + interval) % 12;
+        const octaveOffset = Math.floor((rootIndex + interval) / 12);
+
+        const note = `${noteNames[noteIndex]}${octave + octaveOffset}`;
+        notes.push(note);
+      }
+    }
+
+    // Finally, add root note from upper octave range to complete the set
+    notes.push(`${rootNote}${highOctave}`);
+
+    return notes;
+  };
+
+  const isValidNote = (input: string): boolean => {
+    const note = input.trim();
+    return /^[A-Ga-g](#|b)?[1-6]$/.test(note);
+  };
+
+  const normaliseNote = (note: string): string =>
+    note
+      .trim()
+      .replace(
+        /^([a-g])([#b]?)(\d)$/,
+        (_, letter, accidental, octave) =>
+          `${letter.toUpperCase()}${accidental}${octave}`,
+      );
+
+  const octaveSliderMarks = [
+    { value: 1, label: "1" },
+    { value: 2, label: "2" },
+    { value: 3, label: "3" },
+    { value: 4, label: "4" },
+    { value: 5, label: "5" },
+    { value: 6, label: "6" },
+  ];
+
+  // Update the notes displayed any time root, harmony, or octaveRange changes
+  useEffect(() => {
+    setNotes(generateNotes());
+  }, [rootNote, harmony, octaveRange]);
+
+  // Get input and output options on first load
   useEffect(() => {
     setLoadingInputs(true);
     setLoadingOutputs(true);
@@ -247,7 +399,6 @@ export default function CustomStyleMenu({
           setParameterMappings([
             {
               input: "Time",
-              input_range: null,
               output: "Time",
               output_range: null,
               function: null,
@@ -267,6 +418,7 @@ export default function CustomStyleMenu({
     fetchParams();
   }, []);
 
+  // Fetch sound options from backend on first load
   useEffect(() => {
     setLoadingSounds(true);
 
@@ -277,21 +429,9 @@ export default function CustomStyleMenu({
         if (!response.ok) {
           throw new Error("Failed to fetch sounds");
         }
+
         const soundsData: BaseSound[] = await response.json();
-
-        const filteredSounds =
-          soniType === "light_curves"
-            ? soundsData
-            : soundsData.filter((sound) => sound.composable);
-
-        const collection = createListCollection({
-          items: filteredSounds.map((sound) => ({
-            ...sound,
-            label: `${sound.name}${sound.composable ? " 🎹" : ""}`, // Add piano emoji for composable sounds
-            value: sound.name,
-          })),
-        });
-        setSoundOptions(collection);
+        setAllSounds(soundsData);
       } catch (error) {
         console.error("Error fetching sounds:", error);
       } finally {
@@ -302,6 +442,7 @@ export default function CustomStyleMenu({
     fetchSounds();
   }, []);
 
+  // Check if time is mapped (necessary to save custom style)
   useEffect(() => {
     const hasTimeMapping = parameterMappings.some(
       (m) =>
@@ -318,7 +459,6 @@ export default function CustomStyleMenu({
       ...prev,
       {
         input: "",
-        input_range: null,
         output: "",
         output_range: null,
         function: null,
@@ -340,24 +480,26 @@ export default function CustomStyleMenu({
     );
   };
 
-  const saveSoundSettings = async () => {
-    const url = `${coreAPI}/save-sound-settings/`;
+  const saveStyleSettings = async () => {
+    const url = `${coreAPI}/save-style-settings/`;
     const data = {
+      dataMode,
       sound: sound.name.replace(/\s*🎹$/, ""),
-      map: parameterMappings.map((m) => ({
-        ...m,
-        input:
-          inputOptions.items.find((i) => i.value === m.input)?.key ??
-          m.input.toLowerCase(),
-        output:
-          outputOptions.items.find((o) => o.value === m.output)?.key ??
-          m.output.toLowerCase(),
-      })),
-      chordMode: chordMode,
-      rootNote: rootNote,
-      scale: scale,
-      quality: quality,
+      map: parameterMappings
+        .filter((m) => m.input.trim() !== "" && m.output.trim() !== "") // remove empty mappings
+        .map((m) => ({
+          ...m,
+          input:
+            inputOptions.items.find((i) => i.value === m.input)?.key ??
+            m.input.toLowerCase(),
+          output:
+            outputOptions.items.find((o) => o.value === m.output)?.key ??
+            m.output.toLowerCase(),
+        })),
+      notes: sound.composable ? notes : ["A3"], // Use A3 as the note for non-composable sounds
     };
+
+    console.log(notes)
 
     const response = await apiRequest(url, data);
 
@@ -378,10 +520,10 @@ export default function CustomStyleMenu({
       }
 
       // Save sound settings and get filepath
-      const fileRef = await saveSoundSettings();
+      const fileRef = await saveStyleSettings();
       console.log(fileRef);
 
-      const preview_endpoint = `${coreAPI}/preview-style-settings/${soniType}`;
+      const preview_endpoint = `${coreAPI}/preview-style-settings/`;
       const response = await apiRequest(preview_endpoint, {
         file_ref: fileRef,
       });
@@ -393,7 +535,9 @@ export default function CustomStyleMenu({
       previewRef.current = preview;
       preview.play();
     } catch (err) {
-      setErrorMessage("Error generating preview. Please try different style settings.")
+      setErrorMessage(
+        "Error generating preview. Please try different style settings.",
+      );
       console.error("Error previewing style settings:", err);
     } finally {
       setLoadingCustomPreview(false);
@@ -405,10 +549,9 @@ export default function CustomStyleMenu({
     if (!open && previewRef.current) {
       previewRef.current.pause();
       previewRef.current.currentTime = 0;
-      previewRef.current = null; 
+      previewRef.current = null;
     }
   }, [open]);
-  
 
   const handleStyleUpload = async (files: File[]) => {
     const file = files[0];
@@ -433,10 +576,16 @@ export default function CustomStyleMenu({
     onStyleCreated(result.file_ref);
   };
 
+  const handleNotesChange = (newNotes: string[]) => {
+    // Capitalize notes and remove whitespace
+    const normalised = newNotes.map(normaliseNote);
+    setNotes(normalised);
+  };
+
   const handleApply = async () => {
     setApplyLoading(true);
 
-    const styleRef = await saveSoundSettings();
+    const styleRef = await saveStyleSettings();
 
     // Stop any preview audio
     if (previewRef.current) {
@@ -444,14 +593,10 @@ export default function CustomStyleMenu({
       previewRef.current.currentTime = 0;
       previewRef.current = null;
     }
-    
+
     onStyleCreated(styleRef);
     setApplyLoading(false);
-  };;
-
-  const staccatoWarning = ["Glockenspiel", "Mallets", "Harp"].includes(
-    sound.name,
-  ) && soniType === 'light_curves'
+  };
 
   return (
     <Dialog.Root
@@ -496,73 +641,6 @@ export default function CustomStyleMenu({
                   </FileUpload.Trigger>
                 </FileUpload.Root>
               </HStack>
-              <Select.Root
-                size="sm"
-                collection={soundOptions}
-                value={[sound.name]}
-                onValueChange={(e) => {
-                  const selected = soundOptions.items.find(
-                    (s) => s.value === e.value[0],
-                  );
-                  if (selected) setSound(selected);
-                }}
-              >
-                <Select.HiddenSelect />
-                <HStack>
-                  <Select.Label>Base Sound</Select.Label>
-                  <InfoTip
-                    content="This is the underlying sound (or instrument) that is used as a basis for the sonification. Sounds with a 🎹 icon next to them are composable, meaning you can apply musical settings like chords and scales."
-                    positioning={{ placement: "right" }}
-                    contentProps={{ maxW: "300px" }}
-                  />
-                </HStack>
-                <Select.Control>
-                  <Select.Trigger>
-                    <Select.ValueText placeholder={sound.name} />
-                  </Select.Trigger>
-                  <Select.IndicatorGroup>
-                    <Select.Indicator />
-                  </Select.IndicatorGroup>
-                </Select.Control>
-                <Portal>
-                  <Select.Positioner>
-                    <Select.Content maxH="200px">
-                      {soundOptions.items.map((option) => (
-                        <Select.Item item={option} key={option.value}>
-                          {option.label}
-                          <Select.ItemIndicator />
-                        </Select.Item>
-                      ))}
-                    </Select.Content>
-                  </Select.Positioner>
-                </Portal>
-              </Select.Root>
-
-              {staccatoWarning && (
-                <Alert.Root
-                  status="warning"
-                  size="sm"
-                  variant="subtle"
-                  alignItems="center"
-                  pb={1}
-                  pt={1}
-                >
-                  <Alert.Indicator />
-                  <Alert.Content>
-                    <Alert.Description>
-                      This sound plays individual notes rather than a continuous
-                      tone. For best results, map an input to Pitch and select a
-                      scale in Musical Settings.
-                    </Alert.Description>
-                  </Alert.Content>
-                  <CloseButton
-                    variant="subtle"
-                    size="2xs"
-                    my="auto"
-                    onClick={() => setAutoMappedTime(false)}
-                  />
-                </Alert.Root>
-              )}
 
               <VStack gap={4} align="stretch">
                 <HStack>
@@ -697,18 +775,31 @@ export default function CustomStyleMenu({
                                       overflowY="auto"
                                     >
                                       {outputOptions.items.map((option) => {
+                                        const selectedOutputs =
+                                          parameterMappings
+                                            .filter((_, i) => i !== index)
+                                            .map((m) => m.output);
+
+                                        // Disable outputs that are already selected
                                         const isUsedElsewhere =
-                                          parameterMappings.some(
-                                            (m, i) =>
-                                              m.output === option.value &&
-                                              i !== index,
+                                          selectedOutputs.includes(
+                                            option.value,
                                           );
+
+                                        // Disable 'pan' if Azimuth is selected and vice versa (both spatial parameters)
+                                        const isSpatialConflict =
+                                          (option.value === "Pan" &&
+                                            selectedOutputs.includes(
+                                              "Azimuth",
+                                            )) ||
+                                          (option.value === "Azimuth" &&
+                                            selectedOutputs.includes("Pan"));
 
                                         return (
                                           <Select.Item
                                             item={{
                                               ...option,
-                                              disabled: isUsedElsewhere,
+                                              disabled: isUsedElsewhere || isSpatialConflict,
                                             }}
                                             key={option.value}
                                           >
@@ -767,7 +858,7 @@ export default function CustomStyleMenu({
                                 <VStack align="flex-start" gap={1}>
                                   <HStack>
                                     <Text fontSize="xs" fontWeight="medium">
-                                      Output Range
+                                      {mapping.output} Range
                                     </Text>
                                     <InfoTip
                                       content="Use this to adjust the limits of the output sound parameter. E.g. setting this at 0.3 - 1 on a Volume mapping would mean that the lowest data point would be played at 30% volume, instead of 0% volume."
@@ -881,45 +972,102 @@ export default function CustomStyleMenu({
                   <LuPlus /> Add Mapping
                 </Button>
               </VStack>
+
+              <Field.Root>
+                <HStack>
+                  <Field.Label>Data Mode</Field.Label>
+                  <InfoTip
+                    content="Choose whether the data should be heard as a continuous stream or as individual discrete events."
+                    positioning={{ placement: "right" }}
+                    contentProps={{ maxW: "300px" }}
+                  />
+                </HStack>
+                <SegmentGroup.Root
+                  disabled={isEvents}
+                  value={dataMode}
+                  onValueChange={(e) =>
+                    setDataMode(e.value as "continuous" | "discrete")
+                  }
+                  size="sm"
+                >
+                  <SegmentGroup.Indicator />
+                  <SegmentGroup.Items
+                    items={[
+                      {
+                        label: (
+                          <HStack>
+                            <LuChartSpline />
+                            Continuous
+                          </HStack>
+                        ),
+                        value: "continuous",
+                      },
+                      {
+                        label: (
+                          <HStack>
+                            <LuChartScatter />
+                            Discrete
+                          </HStack>
+                        ),
+                        value: "discrete",
+                      },
+                    ]}
+                  />
+                </SegmentGroup.Root>
+              </Field.Root>
+
+              <Select.Root
+                size="sm"
+                collection={soundOptions}
+                value={[sound.name]}
+                onValueChange={(e) => {
+                  const selected = soundOptions.items.find(
+                    (s) => s.value === e.value[0],
+                  );
+                  if (selected) setSound(selected);
+                }}
+              >
+                <Select.HiddenSelect />
+                <HStack>
+                  <Select.Label>Base Sound</Select.Label>
+                  <InfoTip
+                    content="This is the underlying sound (or instrument) that is used as a basis for the sonification. Sounds with a 🎹 icon next to them are composable, meaning you can apply musical settings like chords and scales."
+                    positioning={{ placement: "right" }}
+                    contentProps={{ maxW: "300px" }}
+                  />
+                </HStack>
+                <Select.Control>
+                  <Select.Trigger>
+                    <Select.ValueText placeholder={sound.name} />
+                  </Select.Trigger>
+                  <Select.IndicatorGroup>
+                    <Select.Indicator />
+                  </Select.IndicatorGroup>
+                </Select.Control>
+                <Portal>
+                  <Select.Positioner>
+                    <Select.Content maxH="200px">
+                      {soundOptions.items.map((option) => (
+                        <Select.Item item={option} key={option.value}>
+                          {option.label}
+                          <Select.ItemIndicator />
+                        </Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Positioner>
+                </Portal>
+              </Select.Root>
+
               {sound.composable && (
-                <Collapsible.Root transition="opacity 0.3s ease-in-out">
-                  <Collapsible.Trigger>
-                    <Text
-                      color="teal.600"
-                      fontWeight="medium"
-                      cursor="pointer"
-                      mb={3}
-                    >
-                      <Span _hover={{ textDecoration: "underline" }}>
-                        Musical Settings
-                      </Span>{" "}
-                      🎹
-                    </Text>
-                  </Collapsible.Trigger>
-                  <Collapsible.Content>
-                    <Switch.Root
-                      checked={chordMode}
-                      onCheckedChange={(e) => setChordMode(e.checked)}
-                      mb={3}
-                      colorPalette="teal"
-                    >
-                      <Switch.HiddenInput />
-                      <Switch.Control />
-                      <HStack>
-                        <Switch.Label>Chord Mode</Switch.Label>
-                        <InfoTip
-                          content="This determines whether a full chord is held, or a single note."
-                          positioning={{ placement: "right" }}
-                        />
-                      </HStack>
-                    </Switch.Root>
+                <>
+                  <HStack gap={5}>
                     <Select.Root
                       collection={rootNoteOptions}
                       value={[rootNote]}
                       size="sm"
-                      width="320px"
-                      onValueChange={(e) => setRootNote(e.value[0])}
-                      mb={3}
+                      onValueChange={(e) => {
+                        setRootNote(e.value[0]);
+                      }}
                     >
                       <Select.HiddenSelect />
                       <Select.Label>Root Note</Select.Label>
@@ -933,7 +1081,7 @@ export default function CustomStyleMenu({
                       </Select.Control>
                       <Portal>
                         <Select.Positioner>
-                          <Select.Content>
+                          <Select.Content maxH="200px">
                             {rootNoteOptions.items.map((option) => (
                               <Select.Item item={option} key={option.value}>
                                 {option.label}
@@ -944,89 +1092,110 @@ export default function CustomStyleMenu({
                         </Select.Positioner>
                       </Portal>
                     </Select.Root>
-                    {!chordMode && (
-                      <Tooltip
-                        content="Pitch must be selected to use a scale."
-                        openDelay={100}
-                        closeDelay={100}
-                        disabled={pitchMapped}
-                      >
-                        <Box>
-                          <Select.Root
-                            collection={scaleOptions}
-                            size="sm"
-                            width="320px"
-                            value={[scale]}
-                            onValueChange={(e) => setScale(e.value[0])}
-                            mb={3}
-                            disabled={!pitchMapped}
-                          >
-                            <Select.HiddenSelect />
-                            <Select.Label>Scale</Select.Label>
 
-                            <Select.Control>
-                              <Select.Trigger>
-                                <Select.ValueText placeholder={scale} />
-                              </Select.Trigger>
-                              <Select.IndicatorGroup>
-                                <Select.Indicator />
-                              </Select.IndicatorGroup>
-                            </Select.Control>
-
-                            <Portal>
-                              <Select.Positioner>
-                                <Select.Content>
-                                  {scaleOptions.items.map((option) => (
-                                    <Select.Item
-                                      item={option}
-                                      key={option.value}
-                                    >
-                                      {option.label}
-                                      <Select.ItemIndicator />
-                                    </Select.Item>
-                                  ))}
-                                </Select.Content>
-                              </Select.Positioner>
-                            </Portal>
-                          </Select.Root>
-                        </Box>
-                      </Tooltip>
-                    )}
-                    {chordMode && (
-                      <Select.Root
-                        collection={qualityOptions}
+                    <Select.Root
+                      collection={harmonyOptions}
+                      size="sm"
+                      value={[harmony]}
+                      onValueChange={(e) => {
+                        setHarmony(e.value[0]);
+                      }}
+                    >
+                      <Select.HiddenSelect />
+                      <Select.Label>Harmony</Select.Label>
+                      <Select.Control>
+                        <Select.Trigger>
+                          <Select.ValueText placeholder={"Major"} />
+                        </Select.Trigger>
+                        <Select.IndicatorGroup>
+                          <Select.Indicator />
+                        </Select.IndicatorGroup>
+                      </Select.Control>
+                      <Portal>
+                        <Select.Positioner>
+                          <Select.Content maxH="200px">
+                            {harmonyCategories.map(([category, items]) => (
+                              <Select.ItemGroup key={category}>
+                                <Select.ItemGroupLabel
+                                  fontWeight="bold"
+                                  fontSize="xs"
+                                  color="teal.500"
+                                  textTransform="uppercase"
+                                  letterSpacing="widest"
+                                  pt={2}
+                                  pb={1}
+                                >
+                                  {category}
+                                </Select.ItemGroupLabel>
+                                {items.map((item) => (
+                                  <Select.Item item={item} key={item.value}>
+                                    {item.label}
+                                    <Select.ItemIndicator />
+                                  </Select.Item>
+                                ))}
+                              </Select.ItemGroup>
+                            ))}
+                          </Select.Content>
+                        </Select.Positioner>
+                      </Portal>
+                    </Select.Root>
+                    <Tooltip content="Randomise harmony">
+                      <IconButton
+                        aria-label="Randomise"
+                        colorPalette="teal"
                         size="sm"
-                        width="320px"
-                        value={[quality]}
-                        onValueChange={(e) => setQuality(e.value[0])}
-                        mb={3}
+                        variant="subtle"
+                        alignSelf="end"
+                        onClick={randomiseHarmony}
                       >
-                        <Select.HiddenSelect />
-                        <Select.Label>Chord</Select.Label>
-                        <Select.Control>
-                          <Select.Trigger>
-                            <Select.ValueText placeholder={"Major"} />
-                          </Select.Trigger>
-                          <Select.IndicatorGroup>
-                            <Select.Indicator />
-                          </Select.IndicatorGroup>
-                        </Select.Control>
-                        <Portal>
-                          <Select.Positioner>
-                            <Select.Content>
-                              {qualityOptions.items.map((option) => (
-                                <Select.Item item={option} key={option.value}>
-                                  {option.label}
-                                  <Select.ItemIndicator />
-                                </Select.Item>
-                              ))}
-                            </Select.Content>
-                          </Select.Positioner>
-                        </Portal>
-                      </Select.Root>
-                    )}
-                  </Collapsible.Content>
-                </Collapsible.Root>
+                        <LuDices />
+                      </IconButton>
+                    </Tooltip>
+                  </HStack>
+                  <Field.Root>
+                    <TagsInput.Root
+                      editable
+                      validate={(e) => isValidNote(e.inputValue)}
+                      maxLength={3}
+                      value={notes}
+                      onValueChange={(details) => {
+                        handleNotesChange(details.value);
+                      }}
+                      colorPalette="teal"
+                    >
+                      <TagsInput.Label>Notes</TagsInput.Label>
+                      <TagsInput.Control>
+                        <TagsInput.Items />
+                        <TagsInput.Input placeholder="Add or edit notes..." />
+                      </TagsInput.Control>
+                    </TagsInput.Root>
+                    {/* <Field.HelperText>
+                      Double-click on a note or use keyboard navigation to edit
+                    </Field.HelperText> */}
+                  </Field.Root>
+                  <Slider.Root
+                    size="sm"
+                    step={1}
+                    colorPalette="teal"
+                    min={1}
+                    max={6}
+                    value={octaveRange}
+                    minStepsBetweenThumbs={0}
+                    thumbCollisionBehavior="push"
+                    onValueChange={(e) => {
+                      setOctaveRange(e.value as [number, number]);
+                    }}
+                  >
+                    <Slider.Label>Octave Range</Slider.Label>
+                    <Slider.Control>
+                      <Slider.Track>
+                        <Slider.Range />
+                      </Slider.Track>
+                      <Slider.Thumbs />
+                      <Slider.Marks marks={octaveSliderMarks} />
+                    </Slider.Control>
+                  </Slider.Root>
+                </>
               )}
             </VStack>
           </Dialog.Body>

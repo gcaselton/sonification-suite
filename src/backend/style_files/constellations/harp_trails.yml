@@ -4,14 +4,15 @@ description: >
   The stars in the constellation appear left to right, 
   with stars with a higher altitude mapped to higher pitch. Brighter stars are louder. Harp base sound.
 
-sound: 'Harp'
-preset: 'sustain'
-mods:
-  looping: 'forwardback'
-  loop_start: 0.4
-  loop_end: 3.
+generator:
+  type: 'sampler'
+  sample: 'Harp'
+  mods:
+    looping: 'forwardback'
+    loop_start: 0.4
+    loop_end: 3.
 
-parameters:
+map:
     
   - input: 'magnitude'
     output: 'volume'
@@ -27,11 +28,12 @@ parameters:
     function: 'invert'
 
   - input: 'ra_corrected'
-    output: 'azimuth'
-    output_range: [0.25, 0.75]
+    output: 'pan'
     function: 'invert'
 
-harmony: ['C3', 'D3', 'E3', 'G3', 'A3', 'B3', 'C4', 'D4', 'E4', 'G4']
+sources: 'events'
+
+notes: ['C3', 'D3', 'E3', 'G3', 'A3', 'B3', 'C4', 'D4', 'E4', 'G4']
   
 
 

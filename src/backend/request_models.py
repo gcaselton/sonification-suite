@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, Literal
 
-# Define BaseModels for expected request types
+# Define BaseModels for expected API request types
 
 #---------- Core ----------#
 
@@ -9,15 +9,18 @@ class DataRequest(BaseModel):
     file_ref: str
 
 class CustomStyleSettings(BaseModel):
+    dataMode: str
     sound: str
     map: list[dict]
-    chordMode: bool
-    rootNote: str
-    scale: str
-    quality: str
+    notes: list[str]
 
 class SoundRequest(BaseModel):
     sound_name: str
+    
+class SoundInfo(BaseModel):
+    name: str
+    composable: bool
+    data_modes: list[str]
 
 class SonificationRequest(BaseModel):
     category: str
