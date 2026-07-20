@@ -91,7 +91,7 @@ def generate_sonification(request: SonificationRequest):
     try:
         
         # First, replace base sound name with filepath to the sound
-        updated_style = str(write_sound_to_style(style_filepath))
+        style_dict = write_sound_to_style(style_filepath, write_to_yml=False)
         
         # Next, determine data format (CSV, .fits) and convert to DataFrame
         data_type = data_filepath.suffix.lower()
@@ -117,13 +117,16 @@ def generate_sonification(request: SonificationRequest):
         
         # Build dict with keyword arguments for sonification function
         kwargs = {
-            'duration': request.duration,
-            'style': updated_style
+            'duration': request.duration
         }
         
         # Handle case that 'Place on Dome' feature is used
         if request.observer:
             position_info = handle_observer(request.observer)
+            
+            # Remove any existing spatial mappings
+            style_dict['map'] = [mapping for mapping in style_dict['map'] 
+                                 if mapping['output'] not in ['azimuth', 'polar', 'pan']]
             
             # Add fixed values to kwargs
             for param in ['azimuth', 'polar']:
@@ -133,6 +136,9 @@ def generate_sonification(request: SonificationRequest):
             alt_az = [position_info['display_values'][value] for value in ['altitude', 'azimuth']]
         else:
             alt_az = None
+        
+        # Add style to kwargs
+        kwargs['style'] = str(write_YAML_file(style_dict))
         
         # Initialise an AudioFigure and sonify
         fig = AudioFigure(system=request.system)

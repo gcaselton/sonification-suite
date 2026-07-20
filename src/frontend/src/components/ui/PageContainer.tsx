@@ -26,19 +26,32 @@ export default function PageContainer({
 
   return (
     <Box maxW="1200px" mx="auto" px={6} py={4} width="100%">
-      {/* Skip Nav */}
+      {/* Skip nav bar for screen reader/keyboard users*/}
       <Link
         href="#"
         position="absolute"
-        top="-40px"
-        left="0"
+        width="1px"
+        height="1px"
+        padding={0}
+        margin="-1px"
+        overflow="hidden"
+        clipPath="inset(50%)"
+        whiteSpace="nowrap"
+        border="0"
         bg="teal.500"
         color="white"
-        px={4}
-        py={2}
         zIndex={9999}
-        _focus={{ top: "0" }}
-        transition="top 0.1s"
+        _focus={{
+          width: "auto",
+          height: "auto",
+          padding: "8px 16px",
+          margin: 0,
+          overflow: "visible",
+          clipPath: "none",
+          whiteSpace: "normal",
+          top: 0,
+          left: 0,
+        }}
         onClick={(e) => {
           e.preventDefault();
           const el = document.getElementById("main-content");
@@ -54,8 +67,8 @@ export default function PageContainer({
       {nav && (
         <>
           {/* Mobile Navigation */}
-          <Flex as='header' display={{ base: "flex", md: "none" }} mb={6}>
-            <NavDrawer/>
+          <Flex as="header" display={{ base: "flex", md: "none" }} mb={6}>
+            <NavDrawer />
           </Flex>
           {/* Desktop Navigation */}
           <Flex
@@ -169,7 +182,7 @@ export default function PageContainer({
         <Text fontSize="xs">
           Powered by{" "}
           <Link
-            aria-label='Go to STRAUSS repository on GitHub'
+            aria-label="Go to STRAUSS repository on GitHub"
             href="https://github.com/james-trayford/strauss"
             colorPalette="teal"
             target="_blank"

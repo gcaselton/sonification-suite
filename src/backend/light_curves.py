@@ -31,6 +31,18 @@ CATEGORY = 'light_curves'
 STYLES_DIR = STYLE_FILES_DIR / CATEGORY
 STARS_DIR = SUGGESTED_DATA_DIR / CATEGORY
 
+# Rankings to sort light curve search results
+MISSION_RANK = {
+    "Kepler": 0,
+    "TESS": 1,
+    "K2": 2,
+}
+
+TESS_PIPELINE_RANK = {
+    "SPOC": 0,
+    "TESS-SPOC": 1,
+}
+
 logging.basicConfig(level=logging.DEBUG)
 LOG = logging.getLogger(__name__)
 
@@ -56,7 +68,7 @@ def run_lightkurve_search(idents, authors, cancel_event: threading.Event):
             search_result = lk.search_lightcurve(
             ident,
             author=authors[id_type],
-            limit=20    # Max number of results to return (per ident)
+            # limit=20    # Max number of results to return (per ident)
             )
         except Exception as e:
             LOG.warning(f"Search failed for {ident}: {e}")
@@ -75,9 +87,54 @@ def run_lightkurve_search(idents, authors, cancel_event: threading.Event):
                 "period": str(row.get("mission")),
                 "dataURI": str(row.get("dataURI")),
             })
+    
+    # Finally, sort the search results using our custom criteria
+    results_metadata.sort(key=sort_key)
 
     return results_metadata
 
+def sort_key(row):
+    """Generate a sortable ranking tuple for a light curve search result.
+
+    Results are sorted primarily by mission priority (Kepler, TESS, K2).
+    Additional mission-specific criteria are then applied:
+
+    - Kepler/K2: newest observations first, then longest exposures first.
+    - TESS: preferred pipelines first (SPOC, then TESS-SPOC), then
+      newest observations first.
+
+    Args:
+        row (dict): Metadata for a single light curve result.
+
+    Returns:
+        tuple: A tuple of ranking values used by ``list.sort()`` to order
+            search results according to the desired mission, pipeline,
+            year, and exposure priorities.
+    """ 
+    mission = row["mission"]
+
+    if mission == "Kepler":
+        return (
+            MISSION_RANK[mission],
+            -row["year"],
+            -row["exposure"],
+        )
+
+    elif mission == "TESS":
+        return (
+            MISSION_RANK[mission],
+            TESS_PIPELINE_RANK.get(row["pipeline"], 99),
+            -row["year"],
+        )
+
+    elif mission == "K2":
+        return (
+            MISSION_RANK[mission],
+            -row["year"],
+            -row["exposure"],
+        )
+
+    return (99,)
 
 
 @router.post('/search-lightcurves/')
@@ -93,6 +150,7 @@ async def search_lightcurves(query: StarQuery, request: Request):
     
     print('ra: ' + str(ra))
     print('dec: ' + str(dec))
+    print('idents: ' + str(idents))
 
     mission_filters = query.filters['mission']
     missions = [k for k in mission_filters.keys() if mission_filters[k] == True]
@@ -113,7 +171,7 @@ async def search_lightcurves(query: StarQuery, request: Request):
     results_metadata = []
 
     authors = {
-            'TIC': ('SPOC', 'QLP', 'TESS-SPOC'),
+            'TIC': ('SPOC', 'TESS-SPOC', 'QLP'),
             'KIC': 'Kepler',
             'EPIC': 'K2SFF'
         }

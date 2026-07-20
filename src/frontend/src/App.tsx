@@ -7,7 +7,6 @@ import Lightcurves from './components/pages/Lightcurves';
 import Style from './components/pages/Style';
 import Sonify from './components/pages/Sonify';
 import Planetaria from './components/pages/Planetaria';
-import Settings from './components/pages/Settings'
 import Landing from './components/pages/Landing';
 import Refine from './components/pages/Refine';
 import Constellations from './components/pages/Constellations';
@@ -59,7 +58,6 @@ function App() {
               <Route path="/refine" element={<Refine />} />
               <Route path="/style" element={<Style />} />
               <Route path="/sonify" element={<Sonify />} />
-              <Route path="/settings" element={<Settings />} />
             </Routes>
           </BrowserRouter>
         </Box>

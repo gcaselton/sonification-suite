@@ -10,11 +10,13 @@ import {
   Portal,
   Stack,
   NativeSelect,
+  SegmentGroup,
   Input,
   Button,
   useListCollection,
 } from "@chakra-ui/react";
 import { LuTelescope } from "react-icons/lu";
+import { InfoTip } from "../ui/ToggleTip";
 
 interface GeoPlace {
   geonameId: number;
@@ -64,9 +66,23 @@ export default function ObserverSetup({
   // Username for the GeoNames service
   const GEO_NAMES_USER = "audiouniverse";
 
+  // Get current date/time for default
+  const getCurrentDateTime = () => {
+    const now = new Date();
+
+    // Adjust for local timezone
+    const offset = now.getTimezoneOffset();
+    const local = new Date(now.getTime() - offset * 60_000);
+
+    return local.toISOString().slice(0, 16);
+  };
+
   // States
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
+  const [locationMode, setLocationMode] = useState<"search" | "coordinates">(
+    "search",
+  );
   const [locationName, setLocationName] = useState("");
   const [inputValue, setInputValue] = useState("");
   const [selectedLoc, setSelectedLoc] = useState<string[]>([]);
@@ -74,7 +90,7 @@ export default function ObserverSetup({
   const [searchingLoc, setSearchingLoc] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [orientation, setOrientation] = useState("");
-  const [dateTime, setDateTime] = useState("");
+  const [dateTime, setDateTime] = useState(getCurrentDateTime);
   const [submitting, setSubmitting] = useState(false);
 
   const { collection, set } = useListCollection<GeoPlace>({
@@ -95,6 +111,10 @@ export default function ObserverSetup({
     setLatitude(item.lat);
     setLongitude(item.lng);
     setLocationName(item.name);
+
+    // Auto-set orientation to South if location in northern hemisphere, and vice versa
+    setOrientation(Number(item.lat) > 0 ? "S" : "N")
+    console.log(item.lat)
   };
 
   const handleSubmit = async () => {
@@ -105,7 +125,7 @@ export default function ObserverSetup({
         longitude,
         locationName,
         orientation,
-        dateTime,
+        dateTime: dateTime.replace("T", " ") + ":00",
       });
     } finally {
       setSubmitting(false);
@@ -200,28 +220,50 @@ export default function ObserverSetup({
     <VStack gap={5} width="300px">
       {/* Location */}
       <Field.Root>
-        <Combobox.Root
-          collection={collection}
-          value={selectedLoc}
-          onInputValueChange={(e) => setInputValue(e.inputValue)}
-          onValueChange={(e) => {
-            const item = e.items[0];
-            if (!item) return;
-            handleSelectLoc(item);
-          }}
-          openOnChange={(e) => e.inputValue.length > 2}
+        <Field.Label>Location Method</Field.Label>
+
+        <SegmentGroup.Root
+          size="sm"
+          value={locationMode}
+          onValueChange={(e) =>
+            setLocationMode(e.value as "search" | "coordinates")
+          }
         >
-          <Combobox.Label>Location</Combobox.Label>
-          <Combobox.Control>
-            <Combobox.Input placeholder="Enter a location..." />
-            <Combobox.IndicatorGroup>
-              <Combobox.ClearTrigger />
-              <Combobox.Trigger />
-            </Combobox.IndicatorGroup>
-          </Combobox.Control>
-          {autoLocated && (
-            <Field.HelperText>Auto-detected location</Field.HelperText>
-          )}
+          <SegmentGroup.Indicator />
+          <SegmentGroup.Items
+            items={[
+              { value: "search", label: "Search" },
+              { value: "coordinates", label: "Coordinates" },
+            ]}
+          />
+        </SegmentGroup.Root>
+      </Field.Root>
+      {locationMode == "search" && (
+        <Field.Root>
+          <Combobox.Root
+            collection={collection}
+            value={selectedLoc}
+            onInputValueChange={(e) => setInputValue(e.inputValue)}
+            onValueChange={(e) => {
+              const item = e.items[0];
+              if (!item) return;
+              handleSelectLoc(item);
+            }}
+            openOnChange={(e) => e.inputValue.length > 2}
+          >
+            <Combobox.Label>Location</Combobox.Label>
+            <Combobox.Control>
+              <Combobox.Input placeholder="Enter a location..." />
+              <Combobox.IndicatorGroup>
+                <Combobox.ClearTrigger />
+                <Combobox.Trigger />
+              </Combobox.IndicatorGroup>
+            </Combobox.Control>
+            {autoLocated && (
+              <Field.HelperText color="teal.500">
+                Auto-detected location
+              </Field.HelperText>
+            )}
             <Combobox.Positioner zIndex="popover">
               <Combobox.Content>
                 {searchingLoc ? (
@@ -250,12 +292,40 @@ export default function ObserverSetup({
                 )}
               </Combobox.Content>
             </Combobox.Positioner>
-        </Combobox.Root>
-      </Field.Root>
+          </Combobox.Root>
+        </Field.Root>
+      )}
+      {locationMode === "coordinates" && (
+        <HStack align="start">
+          <Field.Root>
+            <Field.Label>Latitude</Field.Label>
+            <Input
+              type="number"
+              value={latitude}
+              onChange={(e) => setLatitude(e.target.value)}
+            />
+          </Field.Root>
+
+          <Field.Root>
+            <Field.Label>Longitude</Field.Label>
+            <Input
+              type="number"
+              value={longitude}
+              onChange={(e) => setLongitude(e.target.value)}
+            />
+          </Field.Root>
+        </HStack>
+      )}
 
       {/* Orientation */}
       <Field.Root>
-        <Field.Label>Orientation</Field.Label>
+        <HStack>
+          <Field.Label>Orientation</Field.Label>
+          <InfoTip
+            content="Which direction are you facing?"
+            positioning={{ placement: "right" }}
+          />
+        </HStack>
         <NativeSelect.Root>
           <NativeSelect.Field
             placeholder="Select orientation"
@@ -274,13 +344,17 @@ export default function ObserverSetup({
 
       {/* Date & Time */}
       <Field.Root>
-        <Field.Label>Date & Time</Field.Label>
+        <HStack>
+          <Field.Label>Date & Time</Field.Label>
+          <InfoTip
+            content="The local date/time for the location given above"
+            positioning={{ placement: "right" }}
+          />
+        </HStack>
         <Input
           type="datetime-local"
           value={dateTime}
-          onChange={(e) =>
-            setDateTime(e.target.value.replace("T", " ") + ":00")
-          }
+          onChange={(e) => setDateTime(e.target.value)}
         />
       </Field.Root>
       <Flex justify="center" w="full" gap={3}>
@@ -290,6 +364,7 @@ export default function ObserverSetup({
           </Button>
         )}
         <Button
+          aria-label="Apply settings and continue"
           disabled={!formComplete}
           onClick={handleSubmit}
           colorPalette="teal"
