@@ -656,6 +656,7 @@ export default function CustomStyleMenu({
                 <HStack>
                   <Text fontWeight="medium">Parameter Mappings</Text>
                   <InfoTip
+                    portalled={false}
                     content="Map input data variables to output sound properties"
                     positioning={{ placement: "right" }}
                   />
@@ -696,6 +697,7 @@ export default function CustomStyleMenu({
                               <HStack>
                                 <Field.Label>Input</Field.Label>
                                 <InfoTip
+                                  portalled={false}
                                   content="Choose the data variable to be sonified"
                                   positioning={{ placement: "right" }}
                                 />
@@ -758,6 +760,7 @@ export default function CustomStyleMenu({
                               <HStack>
                                 <Field.Label>Output</Field.Label>
                                 <InfoTip
+                                  portalled={false}
                                   content="Choose which sound property the input data will control"
                                   positioning={{ placement: "right" }}
                                 />
@@ -871,12 +874,13 @@ export default function CustomStyleMenu({
                                       {mapping.output} Range
                                     </Text>
                                     <InfoTip
+                                      portalled={false}
                                       content="Use this to adjust the limits of the output sound parameter. E.g. setting this at 0.3 - 1 on a Volume mapping would mean that the lowest data point would be played at 30% volume, instead of 0% volume."
                                       positioning={{ placement: "right" }}
                                       contentProps={{ maxW: "300px" }}
                                     />
                                   </HStack>
-                                  <HStack gap={10}>
+                                  <HStack gap={8}>
                                     <HStack>
                                       <NumberInput.Root
                                         aria-label={`${mapping.output} range minimum`}
@@ -888,11 +892,13 @@ export default function CustomStyleMenu({
                                           const n = parseFloat(e.value);
                                           if (Number.isNaN(n)) return; // don't commit while the field is empty/mid-edit
                                           updateMapping(index, "output_range", [
-                                            round2(Math.min(
-                                              n,
-                                              (mapping.output_range?.[1] ?? 1) -
-                                                0.01,
-                                            )),
+                                            round2(
+                                              Math.min(
+                                                n,
+                                                (mapping.output_range?.[1] ??
+                                                  1) - 0.01,
+                                              ),
+                                            ),
                                             mapping.output_range?.[1] ?? 1,
                                           ]);
                                         }}
@@ -906,7 +912,7 @@ export default function CustomStyleMenu({
                                       >
                                         <NumberInput.Input
                                           placeholder="0"
-                                          aria-valuetext={`${(mapping.output_range?.[0] ?? 0)}`}
+                                          aria-valuetext={`${mapping.output_range?.[0] ?? 0}`}
                                         />
                                       </NumberInput.Root>
                                       <Text fontSize="sm">–</Text>
@@ -921,11 +927,13 @@ export default function CustomStyleMenu({
                                           if (Number.isNaN(n)) return;
                                           updateMapping(index, "output_range", [
                                             mapping.output_range?.[0] ?? 0,
-                                            round2(Math.max(
-                                              n,
-                                              (mapping.output_range?.[0] ?? 0) +
-                                                0.01,
-                                            )),
+                                            round2(
+                                              Math.max(
+                                                n,
+                                                (mapping.output_range?.[0] ??
+                                                  0) + 0.01,
+                                              ),
+                                            ),
                                           ]);
                                         }}
                                         min={
@@ -938,7 +946,7 @@ export default function CustomStyleMenu({
                                       >
                                         <NumberInput.Input
                                           placeholder="1"
-                                          aria-valuetext={`${(mapping.output_range?.[1] ?? 1)}`}
+                                          aria-valuetext={`${mapping.output_range?.[1] ?? 1}`}
                                         />
                                       </NumberInput.Root>
                                     </HStack>
@@ -962,6 +970,7 @@ export default function CustomStyleMenu({
                                         </Checkbox.Label>
                                       </Checkbox.Root>
                                       <InfoTip
+                                        portalled={false}
                                         content="Reverses the direction of the input data, so that the biggest values become the smallest and vice versa. E.g. Magnitude increases as stars get dimmer, but it's usually useful to flip that relationship so that the sound parameter increases as stars get brighter."
                                         positioning={{ placement: "right" }}
                                         contentProps={{ maxW: "300px" }}
@@ -995,6 +1004,7 @@ export default function CustomStyleMenu({
                 <HStack>
                   <Field.Label>Data Mode</Field.Label>
                   <InfoTip
+                    portalled={false}
                     content="Choose whether the data should be heard as a continuous stream or as individual discrete events."
                     positioning={{ placement: "right" }}
                     contentProps={{ maxW: "300px" }}
@@ -1054,6 +1064,7 @@ export default function CustomStyleMenu({
                 <HStack>
                   <Select.Label>Base Sound</Select.Label>
                   <InfoTip
+                    portalled={false}
                     content="This is the underlying sound (or instrument) that is used as a basis for the sonification. Sounds with a 🎹 icon next to them are composable, meaning you can apply musical settings like chords and scales."
                     positioning={{ placement: "right" }}
                     contentProps={{ maxW: "300px" }}

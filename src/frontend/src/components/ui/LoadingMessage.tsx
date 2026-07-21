@@ -19,7 +19,6 @@ const LoadingMessage = ({
 }: LoadingMessageProps) => (
   <Box
     textAlign="center"
-    maxWidth="50%"
     mx="auto"
     position="relative"
     mt={4}

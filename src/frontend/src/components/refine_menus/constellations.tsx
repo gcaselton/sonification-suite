@@ -188,7 +188,7 @@ export default function Constellations({
           </RadioCard.Root>
           <Collapsible.Root open={filterType == "boundaries"}>
             <Collapsible.Content>
-              <HStack gap={10}>
+              <HStack gap={10} pt={{ base: 6, md: 0 }}>
                 <Field.Root width="auto">
                   <Field.Label>Number of Stars</Field.Label>
                   <NumberInput.Root

@@ -322,6 +322,7 @@ export default function ObserverSetup({
         <HStack>
           <Field.Label>Orientation</Field.Label>
           <InfoTip
+            portalled={false}
             content="Which direction are you facing?"
             positioning={{ placement: "right" }}
           />
@@ -347,6 +348,7 @@ export default function ObserverSetup({
         <HStack>
           <Field.Label>Date & Time</Field.Label>
           <InfoTip
+            portalled={false}
             content="The local date/time for the location given above"
             positioning={{ placement: "right" }}
           />

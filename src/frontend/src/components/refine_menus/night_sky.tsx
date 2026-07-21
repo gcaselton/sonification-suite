@@ -4,7 +4,8 @@ import {
   Field,
   Image,
   NumberInput,
-  VStack,
+  Stack,
+  VStack
 } from "@chakra-ui/react";
 import { RefineMenuProps } from "./RefineMenu";
 import { useState, useEffect } from "react";
@@ -72,43 +73,68 @@ export default function NightSky({ dataRef, dataName, onApply }: RefineMenuProps
 
   }
 
+  const applyButton = (
+    <Button
+      w="auto"
+      onClick={handleClickApply}
+      colorPalette="teal"
+      loading={applyLoading}
+      loadingText="Saving..."
+    >
+      Apply & Continue <LuArrowRight />
+    </Button>
+  );
+
 
   return (
-    <VStack gap="4" align="start" justify="center">
-      <Box width="50%">
-        <Field.Root width='auto'>
-          <Field.Label>Magnitude less than</Field.Label>
-          <NumberInput.Root
-            min={0}
-            max={6}
-            value={magnitude}
-            onValueChange={(e) => {
-              setMagnitude(e.value);
-            }}
-            inputMode="decimal">
-            <NumberInput.Control />
-            <NumberInput.Input />
-          </NumberInput.Root>
-        </Field.Root>
+    <Stack
+      gap="10"
+      align="start"
+      justify="center"
+      direction={{ base: "column", md: "row" }}
+    >
+      <Box>
+        <VStack gap="6" align={{ base: "center", md: "flex-start" }}>
+          <Field.Root width="auto">
+            <Field.Label>Magnitude less than</Field.Label>
+            <NumberInput.Root
+              min={0}
+              max={6}
+              value={magnitude}
+              onValueChange={(e) => {
+                setMagnitude(e.value);
+              }}
+              inputMode="decimal"
+            >
+              <NumberInput.Control />
+              <NumberInput.Input />
+            </NumberInput.Root>
+          </Field.Root>
+
+          {/* Desktop: button stays with the input, above the plot */}
+          <Box hideBelow="md">{applyButton}</Box>
+        </VStack>
       </Box>
-      <Box width="100%" >
+
+      <Box width="100%">
         {imageLoading ? (
           <LoadingMessage msg="" icon="pulsar" />
         ) : imageSrc ? (
-          <Image src={imageSrc} alt={`A plot of the brightest stars in ${dataName}.`} animation="fade-in 300ms ease-out" rounded='md'/>
+          <Image
+            src={imageSrc}
+            alt={`A plot of the brightest stars in ${dataName}.`}
+            animation="fade-in 300ms ease-out"
+            rounded="md"
+          />
         ) : (
           <ErrorMsg message="Unable to plot data." />
         )}
+
+        {/* Mobile: button appears below the plot */}
+        <Box hideFrom="md" width="100%" mt="6">
+          {applyButton}
+        </Box>
       </Box>
-      <Button
-        w="auto"
-        onClick={handleClickApply}
-        colorPalette="teal"
-        loading={applyLoading}
-        loadingText="Saving..."
-      >
-        Apply & Continue <LuArrowRight />
-      </Button>
-    </VStack>
+    </Stack>
   );
 }

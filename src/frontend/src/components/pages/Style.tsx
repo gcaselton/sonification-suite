@@ -98,10 +98,6 @@ export default function Style() {
     if (file) onFileSelect(file);
   };
 
-  const handleButtonClick = () => {
-    inputRef.current?.click();
-  };
-
   return (
     <PageContainer>
       <Heading as="h1">Step 3: Style</Heading>
@@ -113,6 +109,7 @@ export default function Style() {
 
       <Stack
         gap="6"
+        justify={{ base: "center", md: "flex-start" }}
         direction="row"
         wrap="wrap"
         animation="fade-in 300ms ease-out"
@@ -137,7 +134,7 @@ export default function Style() {
               onClick={() => {
                 handleClick(style);
               }}
-              style={{ cursor: "pointer", width: 250 }}
+              style={{ cursor: "pointer" }}
             >
               <StyleCard
                 title={style.name}

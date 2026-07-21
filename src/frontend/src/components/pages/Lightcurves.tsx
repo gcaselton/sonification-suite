@@ -46,7 +46,10 @@ import {
   Text,
   IconButton,
   chakra,
+  SimpleGrid,
   HStack,
+  VisuallyHidden,
+  useBreakpointValue
 } from "@chakra-ui/react";
 
 const soniType = "light_curves";
@@ -95,6 +98,7 @@ export default function Lightcurves() {
   const [loadingPlot, setLoadingPlot] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [loadingId, setLoadingId] = useState("fake ID");
+  const resultsReady = lightcurves.length > 0 && !loading;
 
   const [showFilters, setShowFilters] = useState(false);
   const [tessChecked, setTessChecked] = useState(true);
@@ -114,6 +118,19 @@ export default function Lightcurves() {
   const [dec, setDec] = useState(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  const searchResultsRef = useRef<HTMLHeadingElement>(null)
+
+  // Focus search results for screen readers & scroll into view when ready
+  useEffect(() => {
+    if (resultsReady && searchResultsRef.current) {
+      searchResultsRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+      searchResultsRef.current.focus();
+    }
+  }, [resultsReady]);
 
   const cancelSearch = () => {
     if (abortControllerRef.current) {
@@ -166,6 +183,9 @@ export default function Lightcurves() {
     setLoading(true);
     setErrorMessage("");
 
+    // Clear previous results
+    setLightcurves([]);
+
     // Dictionary of search filters
     const filters = {
       mission: {
@@ -211,7 +231,7 @@ export default function Lightcurves() {
         setLoading(false);
       }
     }
-  };
+  };;
 
   const selectLightcurve = async (dataURI: string) => {
     // Call the API endpoint to select the lightcurve and get the filepath
@@ -378,6 +398,12 @@ export default function Lightcurves() {
 
   return (
     <PageContainer>
+      <VisuallyHidden>
+        <div role="status" aria-live="polite" aria-atomic="true">
+          {resultsReady ??
+            `${lightcurves.length} results found for ${searchTerm}`}
+        </div>
+      </VisuallyHidden>
       <Dialog.Root
         open={dataReduced}
         onOpenChange={(e) => setDataReduced(e.open)}
@@ -435,29 +461,35 @@ export default function Lightcurves() {
       <br />
       <form onSubmit={handleSubmit}>
         <Box display="flex" justifyContent="center">
-          <VStack gap={4} width="50%">
+          <VStack gap={4} width={{ base: "100%", md: "50%" }} maxWidth="600px">
             <HStack width="100%">
-              <InputGroup
-                startElement={<LuTelescope size="1.1rem" />}
-                width="100%"
-              >
-                <Input
-                  placeholder="Search for a star by name, TIC, KIC or EPIC identifier"
-                  type="text"
-                  name="star_name"
-                  variant="outline"
-                  value={selectedStar}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setSelectedStar(value);
-                    if (value.trim() === "") {
-                      setSearched(false);
-                      setLightcurves([]);
-                    }
-                  }}
-                />
-              </InputGroup>
+              <Field.Root>
+                <InputGroup
+                  startElement={<LuTelescope size="1.1rem" />}
+                  width="100%"
+                >
+                  <Input
+                    placeholder="E.g. Polaris, HIP 11767, alf Psc..."
+                    type="text"
+                    name="star_name"
+                    variant="outline"
+                    value={selectedStar}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSelectedStar(value);
+                      if (value.trim() === "") {
+                        setSearched(false);
+                        setLightcurves([]);
+                      }
+                    }}
+                  />
+                </InputGroup>
+                <Field.HelperText>
+                  Search by name or any catalog identifier
+                </Field.HelperText>
+              </Field.Root>
               <Button
+                alignSelf="flex-start"
                 variant="outline"
                 onClick={() => setShowFilters(!showFilters)}
                 aria-label="Show filters"
@@ -541,7 +573,12 @@ export default function Lightcurves() {
             Suggested
           </Heading>
           <br />
-          <Stack gap="4" direction="row" wrap="wrap">
+          <Stack
+            gap="4"
+            direction="row"
+            wrap="wrap"
+            justify={{ base: "center", md: "flex-start" }}
+          >
             {suggested.map((star) => (
               <Card.Root
                 width="200px"
@@ -648,56 +685,106 @@ export default function Lightcurves() {
           <br />
         </Box>
       )}
-      {lightcurves.length > 0 && !loading && (
+      {resultsReady && (
         <>
-          <Heading>Search results for {searchTerm}</Heading>
+          <Heading ref={searchResultsRef}>
+            Search results for {searchTerm}
+          </Heading>
           <br />
-          <Table.Root size="md" interactive stickyHeader>
-            <Table.Header>
-              <Table.Row>
-                <Table.ColumnHeader fontWeight="bold">
-                  Mission
-                </Table.ColumnHeader>
-                <Table.ColumnHeader fontWeight="bold">
-                  Exposure
-                </Table.ColumnHeader>
-                <Table.ColumnHeader fontWeight="bold">
-                  Pipeline
-                </Table.ColumnHeader>
-                <Table.ColumnHeader fontWeight="bold">
-                  Year</Table.ColumnHeader>
-                <Table.ColumnHeader fontWeight="bold">
-                  Period
-                </Table.ColumnHeader>
-                <Table.ColumnHeader fontWeight="bold">
-                  Plot</Table.ColumnHeader>
-                <Table.ColumnHeader fontWeight="bold">
-                  Sonify
-                </Table.ColumnHeader>
-              </Table.Row>
-            </Table.Header>
-            <Table.Body>
-              {lightcurves.map((item: Lightcurve) => (
-                <Table.Row key={item.id}>
-                  <Table.Cell>{item.mission}</Table.Cell>
-                  <Table.Cell>{item.exposure}</Table.Cell>
-                  <Table.Cell>{item.pipeline}</Table.Cell>
-                  <Table.Cell>{item.year}</Table.Cell>
-                  <Table.Cell>{item.period}</Table.Cell>
-                  <Table.Cell>
-                    <PlotButton onClick={handleClickPlot} item={item} />
-                  </Table.Cell>
-                  <Table.Cell>
-                    <SonifyButton
-                      onClick={handleClickSonify}
-                      dataURI={item.dataURI}
-                      loading={item.dataURI === loadingId}
-                    />
-                  </Table.Cell>
+
+          {/* Desktop/tablet: table */}
+          <Box hideBelow="md" width="100%">
+            <Table.Root size="md" interactive stickyHeader>
+              <Table.Header>
+                <Table.Row>
+                  <Table.ColumnHeader fontWeight="bold">
+                    Mission
+                  </Table.ColumnHeader>
+                  <Table.ColumnHeader fontWeight="bold">
+                    Exposure
+                  </Table.ColumnHeader>
+                  <Table.ColumnHeader fontWeight="bold">
+                    Pipeline
+                  </Table.ColumnHeader>
+                  <Table.ColumnHeader fontWeight="bold">
+                    Year
+                  </Table.ColumnHeader>
+                  <Table.ColumnHeader fontWeight="bold">
+                    Period
+                  </Table.ColumnHeader>
+                  <Table.ColumnHeader fontWeight="bold">
+                    Plot
+                  </Table.ColumnHeader>
+                  <Table.ColumnHeader fontWeight="bold">
+                    Sonify
+                  </Table.ColumnHeader>
                 </Table.Row>
-              ))}
-            </Table.Body>
-          </Table.Root>
+              </Table.Header>
+              <Table.Body>
+                {lightcurves.map((item: Lightcurve) => (
+                  <Table.Row key={item.id}>
+                    <Table.Cell>{item.mission}</Table.Cell>
+                    <Table.Cell>{item.exposure}</Table.Cell>
+                    <Table.Cell>{item.pipeline}</Table.Cell>
+                    <Table.Cell>{item.year}</Table.Cell>
+                    <Table.Cell>{item.period}</Table.Cell>
+                    <Table.Cell>
+                      <PlotButton onClick={handleClickPlot} item={item} />
+                    </Table.Cell>
+                    <Table.Cell>
+                      <SonifyButton
+                        onClick={handleClickSonify}
+                        dataURI={item.dataURI}
+                        loading={item.dataURI === loadingId}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                ))}
+              </Table.Body>
+            </Table.Root>
+          </Box>
+
+          {/* Mobile: stacked cards */}
+          <VStack hideFrom="md" gap={3} width="100%" align="stretch">
+            {lightcurves.map((item: Lightcurve) => (
+              <Card.Root key={item.id} variant="outline" width="100%">
+                <Card.Body>
+                  <Stack gap={2}>
+                    <HStack justify="space-between">
+                      <Card.Title>{item.mission}</Card.Title>
+                      <Text color="fg.muted" fontSize="sm">
+                        {item.year}
+                      </Text>
+                    </HStack>
+
+                    <SimpleGrid columns={2} gap={2} fontSize="sm">
+                      <Box>
+                        <Text color="fg.muted">Exposure</Text>
+                        <Text>{item.exposure}</Text>
+                      </Box>
+                      <Box>
+                        <Text color="fg.muted">Pipeline</Text>
+                        <Text>{item.pipeline}</Text>
+                      </Box>
+                      <Box>
+                        <Text color="fg.muted">Period</Text>
+                        <Text>{item.period}</Text>
+                      </Box>
+                    </SimpleGrid>
+
+                    <HStack gap={2} pt={2}>
+                      <PlotButton onClick={handleClickPlot} item={item} />
+                      <SonifyButton
+                        onClick={handleClickSonify}
+                        dataURI={item.dataURI}
+                        loading={item.dataURI === loadingId}
+                      />
+                    </HStack>
+                  </Stack>
+                </Card.Body>
+              </Card.Root>
+            ))}
+          </VStack>
         </>
       )}
     </PageContainer>

@@ -69,52 +69,46 @@ export default function Planetaria() {
         gap="4"
         direction="row"
         wrap="wrap"
+        justify={{ base: "center", md: "flex-start" }}
         animation="fade-in 300ms ease-out"
       >
         {astroTypes.map((astroType) => (
-          <Tooltip
+          <Card.Root
+            width="200px"
             key={astroType.name}
-            content="Coming soon!"
-            openDelay={300}
-            disabled={astroType.page !== "/"}
+            variant="elevated"
+            _hover={{ transform: "scale(1.05)" }}
+            transition="transform 0.2s ease"
           >
-            <Card.Root
-              width="200px"
-              key={astroType.name}
-              variant="elevated"
-              _hover={{ transform: "scale(1.05)" }}
-              transition="transform 0.2s ease"
+            <LinkOverlay
+              as={Link}
+              onClick={() => navigate(astroType.page)}
+              cursor={astroType.page === "/" ? "disabled" : "pointer"}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  navigate(astroType.page);
+                }
+              }}
             >
-              <LinkOverlay
-                as={Link}
-                onClick={() => navigate(astroType.page)}
-                cursor={astroType.page === "/" ? "disabled" : "pointer"}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    navigate(astroType.page);
-                  }
+              <img
+                src={getImage(astroType.name)}
+                alt={astroType.name}
+                style={{
+                  width: "100%",
+                  height: "200px",
+                  objectFit: "cover",
+                  borderRadius: "8px",
                 }}
-              >
-                <img
-                  src={getImage(astroType.name)}
-                  alt={astroType.name}
-                  style={{
-                    width: "100%",
-                    height: "200px",
-                    objectFit: "cover",
-                    borderRadius: "8px",
-                  }}
-                />
-              </LinkOverlay>
-              <Card.Body>
-                <Card.Title mb="2">{astroType.name}</Card.Title>
-                <Card.Description>{astroType.description}</Card.Description>
-              </Card.Body>
-            </Card.Root>
-          </Tooltip>
+              />
+            </LinkOverlay>
+            <Card.Body>
+              <Card.Title mb="2">{astroType.name}</Card.Title>
+              <Card.Description>{astroType.description}</Card.Description>
+            </Card.Body>
+          </Card.Root>
         ))}
         <Card.Root
           width="200px"

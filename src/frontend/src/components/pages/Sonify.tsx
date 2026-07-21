@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import LoadingMessage from "../ui/LoadingMessage";
 import { BackButton } from "../ui/Buttons";
@@ -35,8 +35,10 @@ import {
   NumberInput,
   Separator,
   VStack,
+  Stack,
   Select,
   HStack,
+  VisuallyHidden,
 } from "@chakra-ui/react";
 import {
   LuAudioLines,
@@ -50,6 +52,7 @@ import ObserverSetup, {
   ORIENTATIONS,
 } from "../utils/ObserverSetup";
 import { Tooltip } from "../ui/Tooltip";
+import { Download } from "lucide-react";
 
 export default function Sonify() {
   // Route states
@@ -62,9 +65,6 @@ export default function Sonify() {
   const soniType = location.state.soniType;
   const ra = location.state.ra ?? null;
   const dec = location.state.dec ?? null;
-
-  console.log("Ra: " + ra);
-  console.log("Dec: " + dec);
 
   // Define length limits based on sonification type
   const defaultsDict = {
@@ -90,7 +90,6 @@ export default function Sonify() {
   const [soniClicked, setSoniClicked] = useState(false);
 
   // States to control spectrogram
-  const [specReady, setSpecReady] = useState(false);
   const [specLoading, setSpecLoading] = useState(false);
   const [specImage, setSpecImage] = useState<string | null>(null);
 
@@ -114,6 +113,15 @@ export default function Sonify() {
   );
 
   const [altAz, setAltAz] = useState<string[] | null>(null);
+
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Focus keyboard navigation onto audio player once sonification generated
+  useEffect(() => {
+    if (soniReady) {
+      audioRef.current?.focus();
+    }
+  }, [soniReady]);
 
   // Generate the plot once when component mounts
   useEffect(() => {
@@ -217,7 +225,6 @@ export default function Sonify() {
     event.preventDefault();
     setSoniClicked(true);
     setSoniReady(false);
-    setSpecReady(false);
     setLoading(true);
     setAltAz(null);
 
@@ -299,6 +306,15 @@ export default function Sonify() {
 
   return (
     <PageContainer>
+      <VisuallyHidden>
+        <div role="status" aria-live="polite" aria-atomic="true">
+          {loading
+            ? "Generating sonification"
+            : soniReady
+              ? "Sonification generated successfully. Audio player is now available."
+              : ""}
+        </div>
+      </VisuallyHidden>
       <Heading as="h1">Step 4: Sonify</Heading>
       <br />
       <Text textStyle="lg">
@@ -307,10 +323,20 @@ export default function Sonify() {
       </Text>
       <br />
       <br />
-      <HStack gap="4" align="start" justify="center">
-        <Box width="50%">
+      <Stack
+        direction={{ base: "column", lg: "row" }}
+        gap="4"
+        align="start"
+        justify="center"
+      >
+        <Box width={{ base: "100%", lg: "50%" }}>
           <form onSubmit={handleSubmit}>
-            <VStack align="start" justify="center" w="80%" gap={5}>
+            <VStack
+              align="start"
+              justify="center"
+              w={{ base: "100%", lg: "80%" }}
+              gap={5}
+            >
               <HStack gap={10}>
                 <Field.Root invalid={invalidLength} width="auto">
                   <HStack>
@@ -329,7 +355,6 @@ export default function Sonify() {
                     min={1}
                     max={defaults.max_length}
                   >
-                 
                     <NumberInput.Input aria-valuetext={`${length} seconds`} />
                   </NumberInput.Root>
                   {Number(length) > 30 && Number(length) <= 120 && (
@@ -376,7 +401,12 @@ export default function Sonify() {
               </HStack>
 
               {/* Audio system options */}
-              <HStack alignItems="flex-end" w="100%">
+              <Stack
+                direction={{ base: "column", sm: "row" }}
+                alignItems={{ base: "stretch", sm: "flex-end" }}
+                w="100%"
+                gap={3}
+              >
                 <Select.Root
                   collection={audioSystemOptions}
                   value={audioSystem}
@@ -437,7 +467,7 @@ export default function Sonify() {
                     />
                   </HStack>
                 )}
-              </HStack>
+              </Stack>
 
               {observerValues && (
                 <HStack
@@ -505,12 +535,29 @@ export default function Sonify() {
               <Button
                 type="submit"
                 colorPalette="teal"
-                minW="50%"
+                size="md"
+                minW="60%"
+                transition="transform 0.2s"
+                _hover={{
+                  transform: "translateY(-2px)",
+                }}
+                _active={{
+                  transform: "translateY(0px)",
+                }}
                 disabled={invalidLength || length === ""}
                 loading={loading}
               >
-                <LuAudioLines />
-                Generate
+                <Box
+                  display="inline-flex"
+                  animation={
+                    !invalidLength && length !== ""
+                      ? "audioPulse 2s ease-in-out infinite"
+                      : undefined
+                  }
+                >
+                  <LuAudioLines />
+                </Box>
+                Generate Sonification
               </Button>
 
               <HStack w="100%">
@@ -533,19 +580,24 @@ export default function Sonify() {
                     <DataList.ItemValue>{item.value}</DataList.ItemValue>
                     {item.downloadable && item.fileRef && (
                       <DataList.ItemValue>
-                        <IconButton
-                          asChild
-                          colorPalette="teal"
-                          size="sm"
-                          variant="ghost"
+                        <Tooltip
+                          content={`Download ${item.label.toLowerCase()}`}
                         >
-                          <a
-                            href={`${coreAPI}/download?file_ref=${encodeURIComponent(item.fileRef)}`}
-                            style={{ color: "inherit" }}
+                          <IconButton
+                            aria-label={`Download ${item.label.toLowerCase()}`}
+                            asChild
+                            colorPalette="teal"
+                            size="sm"
+                            variant="ghost"
                           >
-                            <LuDownload />
-                          </a>
-                        </IconButton>
+                            <a
+                              href={`${coreAPI}/download?file_ref=${encodeURIComponent(item.fileRef)}`}
+                              style={{ color: "inherit" }}
+                            >
+                              <LuDownload />
+                            </a>
+                          </IconButton>
+                        </Tooltip>
                       </DataList.ItemValue>
                     )}
                   </DataList.Item>
@@ -575,7 +627,7 @@ export default function Sonify() {
           </form>
           <br />
         </Box>
-        <Box width="50%">
+        <Box width={{ base: "100%", lg: "50%" }}>
           {soniReady && (
             <Flex justify="center" mb={2}>
               <SegmentGroup.Root
@@ -638,17 +690,18 @@ export default function Sonify() {
               <ErrorMsg message="Unable to generate spectrogram." />
             ))}
         </Box>
-      </HStack>
+      </Stack>
       <ActionBar.Root open={soniClicked}>
         <ActionBar.Positioner zIndex={1400}>
           <ActionBar.Content
-            w={loading ? "20%" : "50%"}
+            w={{ base: "90%", md: loading ? "20%" : "50%" }}
             justifyContent="center"
           >
             {loading && <LoadingMessage msg="Generating Sonification..." />}
             {errorMessage && <ErrorMsg message={errorMessage} />}
             {soniReady && (
               <audio
+                ref={audioRef}
                 key={audioKey}
                 src={`${coreAPI}/audio/${audioFilename}?v=${audioKey}`}
                 controls

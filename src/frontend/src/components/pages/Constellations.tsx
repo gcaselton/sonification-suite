@@ -165,7 +165,13 @@ export default function Constellations() {
 
   return (
     <PageContainer>
-      <Heading as="h1">Constellations</Heading>
+      <Heading
+        as="h1"
+        wordBreak="normal"
+        overflowWrap="normal"
+      >
+        Constellations
+      </Heading>
       <br />
       <Text textStyle="lg">
         Search for a specific constellation or choose from the suggestions below
@@ -185,7 +191,8 @@ export default function Constellations() {
               }, 300);
             }
           }}
-          width="50%"
+          width={{ base: "100%", md: "50%" }}
+          maxWidth="600px"
         >
           <Combobox.Control>
             <InputGroup startElement={<LuTelescope size="1.1rem" />}>
@@ -218,7 +225,13 @@ export default function Constellations() {
           Suggested
         </Heading>
         <br />
-        <Stack gap="4" direction="row" wrap="wrap">
+        <Stack
+          gap="4"
+          direction="row"
+          wrap="wrap"
+          justify={{ base: "center", md: "flex-start" }}
+          animation="fade-in 300ms ease-out"
+        >
           {suggested.map((suggestion) => (
             <Card.Root
               width="200px"
