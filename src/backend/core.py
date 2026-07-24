@@ -450,7 +450,7 @@ async def uploadData(file: UploadFile, request: Request):
             session_id,
             ip
         )
-        raise HTTPException(429, f"Session storage quota of {UPLOAD_QUOTA_MB}MB exceeded")
+        raise HTTPException(429, f"Session upload quota of {UPLOAD_QUOTA_MB}MB exceeded")
 
     filepath = os.path.join(uploads_dir, new_name)
 
@@ -818,13 +818,13 @@ async def upload_style(file: UploadFile = File(...), request: Request = None):
     os.makedirs(session_dir, exist_ok=True)
 
     # Check session quota
-    current_usage = get_session_size(session_dir)
-    if current_usage + len(contents) > SESSION_QUOTA_BYTES:
+    current_usage = get_uploads_dir_size(session_dir)
+    if current_usage + len(contents) > UPLOAD_QUOTA_BYTES:
         LOG.warning(
             "Style upload rejected | reason=quota_exceeded | usage=%d | file_size=%d | session=%s | ip=%s",
             current_usage, len(contents), session_id, ip
         )
-        raise HTTPException(429, f"Session storage quota of {SESSION_QUOTA_MB}MB exceeded")
+        raise HTTPException(429, f"Session upload quota of {UPLOAD_QUOTA_MB}MB exceeded")
 
     new_name = f"{uuid.uuid4()}{ext}"
     filepath = os.path.join(session_dir, new_name)
