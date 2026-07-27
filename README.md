@@ -26,7 +26,7 @@ Try the Alpha version online: [https://sonificationsuite.ncl.ac.uk](https://soni
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/gcaselton/sonification-toolkit.git
+git clone https://github.com/gcaselton/sonification-suite.git
 ```
 
 2. **Setup and run the backend**
