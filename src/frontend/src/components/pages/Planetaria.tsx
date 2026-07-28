@@ -49,6 +49,11 @@ const astroTypes: AstroType[] = [
     description: "Hear the stars at your location appear.",
     page: "/night-sky",
   },
+  {
+    name: "Data Composer",
+    description: "Upload your own data and compose sonifications in layers.",
+    page: "/data-composer"
+  }
 ];
 
 export default function Planetaria() {

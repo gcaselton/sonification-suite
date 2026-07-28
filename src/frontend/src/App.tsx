@@ -10,6 +10,7 @@ import Planetaria from './components/pages/Planetaria';
 import Landing from './components/pages/Landing';
 import Refine from './components/pages/Refine';
 import Constellations from './components/pages/Constellations';
+import DataComposer from './components/pages/DataComposer';
 import { useEffect, useState, useRef } from 'react';
 import { coreAPI } from './apiConfig';
 import NightSky from './components/pages/NightSky';
@@ -55,6 +56,7 @@ function App() {
               <Route path="/light-curves" element={<Lightcurves />} />
               <Route path="/constellations" element={<Constellations />} />
               <Route path="/night-sky" element={<NightSky />} />
+              <Route path="/data-composer" element={<DataComposer />} />
               <Route path="/refine" element={<Refine />} />
               <Route path="/style" element={<Style />} />
               <Route path="/sonify" element={<Sonify />} />
