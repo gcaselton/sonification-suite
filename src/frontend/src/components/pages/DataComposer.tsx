@@ -1,12 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  Alert,
+  ActionBar,
   Box,
   Button,
   Card,
   Badge,
   Dialog,
+  Editable,
   Stack,
+  FileUpload,
   Heading,
   VStack,
   HStack,
@@ -17,11 +21,16 @@ import {
   CloseButton,
   Separator,
   Portal,
+  Link,
 } from "@chakra-ui/react";
 import PageContainer from "../ui/PageContainer";
 import { Tooltip } from "../ui/Tooltip";
+import { coreAPI } from "../../apiConfig";
 import {
   LuPlus,
+  LuCheck,
+  LuX,
+  LuPencil,
   LuCopy,
   LuTrash2,
   LuTriangleAlert,
@@ -29,8 +38,7 @@ import {
   LuUpload,
   LuSlidersHorizontal,
   LuPalette,
-  LuVolume2,
-  LuVolumeX,
+  LuCircleHelp,
 } from "react-icons/lu";
 
 interface DataLayer {
@@ -50,8 +58,6 @@ interface DataLayer {
   // Derived / validation
   pointCount: number | null;
   mismatch: boolean;
-
-  muted: boolean;
 }
 
 function makeLayerId() {
@@ -70,7 +76,6 @@ function makeEmptyLayer(index: number): DataLayer {
     styleName: null,
     pointCount: null,
     mismatch: false,
-    muted: false,
   };
 }
 
@@ -78,40 +83,45 @@ const MAX_LAYERS = 6;
 
 export default function DataComposer() {
   const navigate = useNavigate();
+  const soniType = 'data_composer'
 
   const [layers, setLayers] = useState<DataLayer[]>([]);
 
-  // Per-layer "choose data source" dialog (only shown for layer 2+)
-  const [dataDialogLayerId, setDataDialogLayerId] = useState<string | null>(
-    null,
-  );
-  const [reuseChoice, setReuseChoice] = useState<string[]>(["new"]);
+  // Tracks each layer's current dropdown choice ("new" or another layer's id)
+  const [dataSourceChoice, setDataSourceChoice] = useState<
+    Record<string, string>
+  >({});
 
+  // Which layers currently have their Data slot open for editing
+  // (either because they have no data yet, or the user clicked "Change").
+  const [editingDataLayerIds, setEditingDataLayerIds] = useState<Set<string>>(
+    new Set(),
+  );
+
+  const isEditingData = (layer: DataLayer) =>
+    !layer.dataName || editingDataLayerIds.has(layer.id);
+
+  // Tracks whether any data has been uploaded yet
+  const [uploading, setUploading] = useState(false);
+  const [dataUploaded, setDataUploaded] = useState(false);
+
+  const [errorMessage, setErrorMessage] = useState("");
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [howItWorksOpen, setHowItWorksOpen] = useState(false);
 
   const dependentsOf = (layerId: string) =>
     layers.filter((l) => l.reusedFromLayerId === layerId);
 
-  const layerIndex = (id: string) => layers.findIndex((l) => l.id === id);
-
   // ---- Add layer ----
-
   const handleAddLayer = () => {
     if (layers.length >= MAX_LAYERS) return;
     const newLayer = makeEmptyLayer(layers.length + 1);
     setLayers((prev) => [...prev, newLayer]);
-
-    if (layers.length === 0) {
-      // First layer: no reuse option, straight to upload
-      navigateToUpload(newLayer);
-    }
-    // For layer 2+, the card renders with an empty Data slot; the user
-    // clicks "Choose data" on the card itself, which opens the reuse dialog.
   };
 
   // ---- Data slot: choose source (reuse vs upload) ----
 
-  const reuseOptionsFor = (layerId: string) =>
+  const reuseOptionsForLayer = (layerId: string) =>
     createListCollection({
       items: [
         { label: "Upload new data", value: "new" },
@@ -124,61 +134,132 @@ export default function DataComposer() {
       ],
     });
 
-  const handleOpenDataDialog = (layerId: string) => {
-    setReuseChoice(["new"]);
-    setDataDialogLayerId(layerId);
+  const handleDataSourceChange = (layerId: string, value: string) => {
+    setDataSourceChoice((prev) => ({ ...prev, [layerId]: value }));
+
+    if (value === "new") return; // still editing — reveal the upload button
+
+    const layer = layers.find((l) => l.id === layerId);
+    const source = layers.find((l) => l.id === value);
+    if (!layer || !source) return;
+
+    setLayers((prev) =>
+      prev.map((l) =>
+        l.id === layerId
+          ? {
+              ...l,
+              reusedFromLayerId: source.id,
+              dataName: source.dataName,
+              dataRef: source.dataRef,
+              refined: source.refined,
+              styleRef: null,
+              styleName: null,
+              pointCount: null,
+              mismatch: false,
+            }
+          : l,
+      ),
+    );
+
+    // Reuse selected successfully — close edit mode for this layer.
+    setEditingDataLayerIds((prev) => {
+      const next = new Set(prev);
+      next.delete(layerId);
+      return next;
+    });
   };
 
-  const handleConfirmDataChoice = () => {
-    const layer = layers.find((l) => l.id === dataDialogLayerId);
-    if (!layer) return;
-    const choice = reuseChoice[0];
+  const handleFileAccept = async (
+    files: FileList | File[],
+    layer: DataLayer,
+  ) => {
+    setUploading(true);
 
-    if (choice === "new") {
-      setDataDialogLayerId(null);
-      navigateToUpload(layer);
+    const file = files[0];
+
+    if (!file) {
+      setUploading(false);
       return;
     }
 
-    const source = layers.find((l) => l.id === choice);
-    if (source) {
-      setLayers((prev) =>
-        prev.map((l) =>
-          l.id === layer.id
-            ? {
-                ...l,
-                reusedFromLayerId: source.id,
-                dataName: source.dataName,
-                dataRef: source.dataRef,
-                refined: source.refined,
-                // Changing data invalidates any previously chosen style,
-                // since column names/lengths may no longer match.
-                styleRef: null,
-                styleName: null,
-                pointCount: null,
-                mismatch: false,
-              }
-            : l,
-        ),
-      );
+    if (file.size > 1e7) {
+      setUploading(false);
+      setErrorMessage("File too large. Maximum size is 10MB.");
+      return;
     }
-    setDataDialogLayerId(null);
-  };
 
-  const navigateToUpload = (layer: DataLayer) => {
-    // TODO: route to the (not-yet-built) CSV upload page for Composer layers.
-    navigate("/data-composer/upload", {
-      state: {
-        layer,
-        composerReturn: { page: "/data-composer", layerId: layer.id },
-      },
+    const formData = new FormData();
+    formData.append("file", file);
+
+    let result: { file_ref: string };
+
+    try {
+      const res = await fetch(`${coreAPI}/upload-data/`, {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        let message = `HTTP ${res.status}`;
+
+        try {
+          const errorData = await res.json();
+          if (errorData?.detail) {
+            message = errorData.detail;
+          }
+        } catch {
+          // response was not JSON (ignore)
+        }
+        setErrorMessage(message);
+        console.error(message);
+        return;
+      }
+
+      result = await res.json();
+    } catch (err) {
+      setErrorMessage("Failed to upload file. Please try again.");
+      console.error(err);
+      return;
+    } finally {
+      setUploading(false);
+    }
+
+    const dataName = file.name.split(".")[0];
+    const dataRef = result.file_ref;
+
+    setLayers((prev) =>
+      prev.map((l) =>
+        l.id === layer.id
+          ? {
+              ...l,
+              dataName,
+              dataRef,
+              // A fresh upload isn't a reuse of another layer, and any
+              // previous refine/style state no longer applies to new data.
+              reusedFromLayerId: null,
+              refined: false,
+              styleRef: null,
+              styleName: null,
+              pointCount: null,
+              mismatch: false,
+            }
+          : l,
+      ),
+    );
+
+    setDataUploaded(true);
+
+    // Upload succeeded — close edit mode for this layer.
+    setEditingDataLayerIds((prev) => {
+      const next = new Set(prev);
+      next.delete(layer.id);
+      return next;
     });
   };
 
   const handleRefine = (layer: DataLayer) => {
-    // TODO: route to the (not-yet-designed) bespoke refine page for
-    // user-uploaded data.
-    navigate("/data-composer/refine", {
+    navigate("/refine", {
       state: {
         layer,
         composerReturn: { page: "/data-composer", layerId: layer.id },
@@ -196,19 +277,42 @@ export default function DataComposer() {
     });
   };
 
-  // ---- Duplicate / delete / mute ----
+  // ---- Duplicate / delete ----
 
   const handleDuplicateLayer = (id: string) => {
     if (layers.length >= MAX_LAYERS) return;
+
     const source = layers.find((l) => l.id === id);
     if (!source) return;
+
+    // Remove any existing "(Copy)" or "(Copy N)" suffix.
+    const baseLabel = source.label.replace(/ \(Copy(?: \d+)?\)$/, "");
+
+    // Count existing copies of this base label.
+    const copyCount =
+      layers.filter(
+        (l) =>
+          l.label === baseLabel ||
+          l.label.match(
+            new RegExp(
+              `^${baseLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\(Copy(?: \\d+)?\\)$`,
+            ),
+          ),
+      ).length - 1;
+
+    const label =
+      copyCount === 0
+        ? `${baseLabel} (Copy)`
+        : `${baseLabel} (Copy ${copyCount + 1})`;
 
     const copy: DataLayer = {
       ...source,
       id: makeLayerId(),
-      label: `Layer ${layers.length + 1}`,
-      reusedFromLayerId: source.reusedFromLayerId ?? source.id,
+      label,
+      reusedFromLayerId:
+        source.dataRef == null ? null : (source.reusedFromLayerId ?? source.id),
     };
+
     setLayers((prev) => [...prev, copy]);
   };
 
@@ -242,12 +346,6 @@ export default function DataComposer() {
     setPendingDeleteId(null);
   };
 
-  const handleToggleMute = (id: string) => {
-    setLayers((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, muted: !l.muted } : l)),
-    );
-  };
-
   const allLayersReady =
     layers.length > 0 &&
     layers.every((l) => l.dataName && l.styleName && !l.mismatch);
@@ -261,13 +359,35 @@ export default function DataComposer() {
     ? dependentsOf(pendingDeleteId)
     : [];
 
+  const handleRenameLayer = (id: string, label: string) => {
+    setLayers((prev) =>
+      prev.map((layer) =>
+        layer.id === id ? { ...layer, label } : layer,
+      ),
+    );
+  };
+
   return (
     <PageContainer>
       <Heading as="h1">Data Composer</Heading>
       <br />
-      <Text textStyle="lg">
-        Build a layered sonification from your own data. 
-      </Text>
+      <Stack direction={{ base: "column", md: "row" }} gap="4">
+        <Text textStyle="lg">
+          Build a layered sonification from your own data.
+        </Text>
+        <Link
+          onClick={() => setHowItWorksOpen(true)}
+          color="teal.500"
+          fontSize="sm"
+          cursor="pointer"
+          whiteSpace="nowrap"
+        >
+          <HStack gap="2">
+            <LuCircleHelp />
+            <Text>How does this work?</Text>
+          </HStack>
+        </Link>
+      </Stack>
       <br />
       <br />
 
@@ -290,8 +410,10 @@ export default function DataComposer() {
       ) : (
         <Stack gap="4" animation="fade-in 300ms ease-out">
           {layers.map((layer) => {
-            const isFirstLayer = layerIndex(layer.id) === 0;
             const canChooseStyle = !!layer.dataName;
+            const hasReusableData = layers.some(
+              (l) => l.id !== layer.id && l.dataName,
+            );
 
             return (
               <Card.Root key={layer.id} variant="outline" width="100%">
@@ -304,7 +426,40 @@ export default function DataComposer() {
                     mb="4"
                   >
                     <HStack>
-                      <Card.Title>{layer.label}</Card.Title>
+                      <Card.Title>
+                        <Editable.Root
+                          value={layer.label}
+                          onValueChange={(e) =>
+                            handleRenameLayer(layer.id, e.value)
+                          }
+                        >
+                          <Editable.Preview
+                            textStyle="lg"
+                            fontWeight="semibold"
+                          />
+                          <Editable.Input
+                            textStyle="lg"
+                            fontWeight="semibold"
+                          />
+                          <Editable.Control>
+                            <Editable.EditTrigger asChild>
+                              <IconButton variant="ghost" size="xs">
+                                <LuPencil />
+                              </IconButton>
+                            </Editable.EditTrigger>
+                            <Editable.CancelTrigger asChild>
+                              <IconButton variant="outline" size="xs">
+                                <LuX />
+                              </IconButton>
+                            </Editable.CancelTrigger>
+                            <Editable.SubmitTrigger asChild>
+                              <IconButton variant="outline" size="xs">
+                                <LuCheck />
+                              </IconButton>
+                            </Editable.SubmitTrigger>
+                          </Editable.Control>
+                        </Editable.Root>
+                      </Card.Title>
                       {layer.mismatch && (
                         <Badge colorPalette="orange" gap="1">
                           <LuTriangleAlert /> Needs attention
@@ -316,36 +471,28 @@ export default function DataComposer() {
                       gap="1"
                       justify={{ base: "flex-end", md: "flex-start" }}
                     >
-                      <IconButton
-                        size="sm"
-                        variant="ghost"
-                        aria-label={
-                          layer.muted
-                            ? `Unmute ${layer.label}`
-                            : `Mute ${layer.label}`
-                        }
-                        onClick={() => handleToggleMute(layer.id)}
-                      >
-                        {layer.muted ? <LuVolumeX /> : <LuVolume2 />}
-                      </IconButton>
-                      <IconButton
-                        size="sm"
-                        variant="ghost"
-                        aria-label={`Duplicate ${layer.label}`}
-                        disabled={layers.length >= MAX_LAYERS}
-                        onClick={() => handleDuplicateLayer(layer.id)}
-                      >
-                        <LuCopy />
-                      </IconButton>
-                      <IconButton
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="red"
-                        aria-label={`Delete ${layer.label}`}
-                        onClick={() => handleRequestDelete(layer.id)}
-                      >
-                        <LuTrash2 />
-                      </IconButton>
+                      <Tooltip content="Duplicate layer">
+                        <IconButton
+                          size="sm"
+                          variant="ghost"
+                          aria-label={`Duplicate ${layer.label}`}
+                          disabled={layers.length >= MAX_LAYERS}
+                          onClick={() => handleDuplicateLayer(layer.id)}
+                        >
+                          <LuCopy />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip content="Delete layer">
+                        <IconButton
+                          size="sm"
+                          variant="ghost"
+                          colorPalette="red"
+                          aria-label={`Delete ${layer.label}`}
+                          onClick={() => handleRequestDelete(layer.id)}
+                        >
+                          <LuTrash2 />
+                        </IconButton>
+                      </Tooltip>
                     </HStack>
                   </Stack>
 
@@ -360,7 +507,7 @@ export default function DataComposer() {
                       >
                         DATA
                       </Text>
-                      {layer.dataName ? (
+                      {!isEditingData(layer) ? (
                         <VStack align="start" gap="2">
                           <Box>
                             <Text fontWeight="medium">{layer.dataName}</Text>
@@ -380,9 +527,9 @@ export default function DataComposer() {
                               size="xs"
                               variant="outline"
                               onClick={() =>
-                                isFirstLayer
-                                  ? navigateToUpload(layer)
-                                  : handleOpenDataDialog(layer.id)
+                                setEditingDataLayerIds((prev) =>
+                                  new Set(prev).add(layer.id),
+                                )
                               }
                             >
                               Change
@@ -399,18 +546,80 @@ export default function DataComposer() {
                           </HStack>
                         </VStack>
                       ) : (
-                        <Button
-                          size="sm"
-                          colorPalette="teal"
-                          onClick={() =>
-                            isFirstLayer
-                              ? navigateToUpload(layer)
-                              : handleOpenDataDialog(layer.id)
-                          }
-                        >
-                          <LuUpload />{" "}
-                          {isFirstLayer ? "Upload data" : "Choose data"}
-                        </Button>
+                        <HStack align="start" gap="2">
+                          {isEditingData(layer) && hasReusableData && (
+                            <Select.Root
+                              collection={reuseOptionsForLayer(layer.id)}
+                              value={[dataSourceChoice[layer.id] ?? "new"]}
+                              onValueChange={(e) =>
+                                handleDataSourceChange(layer.id, e.value[0])
+                              }
+                              width="100%"
+                            >
+                              <Select.Control>
+                                <Select.Trigger>
+                                  <Select.ValueText />
+                                </Select.Trigger>
+                                <Select.IndicatorGroup>
+                                  <Select.Indicator />
+                                </Select.IndicatorGroup>
+                              </Select.Control>
+                              <Portal>
+                                <Select.Positioner>
+                                  <Select.Content>
+                                    {reuseOptionsForLayer(layer.id).items.map(
+                                      (option) => (
+                                        <Select.Item
+                                          item={option}
+                                          key={option.value}
+                                        >
+                                          {option.label}
+                                          <Select.ItemIndicator />
+                                        </Select.Item>
+                                      ),
+                                    )}
+                                  </Select.Content>
+                                </Select.Positioner>
+                              </Portal>
+                            </Select.Root>
+                          )}
+                          {isEditingData(layer) &&
+                            (!hasReusableData ||
+                              (dataSourceChoice[layer.id] ?? "new") ===
+                                "new") && (
+                              <Box animation="fade-in 300ms ease-out">
+                                <FileUpload.Root
+                                  accept={{ "*/*": [".csv"] }}
+                                  maxFiles={1}
+                                  maxFileSize={1e7}
+                                  onFileAccept={({ files }) =>
+                                    handleFileAccept(files, layer)
+                                  }
+                                  onFileReject={(details) => {
+                                    setErrorMessage(
+                                      `File rejected: ${details.files[0].errors.join(", ")}`,
+                                    );
+                                  }}
+                                >
+                                  <FileUpload.HiddenInput />
+                                  <FileUpload.Trigger asChild>
+                                    <Button
+                                      aria-label="Upload CSV data file, maximum 10MB"
+                                      size="sm"
+                                      colorPalette="teal"
+                                      loading={uploading}
+                                    >
+                                      <LuUpload /> Upload file
+                                    </Button>
+                                  </FileUpload.Trigger>
+                                  <FileUpload.List />
+                                </FileUpload.Root>
+                                <Text fontSize="xs" color="fg.muted" mt="1">
+                                  CSV only, up to 10MB.
+                                </Text>
+                              </Box>
+                            )}
+                        </HStack>
                       )}
                     </Box>
 
@@ -479,7 +688,7 @@ export default function DataComposer() {
           <br />
           <HStack justify="flex-end">
             <Tooltip
-              content="Every layer needs data and a style selected, with no length mismatches, before you can continue."
+              content="Every layer needs data and style selected before you can continue."
               disabled={allLayersReady}
             >
               <Button
@@ -494,79 +703,6 @@ export default function DataComposer() {
           </HStack>
         </>
       )}
-
-      {/* Choose data source (reuse vs upload) — layer 2+ only */}
-      <Dialog.Root
-        open={dataDialogLayerId !== null}
-        onOpenChange={(e) => !e.open && setDataDialogLayerId(null)}
-        placement="center"
-      >
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.Header>
-              <Dialog.Title>Choose data for this layer</Dialog.Title>
-            </Dialog.Header>
-            <Dialog.Body>
-              <VStack align="start" gap={4}>
-                <Text>
-                  Reuse a dataset already used by another layer, or upload
-                  something new.
-                </Text>
-                <Select.Root
-                  collection={
-                    dataDialogLayerId
-                      ? reuseOptionsFor(dataDialogLayerId)
-                      : createListCollection({ items: [] })
-                  }
-                  value={reuseChoice}
-                  onValueChange={(e) => setReuseChoice(e.value)}
-                  width="100%"
-                >
-                  <Select.HiddenSelect />
-                  <Select.Control>
-                    <Select.Trigger>
-                      <Select.ValueText />
-                    </Select.Trigger>
-                    <Select.IndicatorGroup>
-                      <Select.Indicator />
-                    </Select.IndicatorGroup>
-                  </Select.Control>
-                  <Portal>
-                    <Select.Positioner>
-                      <Select.Content>
-                        {(dataDialogLayerId
-                          ? reuseOptionsFor(dataDialogLayerId)
-                          : createListCollection({ items: [] })
-                        ).items.map((option) => (
-                          <Select.Item item={option} key={option.value}>
-                            {option.label}
-                            <Select.ItemIndicator />
-                          </Select.Item>
-                        ))}
-                      </Select.Content>
-                    </Select.Positioner>
-                  </Portal>
-                </Select.Root>
-              </VStack>
-            </Dialog.Body>
-            <Dialog.Footer>
-              <Button
-                variant="ghost"
-                onClick={() => setDataDialogLayerId(null)}
-              >
-                Cancel
-              </Button>
-              <Button colorPalette="teal" onClick={handleConfirmDataChoice}>
-                Continue
-              </Button>
-            </Dialog.Footer>
-            <Dialog.CloseTrigger asChild>
-              <CloseButton size="sm" />
-            </Dialog.CloseTrigger>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
 
       {/* Delete confirmation: warn about dependent layers */}
       <Dialog.Root
@@ -600,6 +736,74 @@ export default function DataComposer() {
                 Delete layer
               </Button>
             </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
+
+      {/* How does this work? */}
+      <Dialog.Root
+        open={howItWorksOpen}
+        onOpenChange={(e) => setHowItWorksOpen(e.open)}
+        placement="center"
+      >
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.Header>
+              <Dialog.Title>How Data Composer works</Dialog.Title>
+            </Dialog.Header>
+            <Dialog.Body>
+              <VStack align="start" gap={4}>
+                <Text>
+                  Data Composer lets you build a sonification from multiple
+                  layers, each with its own dataset and style — similar to
+                  adding several plots to the same figure.
+                </Text>
+                <Box>
+                  <Text fontWeight="bold" mb="1">
+                    1. Add a layer
+                  </Text>
+                  <Text color="fg.muted">
+                    Each layer needs a CSV dataset. You can upload a new file,
+                    or reuse a dataset already used by another layer — handy for
+                    comparing two datasets side by side.
+                  </Text>
+                </Box>
+                <Box>
+                  <Text fontWeight="bold" mb="1">
+                    2. Refine and style each layer
+                  </Text>
+                  <Text color="fg.muted">
+                    Optionally refine a layer's data, then choose a style — the
+                    instrument, sound, and how each column maps to sound (pitch,
+                    volume, and so on).
+                  </Text>
+                </Box>
+                <Box>
+                  <Text fontWeight="bold" mb="1">
+                    3. Sonify
+                  </Text>
+                  <Text color="fg.muted">
+                    On the final step, set a duration for the whole composition.
+                    Every layer's data will stretch or compress to fit that
+                    duration, so layers play in sync regardless of how much data
+                    each one has. You can also balance and mute individual
+                    layers before generating.
+                  </Text>
+                </Box>
+              </VStack>
+            </Dialog.Body>
+            <Dialog.Footer justifyContent="center">
+              <Button
+                colorPalette="teal"
+                onClick={() => setHowItWorksOpen(false)}
+              >
+                Got it
+              </Button>
+            </Dialog.Footer>
+            <Dialog.CloseTrigger asChild>
+              <CloseButton size="sm" />
+            </Dialog.CloseTrigger>
           </Dialog.Content>
         </Dialog.Positioner>
       </Dialog.Root>
