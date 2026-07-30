@@ -26,6 +26,7 @@ import {
 import PageContainer from "../ui/PageContainer";
 import { Tooltip } from "../ui/Tooltip";
 import { coreAPI } from "../../apiConfig";
+import { useComposer, type Layer } from "../../context/ComposerContext";
 import {
   LuPlus,
   LuCheck,
@@ -40,31 +41,13 @@ import {
   LuPalette,
   LuCircleHelp,
 } from "react-icons/lu";
-
-interface DataLayer {
-  id: string;
-  label: string;
-
-  // Data slot
-  dataName: string | null;
-  dataRef: string | null;
-  reusedFromLayerId: string | null;
-  refined: boolean;
-
-  // Style slot
-  styleRef: string | null;
-  styleName: string | null;
-
-  // Derived / validation
-  pointCount: number | null;
-  mismatch: boolean;
-}
+import ErrorMsg from "../ui/ErrorMsg";
 
 function makeLayerId() {
   return `layer_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function makeEmptyLayer(index: number): DataLayer {
+function makeEmptyLayer(index: number): Layer {
   return {
     id: makeLayerId(),
     label: `Layer ${index}`,
@@ -83,9 +66,9 @@ const MAX_LAYERS = 6;
 
 export default function DataComposer() {
   const navigate = useNavigate();
-  const soniType = 'data_composer'
+  const soniType = "data_composer";
 
-  const [layers, setLayers] = useState<DataLayer[]>([]);
+  const { layers, setLayers, updateLayer } = useComposer();
 
   // Tracks each layer's current dropdown choice ("new" or another layer's id)
   const [dataSourceChoice, setDataSourceChoice] = useState<
@@ -94,12 +77,12 @@ export default function DataComposer() {
 
   // Which layers currently have their Data slot open for editing
   // (either because they have no data yet, or the user clicked "Change").
-  const [editingDataLayerIds, setEditingDataLayerIds] = useState<Set<string>>(
+  const [editingLayerIds, setEditingLayerIds] = useState<Set<string>>(
     new Set(),
   );
 
-  const isEditingData = (layer: DataLayer) =>
-    !layer.dataName || editingDataLayerIds.has(layer.id);
+  const isEditingData = (layer: Layer) =>
+    !layer.dataName || editingLayerIds.has(layer.id);
 
   // Tracks whether any data has been uploaded yet
   const [uploading, setUploading] = useState(false);
@@ -128,7 +111,7 @@ export default function DataComposer() {
         ...layers
           .filter((l) => l.id !== layerId && l.dataName)
           .map((l) => ({
-            label: `Reuse data from ${l.label} (${l.dataName})`,
+            label: `${l.label} (${l.dataName})`,
             value: l.id,
           })),
       ],
@@ -162,17 +145,15 @@ export default function DataComposer() {
     );
 
     // Reuse selected successfully — close edit mode for this layer.
-    setEditingDataLayerIds((prev) => {
+    setEditingLayerIds((prev) => {
       const next = new Set(prev);
       next.delete(layerId);
       return next;
     });
   };
 
-  const handleFileAccept = async (
-    files: FileList | File[],
-    layer: DataLayer,
-  ) => {
+  const handleFileAccept = async (files: FileList | File[], layer: Layer) => {
+    setErrorMessage("");
     setUploading(true);
 
     const file = files[0];
@@ -251,28 +232,31 @@ export default function DataComposer() {
     setDataUploaded(true);
 
     // Upload succeeded — close edit mode for this layer.
-    setEditingDataLayerIds((prev) => {
+    setEditingLayerIds((prev) => {
       const next = new Set(prev);
       next.delete(layer.id);
       return next;
     });
   };
 
-  const handleRefine = (layer: DataLayer) => {
+  const handleRefine = (layer: Layer) => {
     navigate("/refine", {
       state: {
-        layer,
-        composerReturn: { page: "/data-composer", layerId: layer.id },
+        dataName: layer.dataName,
+        dataRef: layer.dataRef,
+        layerID: layer.id,
+        soniType,
       },
     });
   };
 
-  const handleChooseStyle = (layer: DataLayer) => {
+  const handleChooseStyle = (layer: Layer) => {
     navigate("/style", {
       state: {
         dataName: layer.dataName,
         dataRef: layer.dataRef,
-        composerReturn: { page: "/data-composer", layerId: layer.id },
+        layerID: layer.id,
+        soniType,
       },
     });
   };
@@ -305,7 +289,7 @@ export default function DataComposer() {
         ? `${baseLabel} (Copy)`
         : `${baseLabel} (Copy ${copyCount + 1})`;
 
-    const copy: DataLayer = {
+    const copy: Layer = {
       ...source,
       id: makeLayerId(),
       label,
@@ -348,7 +332,8 @@ export default function DataComposer() {
 
   const allLayersReady =
     layers.length > 0 &&
-    layers.every((l) => l.dataName && l.styleName && !l.mismatch);
+    layers.every((l) => l.dataName && l.styleName && !l.mismatch) &&
+    layers.every((l) => !isEditingData(l));
 
   const handleProceedToSonify = () => {
     navigate("/sonify", { state: { layers } });
@@ -361,9 +346,7 @@ export default function DataComposer() {
 
   const handleRenameLayer = (id: string, label: string) => {
     setLayers((prev) =>
-      prev.map((layer) =>
-        layer.id === id ? { ...layer, label } : layer,
-      ),
+      prev.map((layer) => (layer.id === id ? { ...layer, label } : layer)),
     );
   };
 
@@ -389,6 +372,9 @@ export default function DataComposer() {
         </Link>
       </Stack>
       <br />
+      {errorMessage && (
+        <ErrorMsg message={errorMessage} onClose={() => setErrorMessage("")} />
+      )}
       <br />
 
       {layers.length === 0 ? (
@@ -513,7 +499,7 @@ export default function DataComposer() {
                             <Text fontWeight="medium">{layer.dataName}</Text>
                             {layer.reusedFromLayerId && (
                               <Text fontSize="xs" color="fg.muted">
-                                Reused from{" "}
+                                Same as{" "}
                                 {
                                   layers.find(
                                     (l) => l.id === layer.reusedFromLayerId,
@@ -527,7 +513,7 @@ export default function DataComposer() {
                               size="xs"
                               variant="outline"
                               onClick={() =>
-                                setEditingDataLayerIds((prev) =>
+                                setEditingLayerIds((prev) =>
                                   new Set(prev).add(layer.id),
                                 )
                               }
@@ -612,7 +598,6 @@ export default function DataComposer() {
                                       <LuUpload /> Upload file
                                     </Button>
                                   </FileUpload.Trigger>
-                                  <FileUpload.List />
                                 </FileUpload.Root>
                                 <Text fontSize="xs" color="fg.muted" mt="1">
                                   CSV only, up to 10MB.

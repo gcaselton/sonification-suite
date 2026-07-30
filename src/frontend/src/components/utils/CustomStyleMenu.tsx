@@ -21,7 +21,7 @@ import {
   LuChartSpline,
   LuChartScatter,
 } from "react-icons/lu";
-import ErrorMsg from "./ErrorMsg";
+import ErrorMsg from "../ui/ErrorMsg";
 
 import {
   Alert,

@@ -1,0 +1,25 @@
+name: 'Twinkle'
+
+description: 'Twinkling mallets become brighter as the starlight increases.'
+
+generator:
+  type: 'sampler'
+  sample: 'Twinkle Mallets'
+  mods:
+    looping: 'forward'
+    loop_start: 0.3
+    loop_end: 5
+
+map:
+  - input: 'flux'
+    output: 'cutoff'
+    output_range: [0.3, 1]
+
+  - input: 'time'
+    output: 'time'
+
+sources: 'objects'
+
+notes: ['A3']
+
+

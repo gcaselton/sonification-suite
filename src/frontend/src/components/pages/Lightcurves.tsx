@@ -548,7 +548,12 @@ export default function Lightcurves() {
                 </Box>
               </Collapsible.Content>
             </Collapsible.Root>
-            {errorMessage && <ErrorMsg message={errorMessage} />}
+            {errorMessage && (
+              <ErrorMsg
+                message={errorMessage}
+                onClose={() => setErrorMessage("")}
+              />
+            )}
           </VStack>
         </Box>
       </form>

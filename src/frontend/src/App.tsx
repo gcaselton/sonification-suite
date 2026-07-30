@@ -2,7 +2,7 @@ import { ChakraProvider, defaultSystem} from '@chakra-ui/react'
 import { ColorModeProvider } from './components/ui/color-mode'
 import { Box } from '@chakra-ui/react'
 import ReactDOM from "react-dom/client";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import Lightcurves from './components/pages/Lightcurves';
 import Style from './components/pages/Style';
 import Sonify from './components/pages/Sonify';
@@ -14,6 +14,7 @@ import DataComposer from './components/pages/DataComposer';
 import { useEffect, useState, useRef } from 'react';
 import { coreAPI } from './apiConfig';
 import NightSky from './components/pages/NightSky';
+import { ComposerProvider } from './context/ComposerContext';
 
 function App() {
 
@@ -45,10 +46,7 @@ function App() {
   return (
     <ChakraProvider value={defaultSystem}>
       <ColorModeProvider>
-        <Box
-          minH="100vh"
-          bg="bg"
-        >
+        <Box minH="100vh" bg="bg">
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Landing />} />
@@ -56,10 +54,19 @@ function App() {
               <Route path="/light-curves" element={<Lightcurves />} />
               <Route path="/constellations" element={<Constellations />} />
               <Route path="/night-sky" element={<NightSky />} />
-              <Route path="/data-composer" element={<DataComposer />} />
-              <Route path="/refine" element={<Refine />} />
-              <Route path="/style" element={<Style />} />
-              <Route path="/sonify" element={<Sonify />} />
+              {/* Routes that may need context from the Data Composer feature */}
+              <Route
+                element={
+                  <ComposerProvider>
+                    <Outlet />
+                  </ComposerProvider>
+                }
+              >
+                <Route path="/data-composer" element={<DataComposer />} />
+                <Route path="/refine" element={<Refine />} />
+                <Route path="/style" element={<Style />} />
+                <Route path="/sonify" element={<Sonify />} />
+              </Route>
             </Routes>
           </BrowserRouter>
         </Box>

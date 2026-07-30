@@ -1,0 +1,30 @@
+name: "Sci-Fi"
+
+description: "Spacey strings get brighter as the star gets brighter."
+
+generator:
+  type: "sampler"
+  sample: "Sci-Fi Strings"
+  mods:
+    looping: "forwardback"
+    loop_start: 0
+    loop_end: 5.
+
+sources: 'objects'
+
+map:
+  - input: 'flux'
+    output: 'cutoff'
+    output_range: [0.3, 1]
+  
+  - input: 'time'
+    output: 'time'
+
+notes: ['A3']
+
+
+
+
+
+
+

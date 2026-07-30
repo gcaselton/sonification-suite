@@ -2,14 +2,16 @@ import React, { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import StyleCard from "../ui/StyleCard";
 import PageContainer from "../ui/PageContainer";
-import CustomStyleMenu from "../ui/CustomStyleMenu";
+import CustomStyleMenu from "../utils/CustomStyleMenu";
 import { coreAPI } from "../../apiConfig";
 import { apiRequest } from "../../utils/requests";
 
 import { Box, Heading, Stack, Text } from "@chakra-ui/react";
+import { useComposer } from "../../context/ComposerContext";
 
 export default function Style() {
   const navigate = useNavigate();
+  const composer = useComposer();
 
   // Location and state
   const location = useLocation();
@@ -19,9 +21,10 @@ export default function Style() {
   const ra = location.state.ra ?? null;
   const dec = location.state.dec ?? null;
   const userUpload = location.state.userUpload;
+  const layerID = location.state.layerID ?? null;
 
-  // Dialog open/close
-  const [open, setOpen] = useState(false);
+  // Custom style menu open/close
+  const [customOpen, setCustomOpen] = useState(false);
 
   // Suggested styles
   const [suggestedStyles, setSuggestedStyles] = useState<any[]>([]);
@@ -41,42 +44,53 @@ export default function Style() {
       });
   }, []);
 
-  const handleClick = async (style: any) => {
+  const handleSelectStyle = (style: any) => {
     if (style.name === "Custom") {
-      setOpen(true);
-    } else {
-      const styleName = style.name;
-      const styleDescription = style.description;
-      const styleRef = style.file_ref;
-      navigate("/sonify", {
-        state: {
-          dataName,
-          dataRef,
-          styleName,
-          styleDescription,
-          styleRef,
-          soniType,
-          ra,
-          dec,
-        },
-      });
+      setCustomOpen(true);
+      return;
     }
+
+    if (soniType === "data_composer") {
+      goToComposer(style.file_ref, style.name);
+      return;
+    }
+
+    goToSonify(style.file_ref, style.name, style.description);
   };
 
   const handleStyleCreated = (styleRef: string) => {
+
+    if (soniType === "data_composer") {
+      goToComposer(styleRef, "Custom");
+      return;
+    }
+
+    goToSonify(styleRef, "Custom", "");
+  };
+
+  const goToSonify = (styleRef: string, styleName: string, styleDescription: string) => {
     navigate("/sonify", {
       state: {
         dataName,
         dataRef,
         styleRef,
-        styleName: "Custom",
-        styleDescription: "",
+        styleName,
+        styleDescription,
         soniType,
         ra,
         dec,
       },
     });
-  };
+  }
+
+  const goToComposer = (styleRef: string, styleName: string) => {
+    composer.updateLayer(layerID, {
+      styleRef,
+      styleName,
+    })
+
+    navigate("/data-composer")
+  }
 
   const onFileSelect = async (file: File) => {
     const formData = new FormData();
@@ -132,7 +146,7 @@ export default function Style() {
             <Box
               key={style.name}
               onClick={() => {
-                handleClick(style);
+                handleSelectStyle(style);
               }}
               style={{ cursor: "pointer" }}
             >
@@ -141,7 +155,7 @@ export default function Style() {
                 description={style.description}
                 gradientClass={gradientClass}
                 isCustom={style.name === "Custom"}
-                onActivate={() => handleClick(style)}
+                onActivate={() => handleSelectStyle(style)}
               />
             </Box>
           );
@@ -158,8 +172,8 @@ export default function Style() {
       />
 
       <CustomStyleMenu
-        open={open}
-        onOpenChange={setOpen}
+        open={customOpen}
+        onOpenChange={setCustomOpen}
         soniType={soniType}
         dataRef={dataRef}
         userUpload={userUpload}

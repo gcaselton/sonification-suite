@@ -1,0 +1,23 @@
+name: "Nuclear"
+
+description: "A flickering synth gets louder/brighter as the star's brightness increases."
+
+generator:
+  type: "sampler"
+  sample: "Nuclear Crackle"
+  mods:
+    looping: "forwardback"
+    loop_start: 0
+    loop_end: 5.
+
+map:
+  - input: "flux"
+    output: "cutoff"
+    output_range: [0.3, 1]
+
+  - input: "time"
+    output: "time"
+
+sources: "objects"
+
+notes: ['A3']

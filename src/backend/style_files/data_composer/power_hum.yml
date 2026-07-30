@@ -1,0 +1,23 @@
+name: "Power Hum"
+
+description: "A whirring synth increases with pitch as star brightness increases."
+
+generator:
+  type: "sampler"
+  sample: "Power Hum"
+  mods:
+    looping: "forwardback"
+    loop_start: 0
+    loop_end: 5.
+
+map:
+  - input: "flux"
+    output: "pitch_shift"
+    output_range: [0, 12]
+
+  - input: "time"
+    output: "time"
+
+sources: "objects"
+
+notes: ['A3']

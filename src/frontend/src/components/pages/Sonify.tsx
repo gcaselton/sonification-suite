@@ -673,7 +673,10 @@ export default function Sonify() {
                 animation="fade-in 300ms ease-out"
               />
             ) : (
-              <ErrorMsg message="Unable to plot data." />
+              <ErrorMsg
+                message="Unable to plot data."
+                onClose={() => setErrorMessage("")}
+              />
             ))}
 
           {activePlot === "spectrogram" &&
@@ -687,7 +690,10 @@ export default function Sonify() {
                 animation="fade-in 300ms ease-out"
               />
             ) : (
-              <ErrorMsg message="Unable to generate spectrogram." />
+              <ErrorMsg
+                message="Unable to generate spectrogram."
+                onClose={() => setErrorMessage("")}
+              />
             ))}
         </Box>
       </Stack>
@@ -698,7 +704,12 @@ export default function Sonify() {
             justifyContent="center"
           >
             {loading && <LoadingMessage msg="Generating Sonification..." />}
-            {errorMessage && <ErrorMsg message={errorMessage} />}
+            {errorMessage && (
+              <ErrorMsg
+                message={errorMessage}
+                onClose={() => setErrorMessage("")}
+              />
+            )}
             {soniReady && (
               <audio
                 ref={audioRef}
