@@ -74,3 +74,17 @@ class NightSkyRequest(BaseModel):
 class MagRequest(BaseModel):
     maglim: float
     file_ref: str
+    
+#---------- Data Composer ----------#
+
+class ColumnRequest(BaseModel):
+    file_ref: str
+    header_mode: Literal['auto', 'header', 'no_header']
+    
+class ComposerRefineRequest(BaseModel):
+    file_ref: str
+    columns: list[str]
+    has_header: bool
+    nan_strategy: Literal["drop", "interpolate", "fill"]
+    fill_value: Optional[float] = None
+    row_range: list[int, int]

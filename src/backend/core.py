@@ -5,8 +5,8 @@ from paths import TMP_DIR, STYLE_FILES_DIR, SUGGESTED_DATA_DIR, SYNTHS_DIR, SAMP
 from context import session_id_var
 from utils import resolve_file, is_number, read_YAML_file, write_YAML_file, is_synth, write_sound_to_style
 from generator_mods import GENERATOR_MODS
-from request_models import DataRequest, CustomStyleSettings, SonificationRequest, SoundInfo
-import logging, yaml, os, uuid, traceback, base64, gc, re
+from request_models import DataRequest, CustomStyleSettings, SonificationRequest, SoundInfo, ColumnRequest, ComposerRefineRequest
+import logging, yaml, os, uuid, traceback, base64, gc, re, csv
 from param_descriptions import INPUTS, OUTPUTS
 from night_sky import handle_observer
 from strauss import AudioFigure
@@ -422,13 +422,6 @@ async def uploadData(file: UploadFile, request: Request):
             ip
             )
             raise HTTPException(415, "Invalid CSV file")
-        
-
-    # Check that the uploaded data is only two columns (x,y) and reduce if necessary
-    df, reduced = ensure_two_columns(ext, contents)
-
-    # Create random ID to store file under
-    new_name = f"{uuid.uuid4()}.csv"
 
     # Ensure session directory exists
     session_dir = os.path.join(TMP_DIR, session_id)
@@ -437,8 +430,6 @@ async def uploadData(file: UploadFile, request: Request):
     # Ensure uploads directory exists
     uploads_dir = os.path.join(session_dir, 'uploads')
     os.makedirs(uploads_dir, exist_ok=True)
-    
-    print(uploads_dir)
     
     # Check session's upload quota
     current_usage = get_uploads_dir_size(uploads_dir)
@@ -452,10 +443,13 @@ async def uploadData(file: UploadFile, request: Request):
         )
         raise HTTPException(429, f"Session upload quota of {UPLOAD_QUOTA_MB}MB exceeded")
 
+    # Create random ID to store file under
+    new_name = f"{uuid.uuid4()}.csv"
     filepath = os.path.join(uploads_dir, new_name)
-
+    
     # Write to new csv file
-    df.to_csv(filepath, index=False)
+    with open(filepath, "wb") as f:
+        f.write(contents)
 
     LOG.info(
         "Upload success | original=%s | stored=%s | size=%d | session=%s | ip=%s",
@@ -468,12 +462,95 @@ async def uploadData(file: UploadFile, request: Request):
 
     file_ref = f"session:uploads:{new_name}"
 
-    return {"file_ref": file_ref, "reduced": reduced}
+    return {"file_ref": file_ref}
 
 
 def round_range(range: list, dp: int = 2) -> list:
     return [round(float(v), dp) for v in range]
 
+
+def detect_headers(filepath: str) -> bool:
+    """
+    Heuristically determine whether a CSV file contains a header row.
+    """
+    with open(filepath, "r", newline="", encoding="utf-8") as f:
+        # Read a small sample of the CSV
+        sample = f.read(2048)
+
+    try:
+        return csv.Sniffer().has_header(sample)
+    except csv.Error:
+        return False
+
+
+@router.post('/data-composer/get-columns/')
+def get_columns(request: ColumnRequest):
+    
+    filepath = str(resolve_file(request.file_ref))
+    
+    if request.header_mode == 'auto':
+        has_header = detect_headers(filepath)
+    elif request.header_mode == 'header':
+        has_header = True
+    else:
+        has_header = False
+    
+    df = pd.read_csv(filepath, header=0 if has_header else None)
+    
+    col_info = []
+    
+    for i, col in enumerate(df.columns):
+        col_info.append(
+            {
+                'name': str(col) if has_header else f'Column {i + 1}',
+                'NaNs': int(df[col].isna().sum())
+            }
+        )
+        
+    return {'columns': col_info, 'total_rows': len(df.index), 'header': has_header}
+
+@router.post('/data-composer/preview-refined/')
+def preview_refined(request: ComposerRefineRequest):
+    
+    # Load csv into dataframe
+    filepath = str(resolve_file(request.file_ref))
+    df = pd.read_csv(filepath, header=0 if request.has_header else None)
+    
+    if not request.has_header:
+        # Rename headers to match frontend
+        df.columns = [f"Column {i + 1}" for i in range(len(df.columns))]
+    
+    # Reduce df to only selected columns
+    df = df[request.columns]
+    
+    # Apply selected NaN strategy
+    if request.nan_strategy == "fill":
+        df = df.fillna(request.fill_value)
+
+    elif request.nan_strategy == "interpolate":
+        df = df.interpolate().bfill().ffill()
+
+    elif request.nan_strategy == "drop":
+        df = df.dropna()
+    
+    # Slice to requested row range
+    start, end = request.row_range
+    df = df.iloc[start:end]
+    
+    return {"rows": df.to_dict(orient="records")}
+    
+    
+        
+# def save_refined(file_ref: str, has_header: bool, columns: list[str], ...):
+#     df = pd.read_csv(file_ref, header=0 if has_header else None)
+
+#     if not has_header:
+#         df.columns = [f"Column {i+1}" for i in range(len(df.columns))]
+
+#     # ...apply column selection, NaN strategy, row range, as already planned...
+
+#     new_ref = save_dataframe(df)  # writes out WITH a header row, always
+#     return {"file_ref": new_ref}
 
 @router.get('/get-inputs/')
 def get_inputs(file_ref: str, soni_type: str, user_upload: bool = False ):

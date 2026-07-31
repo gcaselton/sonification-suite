@@ -26,10 +26,10 @@ import { debounce } from "es-toolkit";
 
 interface ColumnInfo {
   name: string;
-  dtype: "numeric" | "text" | "datetime" | "unknown";
-  nanPercent: number;
+  NaNs: number;
 }
 
+type HeaderMode = 'auto' | 'header' | 'no_header';
 type NanStrategy = "drop" | "interpolate" | "fill";
 
 export default function DataComposer({
@@ -37,6 +37,7 @@ export default function DataComposer({
   dataRef,
   onApply,
 }: RefineMenuProps) {
+
   // Column metadata, fetched once on mount
   const [columns, setColumns] = useState<ColumnInfo[]>([]);
   const [selectedColumns, setSelectedColumns] = useState<Set<string>>(
@@ -45,9 +46,10 @@ export default function DataComposer({
   const [totalRows, setTotalRows] = useState(0);
   const [columnsLoading, setColumnsLoading] = useState(true);
   const [columnsError, setColumnsError] = useState("");
+  const [headerMode, setHeaderMode] = useState<HeaderMode>('auto');
 
   // Missing-value handling
-  const [nanStrategy, setNanStrategy] = useState<NanStrategy>("drop");
+  const [nanStrategy, setNanStrategy] = useState<NanStrategy>('fill');
   const [fillValue, setFillValue] = useState("0");
 
   // Row range
@@ -61,7 +63,7 @@ export default function DataComposer({
   const [applyLoading, setApplyLoading] = useState(false);
 
   const hasNanColumns = columns.some(
-    (c) => selectedColumns.has(c.name) && c.nanPercent > 0,
+    (c) => selectedColumns.has(c.name) && c.NaNs > 0,
   );
 
   // ---- Fetch column metadata on mount ----
@@ -73,13 +75,11 @@ export default function DataComposer({
       setColumnsLoading(true);
       setColumnsError("");
 
-      // TODO: backend endpoint not yet built. Expected response shape:
-      // { columns: ColumnInfo[], total_rows: number }
       const endpoint = `${coreAPI}/data-composer/get-columns/`;
       try {
         const result = await apiRequest(
           endpoint,
-          { file_ref: dataRef },
+          { file_ref: dataRef, header_mode: headerMode },
           "POST",
         );
         if (!mounted) return;
@@ -90,6 +90,7 @@ export default function DataComposer({
         );
         setTotalRows(result.total_rows);
         setRowRange([0, result.total_rows]);
+        setHeaderMode(result.header ? 'header' : 'no_header')
       } catch (err) {
         if (!mounted) return;
         console.error("Error fetching column info:", err);
@@ -102,7 +103,7 @@ export default function DataComposer({
     return () => {
       mounted = false;
     };
-  }, [dataRef]);
+  }, [dataRef, headerMode]);
 
   // ---- Fetch preview whenever refine settings change ----
   const fetchPreview = useCallback(
@@ -122,8 +123,9 @@ export default function DataComposer({
       const payload = {
         file_ref: dataRef,
         columns: cols,
+        has_header: headerMode === 'header',
         nan_strategy: strategy,
-        fill_value: strategy === "fill" ? fill : undefined,
+        fill_value: strategy === "fill" ? Number(fill) : undefined,
         row_range: range,
       };
 
@@ -137,7 +139,7 @@ export default function DataComposer({
         setPreviewLoading(false);
       }
     },
-    [dataRef],
+    [dataRef, headerMode],
   );
 
   const debouncedFetchPreview = useMemo(
@@ -243,39 +245,47 @@ export default function DataComposer({
             ) : columnsError ? (
               <ErrorMsg message={columnsError} />
             ) : (
-              <VStack
-                align="stretch"
-                gap="1"
-                borderWidth="1px"
-                borderRadius="md"
-                p="3"
-              >
-                {columns.map((col) => (
-                  <HStack key={col.name} justify="space-between">
-                    <Checkbox.Root
-                      checked={selectedColumns.has(col.name)}
-                      onCheckedChange={(e) =>
-                        handleToggleColumn(col.name, !!e.checked)
-                      }
-                    >
-                      <Checkbox.HiddenInput />
-                      <Checkbox.Control />
-                      <Checkbox.Label>
-                        {col.name}{" "}
-                        <Text as="span" fontSize="xs" color="fg.muted">
-                          ({col.dtype})
-                        </Text>
-                      </Checkbox.Label>
-                    </Checkbox.Root>
-                    {col.nanPercent > 0 && (
-                      <Badge colorPalette="orange" size="sm" gap="1">
-                        <LuTriangleAlert /> {Math.round(col.nanPercent)}%
-                        missing
-                      </Badge>
-                    )}
-                  </HStack>
-                ))}
-              </VStack>
+              <>
+                <Checkbox.Root
+                  checked={headerMode === 'header'}
+                  onCheckedChange={(e) => setHeaderMode(!!e.checked === true ? 'header' : 'no_header')}
+                  mb="3"
+                >
+                  <Checkbox.HiddenInput />
+                  <Checkbox.Control />
+                  <Checkbox.Label>My file has a header row</Checkbox.Label>
+                </Checkbox.Root>
+                <VStack
+                  align="stretch"
+                  gap="1"
+                  borderWidth="1px"
+                  borderRadius="md"
+                  p="3"
+                >
+                  {columns.map((col) => (
+                    <HStack key={col.name} justify="space-between">
+                      <Checkbox.Root
+                        checked={selectedColumns.has(col.name)}
+                        onCheckedChange={(e) =>
+                          handleToggleColumn(col.name, !!e.checked)
+                        }
+                      >
+                        <Checkbox.HiddenInput />
+                        <Checkbox.Control />
+                        <Checkbox.Label>
+                          {col.name}
+                        </Checkbox.Label>
+                      </Checkbox.Root>
+                      {col.NaNs > 0 && (
+                        <Badge colorPalette="orange" size="sm" gap="1">
+                          <LuTriangleAlert />
+                          Missing values
+                        </Badge>
+                      )}
+                    </HStack>
+                  ))}
+                </VStack>
+              </>
             )}
           </Box>
 
@@ -353,7 +363,7 @@ export default function DataComposer({
                 </Slider.Control>
               </Slider.Root>
               <Text fontSize="sm" color="fg.muted" mt="1">
-                Rows {rowRange[0]}–{rowRange[1]} of {totalRows}
+                Rows {rowRange[0] + 1}–{rowRange[1]} of {totalRows}
               </Text>
             </Box>
           )}
@@ -377,7 +387,7 @@ export default function DataComposer({
             <Text fontSize="sm" color="fg.muted">
               {totalRows} rows · {columns.length} columns
               {hasNanColumns &&
-                ` · ${columns.filter((c) => selectedColumns.has(c.name) && c.nanPercent > 0).length} with missing values`}
+                ` · ${columns.filter((c) => selectedColumns.has(c.name) && c.NaNs > 0).length} with missing values`}
             </Text>
           )}
 

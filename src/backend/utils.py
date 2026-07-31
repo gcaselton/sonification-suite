@@ -225,4 +225,3 @@ def random_chord():
       fourth_note = transpose_note(root_note, chosen_pair[1])
 
       return [[root_note + '2', fifth + '3', third_note + '4', fourth_note + '5']]
-
