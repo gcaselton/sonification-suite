@@ -469,48 +469,30 @@ def round_range(range: list, dp: int = 2) -> list:
     return [round(float(v), dp) for v in range]
 
 
-def detect_headers(filepath: str) -> bool:
-    """
-    Heuristically determine whether a CSV file contains a header row.
-    """
-    with open(filepath, "r", newline="", encoding="utf-8") as f:
-        # Read a small sample of the CSV
-        sample = f.read(2048)
-
-    try:
-        return csv.Sniffer().has_header(sample)
-    except csv.Error:
-        return False
-
-
 @router.post('/data-composer/get-columns/')
 def get_columns(request: ColumnRequest):
     
     filepath = str(resolve_file(request.file_ref))
     
-    if request.header_mode == 'auto':
-        has_header = detect_headers(filepath)
-    elif request.header_mode == 'header':
-        has_header = True
-    else:
-        has_header = False
-    
-    df = pd.read_csv(filepath, header=0 if has_header else None)
+    df = pd.read_csv(filepath, header=0 if request.has_header else None)
     
     col_info = []
     
     for i, col in enumerate(df.columns):
         col_info.append(
             {
-                'name': str(col) if has_header else f'Column {i + 1}',
+                'name': str(col) if request.has_header else f'Column {i + 1}',
                 'NaNs': int(df[col].isna().sum())
             }
         )
         
-    return {'columns': col_info, 'total_rows': len(df.index), 'header': has_header}
+    return {'columns': col_info, 'total_rows': len(df.index)}
 
 @router.post('/data-composer/preview-refined/')
 def preview_refined(request: ComposerRefineRequest):
+
+    # How many rows to send back for preview
+    N_PREVIEW_ROWS = 10
     
     # Load csv into dataframe
     filepath = str(resolve_file(request.file_ref))
@@ -532,12 +514,17 @@ def preview_refined(request: ComposerRefineRequest):
 
     elif request.nan_strategy == "drop":
         df = df.dropna()
+        
+    # Number of rows available after NaN handling
+    available_rows = len(df)
     
     # Slice to requested row range
     start, end = request.row_range
     df = df.iloc[start:end]
     
-    return {"rows": df.to_dict(orient="records")}
+    preview = df.head(N_PREVIEW_ROWS)
+    
+    return {"rows": preview.to_dict(orient="records"), "row_count": available_rows}
     
     
         

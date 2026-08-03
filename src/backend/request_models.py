@@ -79,7 +79,7 @@ class MagRequest(BaseModel):
 
 class ColumnRequest(BaseModel):
     file_ref: str
-    header_mode: Literal['auto', 'header', 'no_header']
+    has_header: bool
     
 class ComposerRefineRequest(BaseModel):
     file_ref: str

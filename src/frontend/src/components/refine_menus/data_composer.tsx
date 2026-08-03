@@ -29,7 +29,6 @@ interface ColumnInfo {
   NaNs: number;
 }
 
-type HeaderMode = 'auto' | 'header' | 'no_header';
 type NanStrategy = "drop" | "interpolate" | "fill";
 
 export default function DataComposer({
@@ -46,7 +45,7 @@ export default function DataComposer({
   const [totalRows, setTotalRows] = useState(0);
   const [columnsLoading, setColumnsLoading] = useState(true);
   const [columnsError, setColumnsError] = useState("");
-  const [headerMode, setHeaderMode] = useState<HeaderMode>('auto');
+  const [hasHeader, setHasHeader] = useState(true);
 
   // Missing-value handling
   const [nanStrategy, setNanStrategy] = useState<NanStrategy>('fill');
@@ -54,6 +53,7 @@ export default function DataComposer({
 
   // Row range
   const [rowRange, setRowRange] = useState<[number, number]>([0, 0]);
+  const [effectiveRowCount, setEffectiveRowCount] = useState(0);
 
   // Preview (re-fetched whenever the above change)
   const [previewRows, setPreviewRows] = useState<Record<string, unknown>[]>([]);
@@ -79,7 +79,7 @@ export default function DataComposer({
       try {
         const result = await apiRequest(
           endpoint,
-          { file_ref: dataRef, header_mode: headerMode },
+          { file_ref: dataRef, has_header: hasHeader },
           "POST",
         );
         if (!mounted) return;
@@ -89,8 +89,8 @@ export default function DataComposer({
           new Set(result.columns.map((c: ColumnInfo) => c.name)),
         );
         setTotalRows(result.total_rows);
+        setEffectiveRowCount(result.total_rows);
         setRowRange([0, result.total_rows]);
-        setHeaderMode(result.header ? 'header' : 'no_header')
       } catch (err) {
         if (!mounted) return;
         console.error("Error fetching column info:", err);
@@ -103,12 +103,13 @@ export default function DataComposer({
     return () => {
       mounted = false;
     };
-  }, [dataRef, headerMode]);
+  }, [dataRef, hasHeader]);
 
   // ---- Fetch preview whenever refine settings change ----
   const fetchPreview = useCallback(
     async (
       cols: string[],
+      hasHeader: boolean,
       strategy: NanStrategy,
       fill: string,
       range: [number, number],
@@ -117,13 +118,11 @@ export default function DataComposer({
       setPreviewLoading(true);
       setPreviewError("");
 
-      // TODO: backend endpoint not yet built. Expected response shape:
-      // { rows: Record<string, unknown>[] }
       const endpoint = `${coreAPI}/data-composer/preview-refined/`;
       const payload = {
         file_ref: dataRef,
         columns: cols,
-        has_header: headerMode === 'header',
+        has_header: hasHeader,
         nan_strategy: strategy,
         fill_value: strategy === "fill" ? Number(fill) : undefined,
         row_range: range,
@@ -132,6 +131,7 @@ export default function DataComposer({
       try {
         const result = await apiRequest(endpoint, payload, "POST");
         setPreviewRows(result.rows);
+        setEffectiveRowCount(result.row_count);
       } catch (err) {
         console.error("Error previewing data:", err);
         setPreviewError("Unable to generate a preview.");
@@ -139,7 +139,7 @@ export default function DataComposer({
         setPreviewLoading(false);
       }
     },
-    [dataRef, headerMode],
+    [dataRef],
   );
 
   const debouncedFetchPreview = useMemo(
@@ -157,11 +157,20 @@ export default function DataComposer({
     if (columnsLoading) return;
     debouncedFetchPreview(
       Array.from(selectedColumns),
+      hasHeader,
       nanStrategy,
       fillValue,
       rowRange,
     );
-  }, [selectedColumns, nanStrategy, fillValue, rowRange, columnsLoading]);
+  }, [selectedColumns, hasHeader, nanStrategy, fillValue, rowRange, columnsLoading]);
+
+  // Update row count if 'Drop rows' is used
+  useEffect(() => {
+    setRowRange(([start, end]) => [
+      Math.min(start, effectiveRowCount),
+      Math.min(end, effectiveRowCount),
+    ]);
+  }, [effectiveRowCount]);
 
   // ---- Handlers ----
 
@@ -187,6 +196,7 @@ export default function DataComposer({
       data_name: dataName,
       file_ref: dataRef,
       columns: Array.from(selectedColumns),
+      has_header: hasHeader,
       nan_strategy: nanStrategy,
       fill_value: nanStrategy === "fill" ? fillValue : undefined,
       row_range: rowRange,
@@ -247,8 +257,8 @@ export default function DataComposer({
             ) : (
               <>
                 <Checkbox.Root
-                  checked={headerMode === 'header'}
-                  onCheckedChange={(e) => setHeaderMode(!!e.checked === true ? 'header' : 'no_header')}
+                  checked={hasHeader}
+                  onCheckedChange={(e) => setHasHeader(!!e.checked)}
                   mb="3"
                 >
                   <Checkbox.HiddenInput />
@@ -341,7 +351,7 @@ export default function DataComposer({
               <HStack mb="2">
                 <Text fontWeight="bold">Row range</Text>
                 <InfoTip
-                  content="Limit the sonification to a subset of rows, e.g. to exclude header junk or shorten a large file."
+                  content="Limit the sonification to a subset of rows"
                   positioning={{ placement: "right" }}
                 />
               </HStack>
@@ -350,7 +360,7 @@ export default function DataComposer({
                 step={1}
                 colorPalette="teal"
                 min={0}
-                max={totalRows}
+                max={effectiveRowCount}
                 value={rowRange}
                 minStepsBetweenThumbs={1}
                 onValueChange={(e) => setRowRange(e.value as [number, number])}
@@ -363,7 +373,7 @@ export default function DataComposer({
                 </Slider.Control>
               </Slider.Root>
               <Text fontSize="sm" color="fg.muted" mt="1">
-                Rows {rowRange[0] + 1}–{rowRange[1]} of {totalRows}
+                Rows {rowRange[0] + 1}–{rowRange[1]} of {effectiveRowCount}
               </Text>
             </Box>
           )}
@@ -385,7 +395,7 @@ export default function DataComposer({
         <VStack align="stretch" gap="3">
           {!columnsLoading && (
             <Text fontSize="sm" color="fg.muted">
-              {totalRows} rows · {columns.length} columns
+              {totalRows} rows (previewing first 10) · {columns.length} columns
               {hasNanColumns &&
                 ` · ${columns.filter((c) => selectedColumns.has(c.name) && c.NaNs > 0).length} with missing values`}
             </Text>
@@ -396,6 +406,7 @@ export default function DataComposer({
           ) : previewError ? (
             <ErrorMsg message={previewError} />
           ) : previewRows.length > 0 ? (
+            
             <Box overflowX="auto" animation="fade-in 300ms ease-out">
               <Table.Root size="sm" interactive>
                 <Table.Header>
