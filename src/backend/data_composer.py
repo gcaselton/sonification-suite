@@ -2,47 +2,59 @@ from fastapi import APIRouter, HTTPException, Request
 from pathlib import Path
 from paths import TMP_DIR, STYLE_FILES_DIR, SUGGESTED_DATA_DIR, SAMPLES_DIR
 from context import session_id_var
-from request_models import ColumnRequest, ComposerRefineRequest as RefineRequest
+from request_models import DataRequest, ComposerRefineRequest as RefineRequest, HeaderRequest
 from utils import resolve_file
 import numpy as np
 import pandas as pd
+import uuid
 
 
 
 router = APIRouter(prefix='/data-composer')
 
 @router.post('/get-columns/')
-def get_columns(request: ColumnRequest):
+def get_columns(request: DataRequest):
     
     filepath = str(resolve_file(request.file_ref))
     
-    df = pd.read_csv(filepath, header=0 if request.has_header else None)
+    df = pd.read_csv(filepath, header=0)
     
     col_info = []
     
     for i, col in enumerate(df.columns):
         col_info.append(
             {
-                'name': str(col) if request.has_header else f'Column {i + 1}',
+                'name': str(col),
                 'NaNs': int(df[col].isna().sum())
             }
         )
         
     return {'columns': col_info, 'total_rows': len(df.index)}
 
-@router.post('/preview-refined/')
-def preview_refined(request: RefineRequest):
-
-    # How many rows to send back for preview
-    N_PREVIEW_ROWS = 10
+@router.post('/set-header/')
+def set_header(request: HeaderRequest):
     
-    # Load csv into dataframe
     filepath = str(resolve_file(request.file_ref))
     df = pd.read_csv(filepath, header=0 if request.has_header else None)
     
     if not request.has_header:
-        # Rename headers to match frontend
+        # Rename headers with generic names
         df.columns = [f"Column {i + 1}" for i in range(len(df.columns))]
+    
+    # get names of columns containing NaNs
+    invalid_columns = df.columns[df.isna().any()].tolist()
+    
+    # Write to CSV with headers
+    df.to_csv(filepath, index=False)
+    
+    return {'invalid_columns': invalid_columns}
+    
+
+def refine_data(request: RefineRequest):
+    
+    # Load csv into dataframe
+    filepath = str(resolve_file(request.file_ref))
+    df = pd.read_csv(filepath, header=0)
     
     # Reduce df to only selected columns
     df = df[request.columns]
@@ -64,19 +76,29 @@ def preview_refined(request: RefineRequest):
     start, end = request.row_range
     df = df.iloc[start:end]
     
-    preview = df.head(N_PREVIEW_ROWS)
+    return df, available_rows
+    
+
+@router.post('/preview-refined/')
+def preview_refined(request: RefineRequest):
+    
+    df, available_rows = refine_data(request)
+    preview = df.head(request.n_preview_rows)
     
     return {"rows": preview.to_dict(orient="records"), "row_count": available_rows}
     
     
-        
-# def save_refined(file_ref: str, has_header: bool, columns: list[str], ...):
-#     df = pd.read_csv(file_ref, header=0 if has_header else None)
+@router.post('/save-refined/')
+def save_refined(request: RefineRequest):
+    
+    df, _ = refine_data(request)
 
-#     if not has_header:
-#         df.columns = [f"Column {i+1}" for i in range(len(df.columns))]
-
-#     # ...apply column selection, NaN strategy, row range, as already planned...
-
-#     new_ref = save_dataframe(df)  # writes out WITH a header row, always
-#     return {"file_ref": new_ref}
+    filename = f"{uuid.uuid4()}.csv"
+    session_id = session_id_var.get()
+    filepath = TMP_DIR / session_id / 'uploads' / filename
+    file_ref = f"session:uploads:{filename}"
+    
+    # Write to CSV
+    df.to_csv(filepath, index=False)
+    
+    return {"file_ref": file_ref}

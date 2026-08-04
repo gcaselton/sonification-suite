@@ -22,16 +22,18 @@ import {
   Separator,
   Portal,
   Link,
+  Input,
+  Field,
+  Checkbox,
 } from "@chakra-ui/react";
 import PageContainer from "../ui/PageContainer";
 import { Tooltip } from "../ui/Tooltip";
-import { coreAPI } from "../../apiConfig";
+import { composerAPI, coreAPI } from "../../apiConfig";
 import { useComposer, type Layer } from "../../context/ComposerContext";
 import {
   LuPlus,
   LuCheck,
   LuX,
-  LuPencil,
   LuCopy,
   LuTrash2,
   LuTriangleAlert,
@@ -42,6 +44,8 @@ import {
   LuCircleHelp,
 } from "react-icons/lu";
 import ErrorMsg from "../ui/ErrorMsg";
+import HelperDialog from "../data_composer/HelperDialog";
+import { apiRequest } from "../../utils/requests";
 
 function makeLayerId() {
   return `layer_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -57,8 +61,8 @@ function makeEmptyLayer(index: number): Layer {
     refined: false,
     styleRef: null,
     styleName: null,
-    pointCount: null,
-    mismatch: false,
+    mappedColumns: null,
+    invalidColumns: null,
   };
 }
 
@@ -84,13 +88,17 @@ export default function DataComposer() {
   const isEditingData = (layer: Layer) =>
     !layer.dataName || editingLayerIds.has(layer.id);
 
-  // Tracks whether any data has been uploaded yet
+  const [uploadReady, setUploadReady] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [dataUploaded, setDataUploaded] = useState(false);
-
-  const [errorMessage, setErrorMessage] = useState("");
+  const [pendingUpload, setPendingUpload] = useState<{
+    fileRef: string;
+    fileName: string;
+  } | null>(null);
+  const [uploadErrorMessage, setUploadErrorMessage] = useState("");
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [hasHeader, setHasHeader] = useState(true);
 
   const dependentsOf = (layerId: string) =>
     layers.filter((l) => l.reusedFromLayerId === layerId);
@@ -137,8 +145,7 @@ export default function DataComposer() {
               refined: source.refined,
               styleRef: null,
               styleName: null,
-              pointCount: null,
-              mismatch: false,
+              invalidColumns: source.invalidColumns,
             }
           : l,
       ),
@@ -152,9 +159,10 @@ export default function DataComposer() {
     });
   };
 
-  const handleFileAccept = async (files: FileList | File[], layer: Layer) => {
-    setErrorMessage("");
-    setUploading(true);
+  const handleFileAccept = async (files: FileList | File[]) => {
+    setUploadErrorMessage("");
+    setPendingUpload(null);
+    setUploadReady(false);
 
     const file = files[0];
 
@@ -165,7 +173,7 @@ export default function DataComposer() {
 
     if (file.size > 1e7) {
       setUploading(false);
-      setErrorMessage("File too large. Maximum size is 10MB.");
+      setUploadErrorMessage("File too large. Maximum size is 10MB.");
       return;
     }
 
@@ -192,51 +200,71 @@ export default function DataComposer() {
         } catch {
           // response was not JSON (ignore)
         }
-        setErrorMessage(message);
+        setUploadErrorMessage(message);
         console.error(message);
         return;
       }
 
       result = await res.json();
+
+      setPendingUpload({
+        fileRef: result.file_ref,
+        fileName: file.name.split(".")[0],
+      });
+      setUploadReady(true);
     } catch (err) {
-      setErrorMessage("Failed to upload file. Please try again.");
+      setUploadErrorMessage("Failed to upload file. Please try again.");
       console.error(err);
       return;
+    }
+  };
+
+  const handleConfirmUpload = async (layer: Layer) => {
+    setUploading(true);
+
+    if (!pendingUpload) {
+      return;
+    }
+
+    try {
+      const endpoint = `${composerAPI}/set-header/`;
+      const payload = {
+        file_ref: pendingUpload.fileRef,
+        has_header: hasHeader,
+      };
+      const result = await apiRequest(endpoint, payload);
+
+      setLayers((prev) =>
+        prev.map((l) =>
+          l.id === layer.id
+            ? {
+                ...l,
+                dataName: pendingUpload.fileName,
+                dataRef: pendingUpload.fileRef,
+                reusedFromLayerId: null,
+                refined: false,
+                styleRef: null,
+                styleName: null,
+                invalidColumns: result.invalid_columns,
+              }
+            : l,
+        ),
+      );
+
+      // Upload successful — close edit mode for this layer.
+      setEditingLayerIds((prev) => {
+        const next = new Set(prev);
+        next.delete(layer.id);
+        return next;
+      });
+
+      setUploadDialogOpen(false);
+    } catch (err) {
+      console.error("Error setting header on upload: ", err);
+      setUploadErrorMessage("Error uploading data, please try another file.");
     } finally {
       setUploading(false);
     }
-
-    const dataName = file.name.split(".")[0];
-    const dataRef = result.file_ref;
-
-    setLayers((prev) =>
-      prev.map((l) =>
-        l.id === layer.id
-          ? {
-              ...l,
-              dataName,
-              dataRef,
-              // A fresh upload isn't a reuse of another layer, and any
-              // previous refine/style state no longer applies to new data.
-              reusedFromLayerId: null,
-              refined: false,
-              styleRef: null,
-              styleName: null,
-              pointCount: null,
-              mismatch: false,
-            }
-          : l,
-      ),
-    );
-
-    setDataUploaded(true);
-
-    // Upload succeeded — close edit mode for this layer.
-    setEditingLayerIds((prev) => {
-      const next = new Set(prev);
-      next.delete(layer.id);
-      return next;
-    });
   };
 
   const handleRefine = (layer: Layer) => {
@@ -321,8 +349,8 @@ export default function DataComposer() {
               refined: false,
               styleRef: null,
               styleName: null,
-              pointCount: null,
-              mismatch: false,
+              mappedColumns: null,
+              invalidColumns: null,
             }
           : l,
       );
@@ -332,8 +360,13 @@ export default function DataComposer() {
 
   const allLayersReady =
     layers.length > 0 &&
-    layers.every((l) => l.dataName && l.styleName && !l.mismatch) &&
-    layers.every((l) => !isEditingData(l));
+    layers.every((l) => l.dataName && l.styleName) &&
+    layers.every((l) => !isEditingData(l)) &&
+    layers.every(
+      (l) =>
+        l.refined ||
+        !l.mappedColumns?.some((col) => l.invalidColumns?.includes(col)),
+    );
 
   const handleProceedToSonify = () => {
     navigate("/sonify", { state: { layers } });
@@ -372,9 +405,6 @@ export default function DataComposer() {
         </Link>
       </Stack>
       <br />
-      {errorMessage && (
-        <ErrorMsg message={errorMessage} onClose={() => setErrorMessage("")} />
-      )}
       <br />
 
       {layers.length === 0 ? (
@@ -400,6 +430,11 @@ export default function DataComposer() {
             const hasReusableData = layers.some(
               (l) => l.id !== layer.id && l.dataName,
             );
+            const invalid =
+              !layer.refined &&
+              layer.mappedColumns?.some((col) =>
+                layer.invalidColumns?.includes(col),
+              );
 
             return (
               <Card.Root key={layer.id} variant="outline" width="100%">
@@ -428,11 +463,6 @@ export default function DataComposer() {
                             fontWeight="semibold"
                           />
                           <Editable.Control>
-                            <Editable.EditTrigger asChild>
-                              <IconButton variant="ghost" size="xs">
-                                <LuPencil />
-                              </IconButton>
-                            </Editable.EditTrigger>
                             <Editable.CancelTrigger asChild>
                               <IconButton variant="outline" size="xs">
                                 <LuX />
@@ -446,7 +476,7 @@ export default function DataComposer() {
                           </Editable.Control>
                         </Editable.Root>
                       </Card.Title>
-                      {layer.mismatch && (
+                      {invalid && (
                         <Badge colorPalette="orange" gap="1">
                           <LuTriangleAlert /> Needs attention
                         </Badge>
@@ -574,34 +604,109 @@ export default function DataComposer() {
                               (dataSourceChoice[layer.id] ?? "new") ===
                                 "new") && (
                               <Box animation="fade-in 300ms ease-out">
-                                <FileUpload.Root
-                                  accept={{ "*/*": [".csv"] }}
-                                  maxFiles={1}
-                                  maxFileSize={1e7}
-                                  onFileAccept={({ files }) =>
-                                    handleFileAccept(files, layer)
+                                <Dialog.Root
+                                  lazyMount
+                                  open={uploadDialogOpen}
+                                  onOpenChange={(e) =>
+                                    setUploadDialogOpen(e.open)
                                   }
-                                  onFileReject={(details) => {
-                                    setErrorMessage(
-                                      `File rejected: ${details.files[0].errors.join(", ")}`,
-                                    );
-                                  }}
                                 >
-                                  <FileUpload.HiddenInput />
-                                  <FileUpload.Trigger asChild>
+                                  <Dialog.Trigger asChild>
                                     <Button
-                                      aria-label="Upload CSV data file, maximum 10MB"
-                                      size="sm"
                                       colorPalette="teal"
+                                      size="sm"
                                       loading={uploading}
                                     >
-                                      <LuUpload /> Upload file
+                                      <LuUpload />
+                                      Upload data
                                     </Button>
-                                  </FileUpload.Trigger>
-                                </FileUpload.Root>
-                                <Text fontSize="xs" color="fg.muted" mt="1">
-                                  CSV only, up to 10MB.
-                                </Text>
+                                  </Dialog.Trigger>
+                                  <Portal>
+                                    <Dialog.Backdrop />
+                                    <Dialog.Positioner>
+                                      <Dialog.Content>
+                                        <Dialog.Header>
+                                          <Dialog.Title>
+                                            Upload data
+                                          </Dialog.Title>
+                                        </Dialog.Header>
+                                        <Dialog.Body>
+                                          <VStack gap={6}>
+                                            <FileUpload.Root
+                                              accept={{ "*/*": [".csv"] }}
+                                              maxFiles={1}
+                                              maxFileSize={1e7}
+                                              onFileAccept={({ files }) =>
+                                                handleFileAccept(files)
+                                              }
+                                              onFileReject={(details) => {
+                                                setUploadErrorMessage(
+                                                  `File rejected: ${details.files[0].errors.join(", ")}`,
+                                                );
+                                              }}
+                                            >
+                                              <FileUpload.HiddenInput />
+                                              <Field.Root>
+                                                <Field.Label fontWeight="semibold">
+                                                  Upload file
+                                                </Field.Label>
+                                                <Input asChild>
+                                                  <FileUpload.Trigger>
+                                                    <FileUpload.FileText />
+                                                  </FileUpload.Trigger>
+                                                </Input>
+                                                <Field.HelperText>
+                                                  CSV only, up to 10MB.
+                                                </Field.HelperText>
+                                              </Field.Root>
+                                            </FileUpload.Root>
+                                            {uploadErrorMessage && (
+                                              <ErrorMsg
+                                                message={uploadErrorMessage}
+                                                onClose={() =>
+                                                  setUploadErrorMessage("")
+                                                }
+                                              />
+                                            )}
+                                            <Checkbox.Root
+                                              colorPalette="teal"
+                                              variant="subtle"
+                                              checked={hasHeader}
+                                              onCheckedChange={(e) =>
+                                                setHasHeader(!!e.checked)
+                                              }
+                                            >
+                                              <Checkbox.HiddenInput />
+                                              <Checkbox.Control />
+                                              <Checkbox.Label fontWeight="semibold">
+                                                My data has a header row
+                                              </Checkbox.Label>
+                                            </Checkbox.Root>
+                                          </VStack>
+                                        </Dialog.Body>
+                                        <Dialog.Footer justifyContent='center'>
+                                          <Dialog.ActionTrigger asChild>
+                                            <Button variant="outline">
+                                              Cancel
+                                            </Button>
+                                          </Dialog.ActionTrigger>
+                                          <Button
+                                            colorPalette="teal"
+                                            disabled={!uploadReady}
+                                            onClick={() =>
+                                              handleConfirmUpload(layer)
+                                            }
+                                          >
+                                            Upload
+                                          </Button>
+                                        </Dialog.Footer>
+                                        <Dialog.CloseTrigger asChild>
+                                          <CloseButton size="sm" />
+                                        </Dialog.CloseTrigger>
+                                      </Dialog.Content>
+                                    </Dialog.Positioner>
+                                  </Portal>
+                                </Dialog.Root>
                               </Box>
                             )}
                         </HStack>
@@ -726,72 +831,7 @@ export default function DataComposer() {
       </Dialog.Root>
 
       {/* How does this work? */}
-      <Dialog.Root
-        open={howItWorksOpen}
-        onOpenChange={(e) => setHowItWorksOpen(e.open)}
-        placement="center"
-      >
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.Header>
-              <Dialog.Title>How Data Composer works</Dialog.Title>
-            </Dialog.Header>
-            <Dialog.Body>
-              <VStack align="start" gap={4}>
-                <Text>
-                  Data Composer lets you build a sonification from multiple
-                  layers, each with its own dataset and style — similar to
-                  adding several plots to the same figure.
-                </Text>
-                <Box>
-                  <Text fontWeight="bold" mb="1">
-                    1. Add a layer
-                  </Text>
-                  <Text color="fg.muted">
-                    Each layer needs a CSV dataset. You can upload a new file,
-                    or reuse a dataset already used by another layer — handy for
-                    comparing two datasets side by side.
-                  </Text>
-                </Box>
-                <Box>
-                  <Text fontWeight="bold" mb="1">
-                    2. Refine and style each layer
-                  </Text>
-                  <Text color="fg.muted">
-                    Optionally refine a layer's data, then choose a style — the
-                    instrument, sound, and how each column maps to sound (pitch,
-                    volume, and so on).
-                  </Text>
-                </Box>
-                <Box>
-                  <Text fontWeight="bold" mb="1">
-                    3. Sonify
-                  </Text>
-                  <Text color="fg.muted">
-                    On the final step, set a duration for the whole composition.
-                    Every layer's data will stretch or compress to fit that
-                    duration, so layers play in sync regardless of how much data
-                    each one has. You can also balance and mute individual
-                    layers before generating.
-                  </Text>
-                </Box>
-              </VStack>
-            </Dialog.Body>
-            <Dialog.Footer justifyContent="center">
-              <Button
-                colorPalette="teal"
-                onClick={() => setHowItWorksOpen(false)}
-              >
-                Got it
-              </Button>
-            </Dialog.Footer>
-            <Dialog.CloseTrigger asChild>
-              <CloseButton size="sm" />
-            </Dialog.CloseTrigger>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
+      <HelperDialog open={howItWorksOpen} onOpenChange={setHowItWorksOpen} />
     </PageContainer>
   );
 }

@@ -45,7 +45,6 @@ export default function DataComposer({
   const [totalRows, setTotalRows] = useState(0);
   const [columnsLoading, setColumnsLoading] = useState(true);
   const [columnsError, setColumnsError] = useState("");
-  const [hasHeader, setHasHeader] = useState(true);
 
   // Missing-value handling
   const [nanStrategy, setNanStrategy] = useState<NanStrategy>('fill');
@@ -66,6 +65,9 @@ export default function DataComposer({
     (c) => selectedColumns.has(c.name) && c.NaNs > 0,
   );
 
+  // How many rows to preview in the table
+  const N_PREVIEW_ROWS = 15
+
   // ---- Fetch column metadata on mount ----
   useEffect(() => {
     if (!dataRef) return;
@@ -79,7 +81,7 @@ export default function DataComposer({
       try {
         const result = await apiRequest(
           endpoint,
-          { file_ref: dataRef, has_header: hasHeader },
+          { file_ref: dataRef},
           "POST",
         );
         if (!mounted) return;
@@ -103,13 +105,12 @@ export default function DataComposer({
     return () => {
       mounted = false;
     };
-  }, [dataRef, hasHeader]);
+  }, [dataRef]);
 
   // ---- Fetch preview whenever refine settings change ----
   const fetchPreview = useCallback(
     async (
       cols: string[],
-      hasHeader: boolean,
       strategy: NanStrategy,
       fill: string,
       range: [number, number],
@@ -122,10 +123,10 @@ export default function DataComposer({
       const payload = {
         file_ref: dataRef,
         columns: cols,
-        has_header: hasHeader,
         nan_strategy: strategy,
         fill_value: strategy === "fill" ? Number(fill) : undefined,
         row_range: range,
+        n_preview_rows: N_PREVIEW_ROWS
       };
 
       try {
@@ -157,12 +158,11 @@ export default function DataComposer({
     if (columnsLoading) return;
     debouncedFetchPreview(
       Array.from(selectedColumns),
-      hasHeader,
       nanStrategy,
       fillValue,
       rowRange,
     );
-  }, [selectedColumns, hasHeader, nanStrategy, fillValue, rowRange, columnsLoading]);
+  }, [selectedColumns, nanStrategy, fillValue, rowRange, columnsLoading]);
 
   // Update row count if 'Drop rows' is used
   useEffect(() => {
@@ -189,14 +189,10 @@ export default function DataComposer({
   const handleApply = async () => {
     setApplyLoading(true);
 
-    // TODO: backend endpoint not yet built. Expected to return
-    // { file_ref: string } for the refined/saved CSV.
     const endpoint = `${composerAPI}/save-refined/`;
     const payload = {
-      data_name: dataName,
       file_ref: dataRef,
       columns: Array.from(selectedColumns),
-      has_header: hasHeader,
       nan_strategy: nanStrategy,
       fill_value: nanStrategy === "fill" ? fillValue : undefined,
       row_range: rowRange,
@@ -255,16 +251,6 @@ export default function DataComposer({
             ) : columnsError ? (
               <ErrorMsg message={columnsError} />
             ) : (
-              <>
-                <Checkbox.Root
-                  checked={hasHeader}
-                  onCheckedChange={(e) => setHasHeader(!!e.checked)}
-                  mb="3"
-                >
-                  <Checkbox.HiddenInput />
-                  <Checkbox.Control />
-                  <Checkbox.Label>My file has a header row</Checkbox.Label>
-                </Checkbox.Root>
                 <VStack
                   align="stretch"
                   gap="1"
@@ -289,13 +275,12 @@ export default function DataComposer({
                       {col.NaNs > 0 && (
                         <Badge colorPalette="orange" size="sm" gap="1">
                           <LuTriangleAlert />
-                          Missing values
+                          {col.NaNs} missing value{col.NaNs > 1 && 's'}
                         </Badge>
                       )}
                     </HStack>
                   ))}
                 </VStack>
-              </>
             )}
           </Box>
 
@@ -379,7 +364,6 @@ export default function DataComposer({
           )}
 
           <Button
-            w={{ base: "100%", sm: "auto" }}
             onClick={handleApply}
             colorPalette="teal"
             loading={applyLoading}
@@ -395,7 +379,7 @@ export default function DataComposer({
         <VStack align="stretch" gap="3">
           {!columnsLoading && (
             <Text fontSize="sm" color="fg.muted">
-              {totalRows} rows (previewing first 10) · {columns.length} columns
+              {totalRows} rows{totalRows > N_PREVIEW_ROWS && ` (previewing first ${N_PREVIEW_ROWS})`} · {columns.length} columns
               {hasNanColumns &&
                 ` · ${columns.filter((c) => selectedColumns.has(c.name) && c.NaNs > 0).length} with missing values`}
             </Text>

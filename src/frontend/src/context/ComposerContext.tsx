@@ -13,10 +13,10 @@ export interface Layer {
   // Style info
   styleRef: string | null;
   styleName: string | null;
+  mappedColumns: string[] | null;
 
-  // validation
-  pointCount: number | null;
-  mismatch: boolean;
+  // List of columns that contain NaNs
+  invalidColumns: string[] | null;
 }
 
 interface ComposerContextValue {

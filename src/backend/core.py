@@ -5,7 +5,7 @@ from paths import TMP_DIR, STYLE_FILES_DIR, SUGGESTED_DATA_DIR, SYNTHS_DIR, SAMP
 from context import session_id_var
 from utils import resolve_file, is_number, read_YAML_file, write_YAML_file, is_synth, write_sound_to_style
 from generator_mods import GENERATOR_MODS
-from request_models import DataRequest, CustomStyleSettings, SonificationRequest, SoundInfo, ColumnRequest, ComposerRefineRequest
+from request_models import DataRequest, CustomStyleSettings, SonificationRequest, SoundInfo
 import logging, yaml, os, uuid, traceback, base64, gc, re, csv
 from param_descriptions import INPUTS, OUTPUTS
 from night_sky import handle_observer
@@ -341,7 +341,7 @@ def ensure_two_columns(ext: str, contents: bytes):
 
 
 @router.post('/upload-data/')
-async def uploadData(file: UploadFile, request: Request):
+async def upload_data(file: UploadFile, request: Request):
     """
     Function for the user to upload their own data to the system, which is then written
     to the tmp directory. The maximum file size is 10mb, as this is a limit set in nginx.
@@ -812,9 +812,13 @@ async def upload_style(file: UploadFile = File(...), request: Request = None):
     # Ensure session directory exists
     session_dir = os.path.join(TMP_DIR, session_id)
     os.makedirs(session_dir, exist_ok=True)
+    
+    # Ensure uploads directory exists
+    uploads_dir = os.path.join(session_dir, 'uploads')
+    os.makedirs(uploads_dir, exist_ok=True)
 
     # Check session quota
-    current_usage = get_uploads_dir_size(session_dir)
+    current_usage = get_uploads_dir_size(uploads_dir)
     if current_usage + len(contents) > UPLOAD_QUOTA_BYTES:
         LOG.warning(
             "Style upload rejected | reason=quota_exceeded | usage=%d | file_size=%d | session=%s | ip=%s",
@@ -823,7 +827,7 @@ async def upload_style(file: UploadFile = File(...), request: Request = None):
         raise HTTPException(429, f"Session upload quota of {UPLOAD_QUOTA_MB}MB exceeded")
 
     new_name = f"{uuid.uuid4()}{ext}"
-    filepath = os.path.join(session_dir, new_name)
+    filepath = os.path.join(uploads_dir, new_name)
 
     with open(filepath, 'wb') as f:
         f.write(contents)
@@ -837,7 +841,7 @@ async def upload_style(file: UploadFile = File(...), request: Request = None):
         ip
     )
 
-    file_ref = f"session:{new_name}"
+    file_ref = f"session:uploads:{new_name}"
     
     return {"file_ref": file_ref, "parsed": parsed_yaml}
 

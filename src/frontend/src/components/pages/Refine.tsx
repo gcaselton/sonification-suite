@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import PageContainer from "../ui/PageContainer";
-import { Box, Heading, Text } from "@chakra-ui/react";
+import { Box, Heading, Text, Highlight } from "@chakra-ui/react";
 import { useComposer } from "../../context/ComposerContext";
 
 export default function Refine() {
@@ -24,7 +24,11 @@ export default function Refine() {
     <PageContainer>
       <Heading as="h1">Step 2: Refine</Heading>
       <br />
-      <Text textStyle="lg">Optionally, edit the {dataName} dataset</Text>
+      <Text textStyle="lg">
+        <Highlight query={dataName} styles={{ color: "teal.600" }}>
+          {`Optionally, edit the ${dataName} dataset`}
+        </Highlight>
+      </Text>
       <br />
       <br />
       <Suspense>
@@ -32,21 +36,19 @@ export default function Refine() {
           dataRef={dataRef}
           dataName={dataName}
           onApply={(newRef: string, newRa?: number, newDec?: number) => {
-            // Navigate with refined data
-            console.log(soniType)
 
             // Go back to Data Composer with new data ref if we came from there
-            if (soniType === 'data_composer') {
+            if (soniType === "data_composer") {
               composer.updateLayer(layerID, {
                 dataRef: newRef,
                 refined: true,
-              })
+              });
 
               navigate("/data-composer");
               return;
             }
 
-            // Otherwise, proceed to Style 
+            // Otherwise, proceed to Style
             navigate("/style", {
               state: {
                 dataRef: newRef,

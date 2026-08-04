@@ -304,6 +304,9 @@ export default function Sonify() {
     ORIENTATIONS.map(({ value, label }) => [value, label]),
   );
 
+  // Place on dome option should only display for these sonification types
+  const placeOnDomeModes = ['light_curves', 'constellations']
+
   return (
     <PageContainer>
       <VisuallyHidden>
@@ -340,7 +343,9 @@ export default function Sonify() {
               <HStack gap={10}>
                 <Field.Root invalid={invalidLength} width="auto">
                   <HStack>
-                    <Field.Label>Duration (seconds)</Field.Label>
+                    <Field.Label fontWeight="semibold">
+                      Duration (seconds)
+                    </Field.Label>
                     <InfoTip
                       content="The total length of the sonification. The sonification will compress or stretch to this length without distorting the aduio."
                       positioning={{ placement: "right" }}
@@ -374,7 +379,9 @@ export default function Sonify() {
                     </Text>
                     <Field.Root width="auto">
                       <HStack>
-                        <Field.Label>Days per Second</Field.Label>
+                        <Field.Label fontWeight="semibold">
+                          Days per Second
+                        </Field.Label>
                         <InfoTip
                           content="Alternatively, enter how many days in the dataset you want to transpire per second. This will then calculate a new sonification duration."
                           positioning={{ placement: "right" }}
@@ -415,7 +422,9 @@ export default function Sonify() {
                 >
                   <Select.HiddenSelect />
                   <HStack>
-                    <Select.Label>Audio System</Select.Label>
+                    <Select.Label fontWeight="semibold">
+                      Audio System
+                    </Select.Label>
                     <InfoTip
                       content="Choose your planetarium's audio setup. Note that using Azimuth as an output parameter requires a 5.1 or 7.1 system, and using Pan requires a stereo system at minimum."
                       positioning={{ placement: "right" }}
@@ -443,7 +452,7 @@ export default function Sonify() {
                     </Select.Positioner>
                   </Portal>
                 </Select.Root>
-                {soniType !== "night_sky" && ra && dec && (
+                {placeOnDomeModes.includes(soniType) && ra && dec && (
                   <HStack>
                     <Tooltip
                       content="Unavailable for Mono audio systems"

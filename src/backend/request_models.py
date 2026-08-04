@@ -76,15 +76,15 @@ class MagRequest(BaseModel):
     file_ref: str
     
 #---------- Data Composer ----------#
-
-class ColumnRequest(BaseModel):
-    file_ref: str
-    has_header: bool
     
 class ComposerRefineRequest(BaseModel):
     file_ref: str
     columns: list[str]
-    has_header: bool
     nan_strategy: Literal["drop", "interpolate", "fill"]
     fill_value: Optional[float] = None
     row_range: list[int, int]
+    n_preview_rows: Optional[int] = 20
+    
+class HeaderRequest(BaseModel):
+    file_ref: str
+    has_header: bool

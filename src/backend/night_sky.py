@@ -246,14 +246,5 @@ def plot_star_data(request: DataRequest):
     return {'image': image}
 
 
-test_request = NightSkyRequest(
-    latitude=21.54238,
-    longitude=39.19797,
-    facing='SSE',
-    date_time="2026-02-01 19:00:00",
-    maglim=4.5
-)
-
-
 
 
