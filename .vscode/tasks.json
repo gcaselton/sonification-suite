@@ -4,7 +4,16 @@
     {
       "label": "Run Backend",
       "type": "shell",
-      "command": "..\\..\\.venv\\Scripts\\python.exe -m uvicorn main:app --reload",
+      "command": "../../.venv/bin/python",
+      "args": [
+        "-m",
+        "uvicorn",
+        "main:app",
+        "--reload"
+      ],
+      "windows": {
+        "command": "..\\..\\.venv\\Scripts\\python.exe"
+      },
       "options": {
         "cwd": "src/backend"
       },
@@ -13,7 +22,11 @@
     {
       "label": "Run Frontend",
       "type": "shell",
-      "command": "npm run dev",
+      "command": "npm",
+      "args": [
+        "run",
+        "dev"
+      ],
       "options": {
         "cwd": "src/frontend"
       },

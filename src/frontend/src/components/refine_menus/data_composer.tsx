@@ -18,7 +18,7 @@ import { RefineMenuProps } from "./RefineMenu";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import LoadingMessage from "../ui/LoadingMessage";
 import ErrorMsg from "../ui/ErrorMsg";
-import { coreAPI } from "../../apiConfig";
+import { composerAPI } from "../../apiConfig";
 import { apiRequest } from "../../utils/requests";
 import { InfoTip } from "../ui/ToggleTip";
 import { LuArrowRight, LuTriangleAlert } from "react-icons/lu";
@@ -75,7 +75,7 @@ export default function DataComposer({
       setColumnsLoading(true);
       setColumnsError("");
 
-      const endpoint = `${coreAPI}/data-composer/get-columns/`;
+      const endpoint = `${composerAPI}/get-columns/`;
       try {
         const result = await apiRequest(
           endpoint,
@@ -118,7 +118,7 @@ export default function DataComposer({
       setPreviewLoading(true);
       setPreviewError("");
 
-      const endpoint = `${coreAPI}/data-composer/preview-refined/`;
+      const endpoint = `${composerAPI}/preview-refined/`;
       const payload = {
         file_ref: dataRef,
         columns: cols,
@@ -191,7 +191,7 @@ export default function DataComposer({
 
     // TODO: backend endpoint not yet built. Expected to return
     // { file_ref: string } for the refined/saved CSV.
-    const endpoint = `${coreAPI}/data-composer/save-refined/`;
+    const endpoint = `${composerAPI}/save-refined/`;
     const payload = {
       data_name: dataName,
       file_ref: dataRef,
