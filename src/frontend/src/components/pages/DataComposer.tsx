@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Alert,
@@ -25,6 +25,7 @@ import {
   Input,
   Field,
   Checkbox,
+  Spinner,
 } from "@chakra-ui/react";
 import PageContainer from "../ui/PageContainer";
 import { Tooltip } from "../ui/Tooltip";
@@ -46,6 +47,8 @@ import {
 import ErrorMsg from "../ui/ErrorMsg";
 import HelperDialog from "../data_composer/HelperDialog";
 import { apiRequest } from "../../utils/requests";
+import UploadDialog from "../data_composer/UploadDialog";
+import DeleteDialog from "../data_composer/DeleteDialog";
 
 function makeLayerId() {
   return `layer_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -61,8 +64,8 @@ function makeEmptyLayer(index: number): Layer {
     refined: false,
     styleRef: null,
     styleName: null,
-    mappedColumns: null,
-    invalidColumns: null,
+    missingColumns: null,
+    nanColumns: null
   };
 }
 
@@ -85,20 +88,23 @@ export default function DataComposer() {
     new Set(),
   );
 
+  // Which layers are currently validating the style/data combination
+  const [validatingLayerIds, setValidatingLayerIds] = useState<Set<string>>(
+    new Set(),
+  );
+
+  const lastValidatedRef = useRef<
+    Record<string, { dataRef: string | null; styleRef: string | null }>
+  >({});
+
   const isEditingData = (layer: Layer) =>
     !layer.dataName || editingLayerIds.has(layer.id);
 
-  const [uploadReady, setUploadReady] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [pendingUpload, setPendingUpload] = useState<{
-    fileRef: string;
-    fileName: string;
-  } | null>(null);
-  const [uploadErrorMessage, setUploadErrorMessage] = useState("");
+  // track which layer is uploading data/needs the UploadDialog open
+  const [uploadLayerId, setUploadLayerId] = useState<string | null>(null);
+
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [hasHeader, setHasHeader] = useState(true);
 
   const dependentsOf = (layerId: string) =>
     layers.filter((l) => l.reusedFromLayerId === layerId);
@@ -134,22 +140,16 @@ export default function DataComposer() {
     const source = layers.find((l) => l.id === value);
     if (!layer || !source) return;
 
-    setLayers((prev) =>
-      prev.map((l) =>
-        l.id === layerId
-          ? {
-              ...l,
-              reusedFromLayerId: source.id,
-              dataName: source.dataName,
-              dataRef: source.dataRef,
-              refined: source.refined,
-              styleRef: null,
-              styleName: null,
-              invalidColumns: source.invalidColumns,
-            }
-          : l,
-      ),
-    );
+    updateLayer(layerId, {
+      reusedFromLayerId: source.id,
+      dataName: source.dataName,
+      dataRef: source.dataRef,
+      refined: source.refined,
+      styleRef: null,
+      styleName: null,
+      missingColumns: null,
+      nanColumns: null
+    });
 
     // Reuse selected successfully — close edit mode for this layer.
     setEditingLayerIds((prev) => {
@@ -159,135 +159,8 @@ export default function DataComposer() {
     });
   };
 
-  const handleFileAccept = async (files: FileList | File[]) => {
-    setUploadErrorMessage("");
-    setPendingUpload(null);
-    setUploadReady(false);
 
-    const file = files[0];
-
-    if (!file) {
-      setUploading(false);
-      return;
-    }
-
-    if (file.size > 1e7) {
-      setUploading(false);
-      setUploadErrorMessage("File too large. Maximum size is 10MB.");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    let result: { file_ref: string };
-
-    try {
-      const res = await fetch(`${coreAPI}/upload-data/`, {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        let message = `HTTP ${res.status}`;
-
-        try {
-          const errorData = await res.json();
-          if (errorData?.detail) {
-            message = errorData.detail;
-          }
-        } catch {
-          // response was not JSON (ignore)
-        }
-        setUploadErrorMessage(message);
-        console.error(message);
-        return;
-      }
-
-      result = await res.json();
-
-      setPendingUpload({
-        fileRef: result.file_ref,
-        fileName: file.name.split(".")[0],
-      });
-      setUploadReady(true);
-    } catch (err) {
-      setUploadErrorMessage("Failed to upload file. Please try again.");
-      console.error(err);
-      return;
-    }
-  };
-
-  const handleConfirmUpload = async (layer: Layer) => {
-    setUploading(true);
-
-    if (!pendingUpload) {
-      return;
-    }
-
-    try {
-      const endpoint = `${composerAPI}/set-header/`;
-      const payload = {
-        file_ref: pendingUpload.fileRef,
-        has_header: hasHeader,
-      };
-      const result = await apiRequest(endpoint, payload);
-
-      setLayers((prev) =>
-        prev.map((l) =>
-          l.id === layer.id
-            ? {
-                ...l,
-                dataName: pendingUpload.fileName,
-                dataRef: pendingUpload.fileRef,
-                reusedFromLayerId: null,
-                refined: false,
-                styleRef: null,
-                styleName: null,
-                invalidColumns: result.invalid_columns,
-              }
-            : l,
-        ),
-      );
-
-      // Upload successful — close edit mode for this layer.
-      setEditingLayerIds((prev) => {
-        const next = new Set(prev);
-        next.delete(layer.id);
-        return next;
-      });
-
-      setUploadDialogOpen(false);
-    } catch (err) {
-      console.error("Error setting header on upload: ", err);
-      setUploadErrorMessage("Error uploading data, please try another file.");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleRefine = (layer: Layer) => {
-    navigate("/refine", {
-      state: {
-        dataName: layer.dataName,
-        dataRef: layer.dataRef,
-        layerID: layer.id,
-        soniType,
-      },
-    });
-  };
-
-  const handleChooseStyle = (layer: Layer) => {
-    navigate("/style", {
-      state: {
-        dataName: layer.dataName,
-        dataRef: layer.dataRef,
-        layerID: layer.id,
-        soniType,
-      },
-    });
-  };
+  
 
   // ---- Duplicate / delete ----
 
@@ -330,6 +203,7 @@ export default function DataComposer() {
 
   const handleRequestDelete = (id: string) => {
     if (dependentsOf(id).length > 0) {
+      // Open the DeleteDialog if there are dependent layers
       setPendingDeleteId(id);
     } else {
       deleteLayer(id);
@@ -349,8 +223,8 @@ export default function DataComposer() {
               refined: false,
               styleRef: null,
               styleName: null,
-              mappedColumns: null,
-              invalidColumns: null,
+              missingColumns: null,
+              nanColumns: null
             }
           : l,
       );
@@ -358,15 +232,104 @@ export default function DataComposer() {
     setPendingDeleteId(null);
   };
 
+  // Trigger layer validation if dataRef or styleRef changes
+  useEffect(() => {
+    layers.forEach((layer) => {
+      // Need both before validation can run
+      if (!layer.dataRef || !layer.styleRef) {
+        return;
+      }
+
+      const previous = lastValidatedRef.current[layer.id];
+
+      const changed =
+        !previous ||
+        previous.dataRef !== layer.dataRef ||
+        previous.styleRef !== layer.styleRef;
+
+      if (!changed) {
+        return;
+      }
+
+      lastValidatedRef.current[layer.id] = {
+        dataRef: layer.dataRef,
+        styleRef: layer.styleRef,
+      };
+
+      validateLayer(layer);
+    });
+  }, [layers]);
+
+
+  // Ensure the dataset and style are compatible
+  // That is, ensure the mapped columns in Style exist in the data and they don't contain NaNs
+  const validateLayer = async (layer: Layer) => {
+
+    setValidatingLayerIds((prev) => new Set(prev).add(layer.id));
+
+    const endpoint = `${composerAPI}/validate-layer/`
+    const payload = {
+      data_ref: layer.dataRef,
+      style_ref: layer.styleRef
+    }
+
+    try {
+      const result = await apiRequest(endpoint, payload);
+
+      if (result.invalid_columns.length > 0) {
+        updateLayer(layer.id, {
+          invalidColumns: result.invalid_columns,
+        });
+      } else {
+        updateLayer(layer.id, {
+          invalidColumns: null,
+        });
+      }
+
+    } finally {
+
+      // remove layer from the validating list
+      setValidatingLayerIds((prev) => {
+        const next = new Set(prev);
+        next.delete(layer.id);
+        return next;
+      });
+    }
+  };
+
   const allLayersReady =
     layers.length > 0 &&
-    layers.every((l) => l.dataName && l.styleName) &&
-    layers.every((l) => !isEditingData(l)) &&
+    validatingLayerIds.size === 0 &&
     layers.every(
       (l) =>
-        l.refined ||
-        !l.mappedColumns?.some((col) => l.invalidColumns?.includes(col)),
+        l.dataName &&
+        l.styleName &&
+        !isEditingData(l) &&
+        !l.missingColumns &&
+        !l.nanColumns,
     );
+
+  const handleRefine = (layer: Layer) => {
+    navigate("/refine", {
+      state: {
+        dataName: layer.dataName,
+        dataRef: layer.dataRef,
+        layerID: layer.id,
+        soniType,
+      },
+    });
+  };
+
+  const handleChooseStyle = (layer: Layer) => {
+    navigate("/style", {
+      state: {
+        dataName: layer.dataName,
+        dataRef: layer.dataRef,
+        layerID: layer.id,
+        soniType,
+      },
+    });
+  };
 
   const handleProceedToSonify = () => {
     navigate("/sonify", { state: { layers } });
@@ -377,11 +340,6 @@ export default function DataComposer() {
     ? dependentsOf(pendingDeleteId)
     : [];
 
-  const handleRenameLayer = (id: string, label: string) => {
-    setLayers((prev) =>
-      prev.map((layer) => (layer.id === id ? { ...layer, label } : layer)),
-    );
-  };
 
   return (
     <PageContainer>
@@ -430,14 +388,18 @@ export default function DataComposer() {
             const hasReusableData = layers.some(
               (l) => l.id !== layer.id && l.dataName,
             );
+            const validating = validatingLayerIds.has(layer.id)
             const invalid =
-              !layer.refined &&
-              layer.mappedColumns?.some((col) =>
-                layer.invalidColumns?.includes(col),
-              );
+              !layer.refined
+              
 
             return (
-              <Card.Root key={layer.id} variant="outline" width="100%">
+              <Card.Root
+                key={layer.id}
+                variant="outline"
+                width="100%"
+                animation="fade-in 300ms ease-out"
+              >
                 <Card.Body>
                   <Stack
                     direction={{ base: "column", md: "row" }}
@@ -451,7 +413,7 @@ export default function DataComposer() {
                         <Editable.Root
                           value={layer.label}
                           onValueChange={(e) =>
-                            handleRenameLayer(layer.id, e.value)
+                            updateLayer(layer.id, { label: e.value })
                           }
                         >
                           <Editable.Preview
@@ -476,6 +438,12 @@ export default function DataComposer() {
                           </Editable.Control>
                         </Editable.Root>
                       </Card.Title>
+                      {validating && (
+                        <Badge colorPalette="blue">
+                          <Spinner size="xs" />
+                          Validating...
+                        </Badge>
+                      )}
                       {invalid && (
                         <Badge colorPalette="orange" gap="1">
                           <LuTriangleAlert /> Needs attention
@@ -571,6 +539,7 @@ export default function DataComposer() {
                                 handleDataSourceChange(layer.id, e.value[0])
                               }
                               width="100%"
+                              size="sm"
                             >
                               <Select.Control>
                                 <Select.Trigger>
@@ -603,111 +572,14 @@ export default function DataComposer() {
                             (!hasReusableData ||
                               (dataSourceChoice[layer.id] ?? "new") ===
                                 "new") && (
-                              <Box animation="fade-in 300ms ease-out">
-                                <Dialog.Root
-                                  lazyMount
-                                  open={uploadDialogOpen}
-                                  onOpenChange={(e) =>
-                                    setUploadDialogOpen(e.open)
-                                  }
-                                >
-                                  <Dialog.Trigger asChild>
-                                    <Button
-                                      colorPalette="teal"
-                                      size="sm"
-                                      loading={uploading}
-                                    >
-                                      <LuUpload />
-                                      Upload data
-                                    </Button>
-                                  </Dialog.Trigger>
-                                  <Portal>
-                                    <Dialog.Backdrop />
-                                    <Dialog.Positioner>
-                                      <Dialog.Content>
-                                        <Dialog.Header>
-                                          <Dialog.Title>
-                                            Upload data
-                                          </Dialog.Title>
-                                        </Dialog.Header>
-                                        <Dialog.Body>
-                                          <VStack gap={6}>
-                                            <FileUpload.Root
-                                              accept={{ "*/*": [".csv"] }}
-                                              maxFiles={1}
-                                              maxFileSize={1e7}
-                                              onFileAccept={({ files }) =>
-                                                handleFileAccept(files)
-                                              }
-                                              onFileReject={(details) => {
-                                                setUploadErrorMessage(
-                                                  `File rejected: ${details.files[0].errors.join(", ")}`,
-                                                );
-                                              }}
-                                            >
-                                              <FileUpload.HiddenInput />
-                                              <Field.Root>
-                                                <Field.Label fontWeight="semibold">
-                                                  Upload file
-                                                </Field.Label>
-                                                <Input asChild>
-                                                  <FileUpload.Trigger>
-                                                    <FileUpload.FileText />
-                                                  </FileUpload.Trigger>
-                                                </Input>
-                                                <Field.HelperText>
-                                                  CSV only, up to 10MB.
-                                                </Field.HelperText>
-                                              </Field.Root>
-                                            </FileUpload.Root>
-                                            {uploadErrorMessage && (
-                                              <ErrorMsg
-                                                message={uploadErrorMessage}
-                                                onClose={() =>
-                                                  setUploadErrorMessage("")
-                                                }
-                                              />
-                                            )}
-                                            <Checkbox.Root
-                                              colorPalette="teal"
-                                              variant="subtle"
-                                              checked={hasHeader}
-                                              onCheckedChange={(e) =>
-                                                setHasHeader(!!e.checked)
-                                              }
-                                            >
-                                              <Checkbox.HiddenInput />
-                                              <Checkbox.Control />
-                                              <Checkbox.Label fontWeight="semibold">
-                                                My data has a header row
-                                              </Checkbox.Label>
-                                            </Checkbox.Root>
-                                          </VStack>
-                                        </Dialog.Body>
-                                        <Dialog.Footer justifyContent='center'>
-                                          <Dialog.ActionTrigger asChild>
-                                            <Button variant="outline">
-                                              Cancel
-                                            </Button>
-                                          </Dialog.ActionTrigger>
-                                          <Button
-                                            colorPalette="teal"
-                                            disabled={!uploadReady}
-                                            onClick={() =>
-                                              handleConfirmUpload(layer)
-                                            }
-                                          >
-                                            Upload
-                                          </Button>
-                                        </Dialog.Footer>
-                                        <Dialog.CloseTrigger asChild>
-                                          <CloseButton size="sm" />
-                                        </Dialog.CloseTrigger>
-                                      </Dialog.Content>
-                                    </Dialog.Positioner>
-                                  </Portal>
-                                </Dialog.Root>
-                              </Box>
+                              <Button
+                                colorPalette="teal"
+                                size="sm"
+                                onClick={() => setUploadLayerId(layer.id)}
+                              >
+                                <LuUpload />
+                                Upload data
+                              </Button>
                             )}
                         </HStack>
                       )}
@@ -756,6 +628,34 @@ export default function DataComposer() {
             );
           })}
 
+          <UploadDialog
+            open={uploadLayerId !== null}
+            onOpenChange={(open) => {
+              if (!open) setUploadLayerId(null);
+            }}
+            onUploadComplete={(fileName, fileRef) => {
+              if (!uploadLayerId) return;
+
+              updateLayer(uploadLayerId, {
+                dataName: fileName,
+                dataRef: fileRef,
+                reusedFromLayerId: null,
+                refined: false,
+                styleRef: null,
+                styleName: null,
+                invalidColumns: null
+              });
+
+              setEditingLayerIds((prev) => {
+                const next = new Set(prev);
+                next.delete(uploadLayerId);
+                return next;
+              });
+
+              setUploadLayerId(null);
+            }}
+          />
+
           <Box>
             <Button
               variant="outline"
@@ -795,40 +695,17 @@ export default function DataComposer() {
       )}
 
       {/* Delete confirmation: warn about dependent layers */}
-      <Dialog.Root
+      <DeleteDialog
         open={pendingDeleteId !== null}
-        onOpenChange={(e) => !e.open && setPendingDeleteId(null)}
-        placement="center"
-      >
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.Header>
-              <Dialog.Title>Delete {pendingDeleteLayer?.label}?</Dialog.Title>
-            </Dialog.Header>
-            <Dialog.Body>
-              <Text>
-                {pendingDeleteDependents.map((l) => l.label).join(", ")}{" "}
-                {pendingDeleteDependents.length === 1 ? "reuses" : "reuse"} this
-                layer's dataset. Deleting {pendingDeleteLayer?.label} will clear
-                their data selection and they'll need to be reconfigured before
-                you can continue.
-              </Text>
-            </Dialog.Body>
-            <Dialog.Footer>
-              <Button variant="ghost" onClick={() => setPendingDeleteId(null)}>
-                Cancel
-              </Button>
-              <Button
-                colorPalette="red"
-                onClick={() => pendingDeleteId && deleteLayer(pendingDeleteId)}
-              >
-                Delete layer
-              </Button>
-            </Dialog.Footer>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
+        layerLabel={pendingDeleteLayer?.label ?? null}
+        dependentLabels={pendingDeleteDependents.map((l) => l.label)}
+        onClose={() => setPendingDeleteId(null)}
+        onConfirm={() => {
+          if (pendingDeleteId) {
+            deleteLayer(pendingDeleteId);
+          }
+        }}
+      />
 
       {/* How does this work? */}
       <HelperDialog open={howItWorksOpen} onOpenChange={setHowItWorksOpen} />
