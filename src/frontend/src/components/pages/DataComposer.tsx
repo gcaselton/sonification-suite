@@ -49,6 +49,7 @@ import HelperDialog from "../data_composer/HelperDialog";
 import { apiRequest } from "../../utils/requests";
 import UploadDialog from "../data_composer/UploadDialog";
 import DeleteDialog from "../data_composer/DeleteDialog";
+import ValidationBadges from "../data_composer/ValidationBadges";
 
 function makeLayerId() {
   return `layer_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -64,8 +65,10 @@ function makeEmptyLayer(index: number): Layer {
     refined: false,
     styleRef: null,
     styleName: null,
-    missingColumns: null,
-    nanColumns: null
+    styleDescription: null,
+    missingColumns: [],
+    nanColumns: [],
+    insufficientColumns: null,
   };
 }
 
@@ -147,8 +150,10 @@ export default function DataComposer() {
       refined: source.refined,
       styleRef: null,
       styleName: null,
-      missingColumns: null,
-      nanColumns: null
+      styleDescription: null,
+      missingColumns: [],
+      nanColumns: [],
+      insufficientColumns: null,
     });
 
     // Reuse selected successfully — close edit mode for this layer.
@@ -158,9 +163,6 @@ export default function DataComposer() {
       return next;
     });
   };
-
-
-  
 
   // ---- Duplicate / delete ----
 
@@ -223,8 +225,10 @@ export default function DataComposer() {
               refined: false,
               styleRef: null,
               styleName: null,
-              missingColumns: null,
-              nanColumns: null
+              styleDescription: null,
+              missingColumns: [],
+              nanColumns: [],
+              insufficientColumns: null,
             }
           : l,
       );
@@ -260,34 +264,27 @@ export default function DataComposer() {
     });
   }, [layers]);
 
-
   // Ensure the dataset and style are compatible
   // That is, ensure the mapped columns in Style exist in the data and they don't contain NaNs
   const validateLayer = async (layer: Layer) => {
-
     setValidatingLayerIds((prev) => new Set(prev).add(layer.id));
 
-    const endpoint = `${composerAPI}/validate-layer/`
+    const endpoint = `${composerAPI}/validate-layer/`;
     const payload = {
       data_ref: layer.dataRef,
-      style_ref: layer.styleRef
-    }
+      style_ref: layer.styleRef,
+    };
 
     try {
       const result = await apiRequest(endpoint, payload);
 
-      if (result.invalid_columns.length > 0) {
-        updateLayer(layer.id, {
-          invalidColumns: result.invalid_columns,
-        });
-      } else {
-        updateLayer(layer.id, {
-          invalidColumns: null,
-        });
-      }
-
+      // Add any missing/invalid columns to the layer (this renders a warning badge on that layer)
+      updateLayer(layer.id, {
+        missingColumns: result.missing_columns,
+        nanColumns: result.nan_columns,
+        insufficientColumns: result.insufficient_columns,
+      });
     } finally {
-
       // remove layer from the validating list
       setValidatingLayerIds((prev) => {
         const next = new Set(prev);
@@ -305,8 +302,9 @@ export default function DataComposer() {
         l.dataName &&
         l.styleName &&
         !isEditingData(l) &&
-        !l.missingColumns &&
-        !l.nanColumns,
+        l.missingColumns.length === 0 &&
+        l.nanColumns.length === 0 &&
+        !l.insufficientColumns,
     );
 
   const handleRefine = (layer: Layer) => {
@@ -327,19 +325,19 @@ export default function DataComposer() {
         dataRef: layer.dataRef,
         layerID: layer.id,
         soniType,
+        userUpload: true // tell custom style menu we are using user data
       },
     });
   };
 
-  const handleProceedToSonify = () => {
-    navigate("/sonify", { state: { layers } });
+  const handleContinueToSonify = () => {
+    navigate("/sonify", { state: { layers, soniType } });
   };
 
   const pendingDeleteLayer = layers.find((l) => l.id === pendingDeleteId);
   const pendingDeleteDependents = pendingDeleteId
     ? dependentsOf(pendingDeleteId)
     : [];
-
 
   return (
     <PageContainer>
@@ -388,11 +386,9 @@ export default function DataComposer() {
             const hasReusableData = layers.some(
               (l) => l.id !== layer.id && l.dataName,
             );
-            const validating = validatingLayerIds.has(layer.id)
-            const invalid =
-              !layer.refined
-              
 
+            const nMissing = layer.missingColumns.length;
+            const nNan = layer.nanColumns.length;
             return (
               <Card.Root
                 key={layer.id}
@@ -438,19 +434,11 @@ export default function DataComposer() {
                           </Editable.Control>
                         </Editable.Root>
                       </Card.Title>
-                      {validating && (
-                        <Badge colorPalette="blue">
-                          <Spinner size="xs" />
-                          Validating...
-                        </Badge>
-                      )}
-                      {invalid && (
-                        <Badge colorPalette="orange" gap="1">
-                          <LuTriangleAlert /> Needs attention
-                        </Badge>
-                      )}
+                      <ValidationBadges
+                        layer={layer}
+                        validating={validatingLayerIds.has(layer.id)}
+                      />
                     </HStack>
-
                     <HStack
                       gap="1"
                       justify={{ base: "flex-end", md: "flex-start" }}
@@ -643,7 +631,10 @@ export default function DataComposer() {
                 refined: false,
                 styleRef: null,
                 styleName: null,
-                invalidColumns: null
+                styleDescription: null,
+                missingColumns: [],
+                nanColumns: [],
+                insufficientColumns: null,
               });
 
               setEditingLayerIds((prev) => {
@@ -678,14 +669,14 @@ export default function DataComposer() {
           <br />
           <HStack justify="flex-end">
             <Tooltip
-              content="Every layer needs data and style selected before you can continue."
+              content="Every layer needs valid data and style selected before you can continue."
               disabled={allLayersReady}
             >
               <Button
                 colorPalette="teal"
                 size="lg"
                 disabled={!allLayersReady}
-                onClick={handleProceedToSonify}
+                onClick={handleContinueToSonify}
               >
                 Continue to Sonify <LuArrowRight />
               </Button>

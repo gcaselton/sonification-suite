@@ -13,10 +13,18 @@ export interface Layer {
   // Style info
   styleRef: string | null;
   styleName: string | null;
+  styleDescription: string | null;
 
   // Validation
-  missingColumns: string[] | null; // columns mapped in Style but not present in data
-  nanColumns: string[] | null; // columns mapped in Style but contain NaNs
+  missingColumns: string[]; // columns mapped in Style but not present in data
+  nanColumns: string[]; // columns mapped in Style but contain NaNs
+  insufficientColumns: InsufficientColumns | null;
+}
+
+// Used if there are more (unnnamed) columns in the Style than there are in the data
+interface InsufficientColumns {
+  style: number,
+  data: number
 }
 
 interface ComposerContextValue {

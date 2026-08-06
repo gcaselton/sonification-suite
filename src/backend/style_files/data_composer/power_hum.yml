@@ -11,12 +11,12 @@ generator:
     loop_end: 5.
 
 map:
-  - input: "flux"
-    output: "pitch_shift"
-    output_range: [0, 12]
+  - output: "time"
 
-  - input: "time"
-    output: "time"
+  - output: "pitch_shift"
+    output_range: [0, 12]
+  
+  - output: "cutoff"
 
 sources: "objects"
 

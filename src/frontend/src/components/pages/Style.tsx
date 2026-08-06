@@ -51,7 +51,7 @@ export default function Style() {
     }
 
     if (soniType === "data_composer") {
-      goToComposer(style.file_ref, style.name);
+      goToComposer(style.file_ref, style.name, style.description);
       return;
     }
 
@@ -61,7 +61,7 @@ export default function Style() {
   const handleStyleCreated = (styleRef: string) => {
 
     if (soniType === "data_composer") {
-      goToComposer(styleRef, "Custom");
+      goToComposer(styleRef, "Custom", "");
       return;
     }
 
@@ -83,10 +83,11 @@ export default function Style() {
     });
   }
 
-  const goToComposer = (styleRef: string, styleName: string) => {
+  const goToComposer = (styleRef: string, styleName: string, styleDescription: string) => {
     composer.updateLayer(layerID, {
       styleRef,
       styleName,
+      styleDescription
     })
 
     navigate("/data-composer")

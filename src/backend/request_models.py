@@ -21,11 +21,14 @@ class SoundInfo(BaseModel):
     name: str
     composable: bool
     data_modes: list[str]
+    
+class LayerRequest(BaseModel):
+    data_ref: str
+    style_ref: str
 
 class SonificationRequest(BaseModel):
     category: str
-    data_ref: str
-    style_ref: str
+    layers: list[LayerRequest]
     duration: float
     system: str
     data_name: str

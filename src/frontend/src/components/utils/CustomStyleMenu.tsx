@@ -394,19 +394,20 @@ export default function CustomStyleMenu({
         setInputOptions(createListCollection({ items: inputItems }));
         setOutputOptions(createListCollection({ items: outputItems }));
 
-        // Auto-map time → time if both exist
-        const hasTimeInput = inputItems.some(
+        // Auto-map time → time if both exist (case-insensitive)
+        const timeInput = inputItems.find(
           (i) => i.value.toLowerCase() === "time",
         );
-        const hasTimeOutput = outputItems.some(
+
+        const timeOutput = outputItems.find(
           (o) => o.value.toLowerCase() === "time",
         );
 
-        if (hasTimeInput && hasTimeOutput) {
+        if (timeInput && timeOutput) {
           setParameterMappings([
             {
-              input: "Time",
-              output: "Time",
+              input: timeInput.value,
+              output: timeOutput.value,
               output_range: null,
               function: null,
             },
@@ -1238,7 +1239,7 @@ export default function CustomStyleMenu({
             </VStack>
           </Dialog.Body>
           {!hasTimeMapping && (
-            <Text pb={2} fontSize="sm" color="fg.muted" textAlign="center">
+            <Text pb={2} pt={2} fontSize="sm" color="fg.muted" textAlign="center">
               One parameter must be mapped to <strong>Time</strong> to continue.
             </Text>
           )}

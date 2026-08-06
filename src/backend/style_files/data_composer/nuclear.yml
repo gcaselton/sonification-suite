@@ -11,12 +11,11 @@ generator:
     loop_end: 5.
 
 map:
-  - input: "flux"
-    output: "cutoff"
-    output_range: [0.3, 1]
 
-  - input: "time"
-    output: "time"
+  - output: "time"
+
+  - output: "cutoff"
+    output_range: [0.3, 1]
 
 sources: "objects"
 

@@ -37,7 +37,8 @@ UPLOAD_QUOTA_BYTES = UPLOAD_QUOTA_MB * 1024 * 1024
 FORMATTED_FILENAMES = {
     'light_curves': 'Light Curve',
     'constellations': 'Constellation',
-    'night_sky': 'Night Sky'
+    'night_sky': 'Night Sky',
+    'data_composer': 'Data Composer'
 }
 
 MASTER_VOL = 0.5
@@ -83,91 +84,96 @@ def generate_sonification(request: SonificationRequest):
     
     if int(request.duration) > 300:
         raise HTTPException(status_code=400, detail="Sonification too long, maximum length = 5 minutes.")
-        
-    # Resolve data and style file names to actual paths in backend
-    data_filepath = resolve_file(request.data_ref)
-    style_filepath = resolve_file(request.style_ref)
     
-    try:
-        
-        # First, replace base sound name with filepath to the sound
-        style_dict = write_sound_to_style(style_filepath, write_to_yml=False)
-        
-        # Next, determine data format (CSV, .fits) and convert to DataFrame
-        data_type = data_filepath.suffix.lower()
-        
-        if data_type == '.fits':
-                lc = lk.read(str(data_filepath))
-                time = lc.time.value
-                flux = lc.flux.value
-                
-                df = pd.DataFrame({
-                    "time": np.asarray(time, dtype=np.float64),
-                    "flux": np.asarray(flux, dtype=np.float64)
-                })
-                
-                # Interpolate across NaNs for light curves, and fill in empty start and end values
-                df['flux'] = df['flux'].interpolate().bfill().ffill()
-                
-        elif data_type == '.csv':
-                df = pd.read_csv(str(data_filepath))
-        else:
-                raise ValueError(f'{data_type} file type not suitable for sonification, please use .csv or .fits.')
-        
-        
-        # Build dict with keyword arguments for sonification function
-        kwargs = {
-            'duration': request.duration
-        }
-        
-        # Handle case that 'Place on Dome' feature is used
-        if request.observer:
-            position_info = handle_observer(request.observer)
-            
-            # Remove any existing spatial mappings
-            style_dict['map'] = [mapping for mapping in style_dict['map'] 
-                                 if mapping['output'] not in ['azimuth', 'polar', 'pan']]
-            
-            # Add fixed values to kwargs
-            for param in ['azimuth', 'polar']:
-                kwargs[f'fix_{param}'] = position_info['STRAUSS_inputs'][param]
-            
-            # Get altitude and azimuth values in degrees to send to the frontend to display    
-            alt_az = [position_info['display_values'][value] for value in ['altitude', 'azimuth']]
-        else:
-            alt_az = None
-        
-        # Add style to kwargs
-        kwargs['style'] = str(write_YAML_file(style_dict))
-        
-        # Initialise an AudioFigure and sonify
-        fig = AudioFigure(system=request.system)
-        fig.sonify(df, **kwargs)
-
-        session_id = session_id_var.get()
-
-        if not session_id:
-            raise HTTPException(status_code=400, detail="No session cookie found")
-        
-        category = FORMATTED_FILENAMES[request.category]
-        ext = '.wav'
-        filename = f'{request.data_name} {category}{ext}'
-        filepath = TMP_DIR / session_id / filename
-        fig.save(filepath)
-
-        file_ref = f'session:{filename}'
-
-        return {'file_ref': file_ref, 'alt_az': alt_az}
+    # Initialise AudioFigure
+    fig = AudioFigure(system=request.system)
     
-    except HTTPException:
-        raise
-    except Exception as e:
-        LOG.error("Error generating sonification:\n" + traceback.format_exc())
-        raise HTTPException(
-            status_code=500,
-            detail=f"{type(e).__name__}: {str(e)}"
-        )
+    for layer in request.layers:
+        
+        # Resolve data and style file names to actual paths in backend
+        data_filepath = resolve_file(layer.data_ref)
+        style_filepath = resolve_file(layer.style_ref)
+        
+        try:
+            
+            # First, replace base sound name with filepath to the sound
+            style_dict = write_sound_to_style(style_filepath, write_to_yml=False)
+            
+            # Next, determine data format (CSV, .fits) and convert to DataFrame
+            data_type = data_filepath.suffix.lower()
+            
+            if data_type == '.fits':
+                    lc = lk.read(str(data_filepath))
+                    time = lc.time.value
+                    flux = lc.flux.value
+                    
+                    df = pd.DataFrame({
+                        "time": np.asarray(time, dtype=np.float64),
+                        "flux": np.asarray(flux, dtype=np.float64)
+                    })
+                    
+                    # Interpolate across NaNs for light curves, and fill in empty start and end values
+                    df['flux'] = df['flux'].interpolate().bfill().ffill()
+                    
+            elif data_type == '.csv':
+                    df = pd.read_csv(str(data_filepath), header=0)
+            else:
+                    raise ValueError(f'{data_type} file type not suitable for sonification, please use .csv or .fits.')
+            
+            # Build dict with keyword arguments for sonification function
+            kwargs = {
+                'duration': request.duration
+            }
+            
+            # Handle case that 'Place on Dome' feature is used
+            if request.observer:
+                position_info = handle_observer(request.observer)
+                
+                # Remove any existing spatial mappings
+                style_dict['map'] = [mapping for mapping in style_dict['map'] 
+                                        if mapping['output'] not in ['azimuth', 'polar', 'pan']]
+                
+                # Add fixed values to kwargs
+                for param in ['azimuth', 'polar']:
+                    kwargs[f'fix_{param}'] = position_info['STRAUSS_inputs'][param]
+                
+                # Get altitude and azimuth values in degrees to send to the frontend to display    
+                alt_az = [position_info['display_values'][value] for value in ['altitude', 'azimuth']]
+            else:
+                alt_az = None
+            
+            # Add style to kwargs
+            kwargs['style'] = str(write_YAML_file(style_dict))
+            
+            # Add layer to the AudioFigure and sonify
+            fig.sonify(df, **kwargs)
+            
+        except HTTPException:
+            raise
+        
+        except Exception as e:
+            LOG.error("Error generating sonification:\n" + traceback.format_exc())
+            raise HTTPException(
+                status_code=500,
+                detail=f"{type(e).__name__}: {str(e)}"
+            )
+        
+    session_id = session_id_var.get()
 
+    if not session_id:
+        raise HTTPException(status_code=400, detail="No session cookie found")
+    
+    category = FORMATTED_FILENAMES[request.category]
+    ext = '.wav'
+    filename = f'{request.data_name} {category}{ext}'
+    filepath = TMP_DIR / session_id / filename
+    fig.save(filepath)
+
+    file_ref = f'session:{filename}'
+
+    return {'file_ref': file_ref, 'alt_az': alt_az}
+    
+    
 @router.post('/generate-spectrogram/')
 def generate_spectrogram(request: DataRequest):
 
@@ -469,20 +475,13 @@ def round_range(range: list, dp: int = 2) -> list:
     return [round(float(v), dp) for v in range]
 
 
-
-
 @router.get('/get-inputs/')
 def get_inputs(file_ref: str, soni_type: str, user_upload: bool = False ):
     
     filepath = str(resolve_file(file_ref))
     
     if filepath.endswith('.csv') and user_upload:
-        df = pd.read_csv(filepath)
-        
-        # If all column names are numeric, the data likely has no headers
-        if all(str(col).replace('.', '').replace('-', '').isnumeric() for col in df.columns):
-            df = pd.read_csv(filepath, header=None)
-            df.columns = [f"Column {i + 1}" for i in range(len(df.columns))]
+        df = pd.read_csv(filepath, header=0)
             
         inputs = [
             {

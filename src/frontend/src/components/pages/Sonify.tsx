@@ -53,6 +53,7 @@ import ObserverSetup, {
 } from "../utils/ObserverSetup";
 import { Tooltip } from "../ui/Tooltip";
 import { Download } from "lucide-react";
+import { Layer } from "../../context/ComposerContext";
 
 export default function Sonify() {
   // Route states
@@ -65,6 +66,7 @@ export default function Sonify() {
   const soniType = location.state.soniType;
   const ra = location.state.ra ?? null;
   const dec = location.state.dec ?? null;
+  const layers: Layer[] | null = location.state.layers ?? null;
 
   // Define length limits based on sonification type
   const defaultsDict = {
@@ -75,6 +77,7 @@ export default function Sonify() {
       audio_system: "stereo",
     },
     night_sky: { max_length: 120, default_length: 30, audio_system: "stereo" },
+    data_composer: { max_length: 120, default_length: 15, audio_system: "stereo"}
   };
 
   const defaults = defaultsDict[soniType as keyof typeof defaultsDict];
@@ -183,13 +186,25 @@ export default function Sonify() {
 
     const url = `${coreAPI}/generate-sonification/`;
 
+    const soniLayers = layers
+      // Send an array of data/style refs if using Data Composer
+      ? layers.map((l) => ({
+          data_ref: l.dataRef,
+          style_ref: l.styleRef,
+        }))
+      : [ // Otherwise, send just the one wrapped in an array
+          {
+            data_ref: dataRef,
+            style_ref: styleRef,
+          },
+        ];
+
     const data = {
       category: soniType,
-      data_ref: dataRef,
-      style_ref: styleRef,
+      layers: soniLayers,
       duration: length,
       system: audioSystem[0],
-      data_name: dataName,
+      data_name: layers ? "Layers" : dataName,
       observer: observerValues
         ? {
             latitude: observerValues.latitude,

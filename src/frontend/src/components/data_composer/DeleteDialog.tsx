@@ -32,9 +32,9 @@ export default function DeleteDialog({
 
             <Dialog.Body>
               <Text>
-                {dependentLabels.join(", ")}{" "}
+                <strong>{dependentLabels.join(", ")}</strong>{" "}
                 {dependentLabels.length === 1 ? "reuses" : "reuse"} this layer's
-                dataset. Deleting {layerLabel} will clear their data selection
+                dataset. Deleting <strong>{layerLabel}</strong> will clear their data selection
                 and they'll need to be reconfigured before you can continue.
               </Text>
             </Dialog.Body>
