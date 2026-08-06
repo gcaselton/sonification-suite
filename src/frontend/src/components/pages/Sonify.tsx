@@ -130,6 +130,9 @@ export default function Sonify() {
   useEffect(() => {
     async function fetchPlot() {
       try {
+        // Don't plot if using Data Composer
+        if (soniType === "data_composer") return;
+
         const imageBase64 = await plotData(dataRef, soniType);
 
         setImageSrc(`data:image/svg+xml;base64,${imageBase64}`);
@@ -217,8 +220,6 @@ export default function Sonify() {
         : null,
     };
 
-    console.log(data);
-
     try {
       const response = await apiRequest(url, data);
       console.log("Sonification result:", response);
@@ -246,7 +247,6 @@ export default function Sonify() {
     requestSonification().then((fileRef) => {
       setLoading(false);
       if (fileRef) {
-        console.log("Sonification file created:", fileRef);
         setAudioKey(Date.now().toString());
         setAudioFilename(`${fileRef}`);
         setSoniReady(true);
@@ -309,11 +309,17 @@ export default function Sonify() {
     return Number(coord).toFixed(2);
   }
 
-  const summaryItems = [
-    { label: "Description", value: styleDescription, downloadable: false },
-    { label: "Data", value: dataName, downloadable: true, fileRef: dataRef },
-    { label: "Style", value: styleName, downloadable: true, fileRef: styleRef },
-  ];
+  const summaryItems = layers ? 
+    layers.map((l) => ([
+      { label: "Description", value: styleDescription, downloadable: false },
+      { label: "Data", value: dataName, downloadable: true, fileRef: dataRef },
+      { label: "Style", value: styleName, downloadable: true, fileRef: styleRef },
+    ])) : 
+    [
+      { label: "Description", value: styleDescription, downloadable: false },
+      { label: "Data", value: dataName, downloadable: true, fileRef: dataRef },
+      { label: "Style", value: styleName, downloadable: true, fileRef: styleRef },
+    ];
 
   const COMPASS = Object.fromEntries(
     ORIENTATIONS.map(({ value, label }) => [value, label]),

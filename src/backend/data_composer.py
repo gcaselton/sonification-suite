@@ -145,4 +145,7 @@ def validate_layer(request: LayerRequest):
                 response['nan_columns'].append(df.columns[i])
 
     return response
-    
+
+
+@router.post('/plot/')
+def plot(request: )
