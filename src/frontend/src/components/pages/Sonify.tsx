@@ -39,6 +39,7 @@ import {
   Select,
   HStack,
   VisuallyHidden,
+  Menu,
 } from "@chakra-ui/react";
 import {
   LuAudioLines,
@@ -77,7 +78,11 @@ export default function Sonify() {
       audio_system: "stereo",
     },
     night_sky: { max_length: 120, default_length: 30, audio_system: "stereo" },
-    data_composer: { max_length: 120, default_length: 15, audio_system: "stereo"}
+    data_composer: {
+      max_length: 120,
+      default_length: 15,
+      audio_system: "stereo",
+    },
   };
 
   const defaults = defaultsDict[soniType as keyof typeof defaultsDict];
@@ -190,12 +195,13 @@ export default function Sonify() {
     const url = `${coreAPI}/generate-sonification/`;
 
     const soniLayers = layers
-      // Send an array of data/style refs if using Data Composer
-      ? layers.map((l) => ({
+      ? // Send an array of data/style refs if using Data Composer
+        layers.map((l) => ({
           data_ref: l.dataRef,
           style_ref: l.styleRef,
         }))
-      : [ // Otherwise, send just the one wrapped in an array
+      : [
+          // Otherwise, send just the one wrapped in an array
           {
             data_ref: dataRef,
             style_ref: styleRef,
@@ -293,6 +299,32 @@ export default function Sonify() {
     setObserverOpen(false);
   };
 
+  const handleDownload = async (format: string) => {
+    const response = await fetch(
+      `${coreAPI}/audio/${audioFilename}?format=${format}&v=${audioKey}`,
+      {
+        credentials: "include",
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to download audio.");
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `sonification.${format}`;
+
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    URL.revokeObjectURL(url);
+  };
+
   const invalidLength =
     Number(length) > defaults.max_length ||
     length === "0" ||
@@ -309,24 +341,73 @@ export default function Sonify() {
     return Number(coord).toFixed(2);
   }
 
-  const summaryItems = layers ? 
-    layers.map((l) => ([
-      { label: "Description", value: styleDescription, downloadable: false },
-      { label: "Data", value: dataName, downloadable: true, fileRef: dataRef },
-      { label: "Style", value: styleName, downloadable: true, fileRef: styleRef },
-    ])) : 
-    [
-      { label: "Description", value: styleDescription, downloadable: false },
-      { label: "Data", value: dataName, downloadable: true, fileRef: dataRef },
-      { label: "Style", value: styleName, downloadable: true, fileRef: styleRef },
-    ];
+  const downloadFormats = ["wav", "mp3"];
 
+  interface SummaryRow {
+    label: string;
+    value: string;
+    downloadable: boolean;
+    fileRef?: string;
+  }
+
+  interface SummarySection {
+    layerLabel?: string;
+    rows: SummaryRow[];
+  }
+
+  const summaries: SummarySection[] = layers
+    ? layers.map((l) => ({
+        layerLabel: l.label,
+        rows: [
+          {
+            label: "Description",
+            value: l.styleDescription!,
+            downloadable: false,
+          },
+          {
+            label: "Data",
+            value: l.dataName!,
+            downloadable: true,
+            fileRef: l.dataRef!,
+          },
+          {
+            label: "Style",
+            value: l.styleName!,
+            downloadable: true,
+            fileRef: l.styleRef!,
+          },
+        ],
+      }))
+    : [
+        {
+          rows: [
+            {
+              label: "Description",
+              value: styleDescription,
+              downloadable: false,
+            },
+            {
+              label: "Data",
+              value: dataName,
+              downloadable: true,
+              fileRef: dataRef,
+            },
+            {
+              label: "Style",
+              value: styleName,
+              downloadable: true,
+              fileRef: styleRef,
+            },
+          ],
+        },
+      ];
+      
   const COMPASS = Object.fromEntries(
     ORIENTATIONS.map(({ value, label }) => [value, label]),
   );
 
   // Place on dome option should only display for these sonification types
-  const placeOnDomeModes = ['light_curves', 'constellations']
+  const placeOnDomeModes = ["light_curves", "constellations"];
 
   return (
     <PageContainer>
@@ -590,69 +671,85 @@ export default function Sonify() {
                 Generate Sonification
               </Button>
 
+              {/* Summary section */}
+
               <HStack w="100%">
                 <Separator w="100%" size="lg" />
                 <Text flexShrink="0">Summary</Text>
                 <Separator w="100%" size="lg" />
               </HStack>
+              {summaries.map((summary) => (
+                <DataList.Root
+                  key={summary.layerLabel}
+                  orientation="horizontal"
+                  divideY="1px"
+                  variant="bold"
+                  w="100%"
+                  pb={4}
+                >
+                  {layers && (
+                    <Heading textAlign="center" size="sm" color="teal">
+                      {summary.layerLabel}
+                    </Heading>
+                  )}
+                  {summary.rows.map(
+                    (row) =>
+                      row.value !== "" && (
+                        <DataList.Item key={row.label} pt="4" width="100%">
+                          <DataList.ItemLabel fontWeight="bold">
+                            {row.label}
+                          </DataList.ItemLabel>
+                          <DataList.ItemValue>
+                            <HStack justify="space-between" w="100%">
+                              <Text>{row.value}</Text>
+                              {row.downloadable && row.fileRef && (
+                                <Tooltip
+                                  content={`Download ${row.label.toLowerCase()}`}
+                                >
+                                  <IconButton
+                                    aria-label={`Download ${row.label.toLowerCase()}`}
+                                    asChild
+                                    colorPalette="teal"
+                                    size="sm"
+                                    variant="ghost"
+                                  >
+                                    <a
+                                      href={`${coreAPI}/download?file_ref=${encodeURIComponent(row.fileRef)}`}
+                                      style={{ color: "inherit" }}
+                                    >
+                                      <LuDownload />
+                                    </a>
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                            </HStack>
+                          </DataList.ItemValue>
+                        </DataList.Item>
+                      ),
+                  )}
 
-              <DataList.Root
-                orientation="horizontal"
-                divideY="1px"
-                variant="bold"
-                w="100%"
-              >
-                {summaryItems.map((item) => (
-                  <DataList.Item key={item.label} pt="4">
-                    <DataList.ItemLabel fontWeight="bold">
-                      {item.label}
-                    </DataList.ItemLabel>
-                    <DataList.ItemValue>{item.value}</DataList.ItemValue>
-                    {item.downloadable && item.fileRef && (
-                      <DataList.ItemValue>
-                        <Tooltip
-                          content={`Download ${item.label.toLowerCase()}`}
-                        >
-                          <IconButton
-                            aria-label={`Download ${item.label.toLowerCase()}`}
-                            asChild
-                            colorPalette="teal"
-                            size="sm"
-                            variant="ghost"
-                          >
-                            <a
-                              href={`${coreAPI}/download?file_ref=${encodeURIComponent(item.fileRef)}`}
-                              style={{ color: "inherit" }}
-                            >
-                              <LuDownload />
-                            </a>
-                          </IconButton>
-                        </Tooltip>
-                      </DataList.ItemValue>
-                    )}
-                  </DataList.Item>
-                ))}
-                {altAz && (
-                  <>
-                    <DataList.Item key="altitude" pt="4">
-                      <DataList.ItemLabel fontWeight="bold">
-                        Altitude
-                      </DataList.ItemLabel>
-                      <DataList.ItemValue>
-                        {formatCoord(altAz[0])}°
-                      </DataList.ItemValue>
-                    </DataList.Item>
-                    <DataList.Item key="azimuth" pt="4">
-                      <DataList.ItemLabel fontWeight="bold">
-                        Azimuth
-                      </DataList.ItemLabel>
-                      <DataList.ItemValue>
-                        {formatCoord(altAz[1])}°
-                      </DataList.ItemValue>
-                    </DataList.Item>
-                  </>
-                )}
-              </DataList.Root>
+                  {altAz && (
+                    <>
+                      <DataList.Item key="altitude" pt="4">
+                        <DataList.ItemLabel fontWeight="bold">
+                          Altitude
+                        </DataList.ItemLabel>
+                        <DataList.ItemValue>
+                          {formatCoord(altAz[0])}°
+                        </DataList.ItemValue>
+                      </DataList.Item>
+                      <DataList.Item key="azimuth" pt="4">
+                        <DataList.ItemLabel fontWeight="bold">
+                          Azimuth
+                        </DataList.ItemLabel>
+                        <DataList.ItemValue>
+                          {formatCoord(altAz[1])}°
+                        </DataList.ItemValue>
+                      </DataList.Item>
+                    </>
+                  )}
+                </DataList.Root>
+              ))}
             </VStack>
           </form>
           <br />
@@ -741,13 +838,35 @@ export default function Sonify() {
               />
             )}
             {soniReady && (
-              <audio
-                ref={audioRef}
-                key={audioKey}
-                src={`${coreAPI}/audio/${audioFilename}?v=${audioKey}`}
-                controls
-                style={{ width: "100%" }}
-              />
+              <HStack justify="space-between" w="100%" gap={4}>
+                <audio
+                  ref={audioRef}
+                  key={audioKey}
+                  src={`${coreAPI}/audio/${audioFilename}?format=wav&v=${audioKey}`}
+                  controls
+                  style={{ flex: 1 }}
+                />
+
+                <Menu.Root>
+                  <Menu.Trigger asChild>
+                    <Button colorPalette="teal">Download</Button>
+                  </Menu.Trigger>
+                  <Portal>
+                    <Menu.Positioner>
+                      <Menu.Content>
+                        {downloadFormats.map((format) => (
+                          <Menu.Item
+                            value={format}
+                            onClick={() => handleDownload(format)}
+                          >
+                            Download {format.toUpperCase()}
+                          </Menu.Item>
+                        ))}
+                      </Menu.Content>
+                    </Menu.Positioner>
+                  </Portal>
+                </Menu.Root>
+              </HStack>
             )}
           </ActionBar.Content>
         </ActionBar.Positioner>

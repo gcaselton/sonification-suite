@@ -6,7 +6,7 @@ from context import session_id_var
 from utils import resolve_file, is_number, read_YAML_file, write_YAML_file, is_synth, write_sound_to_style
 from generator_mods import GENERATOR_MODS
 from request_models import DataRequest, CustomStyleSettings, SonificationRequest, SoundInfo
-import logging, yaml, os, uuid, traceback, base64, gc, re, csv
+import logging, yaml, os, uuid, traceback, base64, gc, re, csv, shutil
 from param_descriptions import INPUTS, OUTPUTS
 from night_sky import handle_observer
 from strauss import AudioFigure
@@ -22,6 +22,7 @@ from io import BytesIO
 import lightkurve as lk
 from astropy.io import fits
 from astropy.table import Table
+from pydub import AudioSegment
 
 
 router = APIRouter(prefix='/core')
@@ -259,16 +260,55 @@ def generate_spectrogram(request: DataRequest):
     return {'image': img_base64}
 
 @router.get('/audio/{file_ref}')
-def get_audio(file_ref: str):
+def get_audio(file_ref: str, format: str):
+    
+    wav_path = str(resolve_file(file_ref))
 
-    filepath = resolve_file(file_ref)
-    file_name = file_ref.split(':')[-1]
-    ext = filepath.suffix.lstrip('.')
+    if format == 'mp3':
+        file_path = convert_to_mp3(wav_path)
+    else:
+        file_path = wav_path
 
-    return FileResponse(path=filepath, 
-                        filename=file_name,
-                        media_type=f"audio/{ext}")
+    return FileResponse(path=file_path, 
+                        filename=Path(file_path).name,
+                        media_type="audio/mpeg" if format == "mp3" else "audio/wav")
 
+def convert_to_mp3(wav_file: str) -> str:
+    """
+    Convert a WAV file to an MP3.
+    
+    Args:
+        wav_file: Path to the WAV file.
+    Returns:
+        Path to the generated MP3 file.
+    """
+    wav_path = Path(wav_file)
+
+    if not wav_path.exists():
+        raise FileNotFoundError(f"WAV file not found: {wav_path}")
+
+    if wav_path.suffix.lower() != ".wav":
+        raise ValueError(f"Expected a .wav file, got {wav_path.suffix}")
+
+    mp3_path = wav_path.with_suffix(".mp3")
+    
+    if mp3_path.exists():
+        return str(mp3_path)
+
+    system_ffmpeg = shutil.which("ffmpeg")
+    
+    if system_ffmpeg:
+        # System has ffmpeg installed (likely production server)
+        AudioSegment.converter = system_ffmpeg
+    else:
+        # Hardcoded for development on Windows
+        AudioSegment.converter = r"C:\Users\ngc133\ffmpeg\bin\ffmpeg.exe"
+    
+    audio = AudioSegment.from_wav(wav_path)
+    audio.export(mp3_path, format="mp3", bitrate="320k")
+
+    return str(mp3_path)
+    
 
 @router.get("/download")
 def download_file(file_ref: str):

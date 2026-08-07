@@ -147,5 +147,5 @@ def validate_layer(request: LayerRequest):
     return response
 
 
-@router.post('/plot/')
-def plot(request: )
+# @router.post('/plot/')
+# def plot(request: )
