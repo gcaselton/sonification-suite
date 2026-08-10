@@ -1,6 +1,6 @@
 name: "Power Hum"
 
-description: "A whirring synth increases with pitch as star brightness increases."
+description: "A whirring synth increases with pitch as the values in Column 2 increase. Uses Column 1 as the time axis."
 
 generator:
   type: "sampler"
@@ -15,8 +15,6 @@ map:
 
   - output: "pitch_shift"
     output_range: [0, 12]
-  
-  - output: "cutoff"
 
 sources: "objects"
 

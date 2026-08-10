@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import PageContainer from "../ui/PageContainer";
 import { getImage } from "../../utils/assets";
 import { Tooltip } from "../ui/Tooltip";
-import { LuFilm } from "react-icons/lu";
+import { LuExternalLink, LuFilm, LuLayers3 } from "react-icons/lu";
 
 import {
   Box,
@@ -30,30 +30,39 @@ import { apiUrl } from "../../apiConfig";
 interface AstroType {
   name: string;
   description: string;
-  page: string;
+  page?: string;
+  href?: string;
+  icon?: React.ElementType;
 }
 
 const astroTypes: AstroType[] = [
   {
     name: "Light Curves",
     description: "Listen to fluctuations in a star's light.",
-    page: "/light-curves",
+    page: "/planetaria/light-curves",
   },
   {
     name: "Constellations",
     description: "Hear the unique qualities of the 88 constellations.",
-    page: "/constellations",
+    page: "/planetaria/constellations",
   },
   {
     name: "Night Sky",
     description: "Hear the stars at your location appear.",
-    page: "/night-sky",
+    page: "/planetaria/night-sky",
   },
   {
     name: "Data Composer",
     description: "Upload your own data and compose sonifications in layers.",
-    page: "/data-composer"
-  }
+    page: "/planetaria/data-composer",
+    icon: LuLayers3,
+  },
+  {
+    name: "Example Bank",
+    description: "Use some of our pre-made examples in your shows.",
+    href: "https://www.audiouniverse.org/sonification-suite/planetaria/example-bank",
+    icon: LuFilm,
+  },
 ];
 
 export default function Planetaria() {
@@ -77,79 +86,87 @@ export default function Planetaria() {
         justify={{ base: "center", md: "flex-start" }}
         animation="fade-in 300ms ease-out"
       >
-        {astroTypes.map((astroType) => (
-          <Card.Root
-            width="200px"
-            key={astroType.name}
-            variant="elevated"
-            _hover={{ transform: "scale(1.05)" }}
-            transition="transform 0.2s ease"
-          >
-            <LinkOverlay
-              as={Link}
-              onClick={() => navigate(astroType.page)}
-              cursor={astroType.page === "/" ? "disabled" : "pointer"}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  navigate(astroType.page);
+        {astroTypes.map((astroType) => {
+          const isExternal = !!astroType.href;
+
+          return (
+            <Card.Root
+              width="200px"
+              key={astroType.name}
+              _hover={{ transform: "scale(1.05)" }}
+              transition="transform 0.2s ease"
+              variant={isExternal ? "subtle" : "elevated"}
+            >
+              <LinkOverlay
+                as={Link}
+                href={astroType.href}
+                onClick={
+                  !isExternal && astroType.page
+                    ? () => navigate(astroType.page!)
+                    : undefined
                 }
-              }}
-            >
-              <img
-                src={getImage(astroType.name)}
-                alt={astroType.name}
-                style={{
-                  width: "100%",
-                  height: "200px",
-                  objectFit: "cover",
-                  borderRadius: "8px",
+                target={isExternal ? "_blank" : undefined}
+                rel={isExternal ? "noopener noreferrer" : undefined}
+                cursor="pointer"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+
+                    if (isExternal) {
+                      window.open(
+                        astroType.href,
+                        "_blank",
+                        "noopener,noreferrer",
+                      );
+                    } else if (astroType.page) {
+                      navigate(astroType.page);
+                    }
+                  }
                 }}
-              />
-            </LinkOverlay>
-            <Card.Body>
-              <Card.Title mb="2">{astroType.name}</Card.Title>
-              <Card.Description>{astroType.description}</Card.Description>
-            </Card.Body>
-          </Card.Root>
-        ))}
-        <Card.Root
-          width="200px"
-          key="examples"
-          variant="subtle"
-          _hover={{ transform: "scale(1.05)" }}
-          transition="transform 0.2s ease"
-        >
-          <LinkOverlay
-            as={Link}
-            role="button"
-            tabIndex={0}
-            href="https://www.audiouniverse.org/sonification-suite/planetaria/example-bank"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Box
-              height="200px"
-              width="100%"
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              borderRadius="8px"
-            >
-              <Icon boxSize="64px" color="gray.400">
-                <LuFilm />
-              </Icon>
-            </Box>
-          </LinkOverlay>
-          <Card.Body>
-            <Card.Title mb="2">Example Bank</Card.Title>
-            <Card.Description>
-              Use some of our pre-made examples in your shows.
-            </Card.Description>
-          </Card.Body>
-        </Card.Root>
+              >
+                {astroType.icon ? (
+                  <Box
+                    height="200px"
+                    width="100%"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    borderRadius="8px"
+                  >
+                    <Icon boxSize="64px" color="teal.500">
+                      <astroType.icon />
+                    </Icon>
+                  </Box>
+                ) : (
+                  <img
+                    src={getImage(astroType.name)}
+                    alt={astroType.name}
+                    style={{
+                      width: "100%",
+                      height: "200px",
+                      objectFit: "cover",
+                      borderRadius: "8px",
+                    }}
+                  />
+                )}
+              </LinkOverlay>
+
+              <Card.Body>
+                <Card.Title mb="2">
+                  {astroType.name}
+                  {isExternal && (
+                    <Icon ml="3" mb="1" boxSize="4" color="gray.500">
+                      <LuExternalLink />
+                    </Icon>
+                  )}
+                </Card.Title>
+                <Card.Description>{astroType.description}</Card.Description>
+              </Card.Body>
+            </Card.Root>
+          );
+        })}
       </Stack>
     </PageContainer>
   );

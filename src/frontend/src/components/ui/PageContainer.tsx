@@ -9,11 +9,13 @@ import {
   VStack,
   Dialog,
   CloseButton,
+  Breadcrumb,
 } from "@chakra-ui/react";
 import { useNavigate, NavLink } from "react-router-dom";
 import { CircleQuestionMark, Info, Menu } from "lucide-react";
 import { useState } from "react";
 import { NavDrawer } from "./NavDrawer";
+import Breadcrumbs from "./BreadCrumbs";
 
 export default function PageContainer({
   children,
@@ -86,26 +88,14 @@ export default function PageContainer({
                   _hover={{ opacity: 0.8 }}
                   transition="opacity 0.15s ease"
                 >
-                  Sonification{" "}
-                  <Box as="span" color="teal.500">
-                    Suite
-                  </Box>
+                  Sonification Suite
+             
                 </Text>
               </NavLink>
+              <Text opacity={0.7}>/</Text>
 
-              <Text opacity={0.35}>/</Text>
-
-              <NavLink to="/planetaria" aria-label="Go to Planetaria home page">
-                <Text
-                  fontSize="lg"
-                  opacity={0.6}
-                  cursor="pointer"
-                  _hover={{ opacity: 1 }}
-                  transition="opacity 0.15s ease"
-                >
-                  Planetaria
-                </Text>
-              </NavLink>
+              <Breadcrumbs />
+              
             </Flex>
             <Flex gap={5}>
               <Link

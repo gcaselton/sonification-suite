@@ -92,6 +92,9 @@ export default function Sonify() {
   const [audioSystem, setAudioSystem] = useState<string[]>([
     defaults.audio_system,
   ]);
+  // Track the audio system used for the most recently generated sonification.
+  // This is used to disable mp3 downloads if system has more channels than mono or stereo.
+  const [generatedAudioSystem, setGeneratedAudioSystem] = useState(defaults.audio_system[0])
   const [audioFilename, setAudioFilename] = useState("");
 
   const [soniReady, setSoniReady] = useState(false);
@@ -253,6 +256,7 @@ export default function Sonify() {
     requestSonification().then((fileRef) => {
       setLoading(false);
       if (fileRef) {
+        setGeneratedAudioSystem(audioSystem[0])
         setAudioKey(Date.now().toString());
         setAudioFilename(`${fileRef}`);
         setSoniReady(true);
@@ -854,14 +858,23 @@ export default function Sonify() {
                   <Portal>
                     <Menu.Positioner>
                       <Menu.Content>
-                        {downloadFormats.map((format) => (
-                          <Menu.Item
-                            value={format}
-                            onClick={() => handleDownload(format)}
-                          >
-                            Download {format.toUpperCase()}
-                          </Menu.Item>
-                        ))}
+                        {downloadFormats.map((format) => {
+                          const mp3Disabled =
+                            format === "mp3" &&
+                            !["stereo", "mono"].includes(generatedAudioSystem);
+                          return (
+                            <Tooltip disabled={!mp3Disabled} content="MP3 is only available for Mono or Stereo audio.">
+                              <Menu.Item
+                                value={format}
+                                onClick={() => handleDownload(format)}
+                                disabled={mp3Disabled}
+                              >
+                                Download {format.toUpperCase()}
+                              </Menu.Item>
+                            </Tooltip>
+                          );
+                        }
+                        )}
                       </Menu.Content>
                     </Menu.Positioner>
                   </Portal>

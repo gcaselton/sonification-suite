@@ -1,6 +1,6 @@
-name: "hello there"
+name: "Japanese Harp"
 
-description: "Harp plays a Japanese hirajoshi scale, where pitch increases with brightness."
+description: "Harp plays a Japanese hirajoshi scale, where Column 1 is used as the time axis and pitch is mapped to Column 2."
 
 generator:
   type: "sampler"
@@ -12,11 +12,9 @@ generator:
       R: 1
 
 map:
-  - input: "time"
-    output: "time"
+  - output: "time"
 
-  - input: "flux"
-    output: "pitch"
+  - output: "pitch"
 
 notes: ["C3", "D3", "D#3", "G3", "G#3", "C4", "D4", "D#4", "G4", "G#4", "C5"]
 

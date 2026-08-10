@@ -303,14 +303,14 @@ export default function Lightcurves() {
     }
 
     // Navigate to style page with data file path.
-    navigate("/refine", { state: { ...navInfo, soniType } });
+    navigate("/planetaria/refine", { state: { ...navInfo, soniType } });
   };
 
   const handleConfirmReduced = () => {
     setDataReduced(false);
 
     if (pendingNav) {
-      navigate("/refine", { state: { ...pendingNav, soniType } });
+      navigate("/planetaria/refine", { state: { ...pendingNav, soniType } });
       setPendingNav(null);
     }
   };
@@ -332,7 +332,7 @@ export default function Lightcurves() {
         console.log("Lightcurve selected, file ref:", dataRef);
         // Navigate to the style page with the filepath and star name
         const dataName = searchTerm;
-        navigate("/refine", {
+        navigate("/planetaria/refine", {
           state: { dataRef, dataName, soniType, ra, dec },
         });
       }
@@ -379,7 +379,9 @@ export default function Lightcurves() {
     const ra = star.ra;
     const dec = star.dec;
 
-    navigate("/refine", { state: { dataRef, dataName, soniType, ra, dec } });
+    navigate("/planetaria/refine", {
+      state: { dataRef, dataName, soniType, ra, dec },
+    });
   };
 
   const handleCancelReduced = () => {

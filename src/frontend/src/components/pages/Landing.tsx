@@ -35,8 +35,6 @@ const DOMAINS: Domain[] = [
   }
 ];
 
-// ─── Waveform SVG ─────────────────────────────────────────────────────────────
-
 function WaveformDecoration() {
   const points = Array.from({ length: 300 }, (_, i) => {
     const t = i / 299; // 0 → 1
@@ -100,8 +98,6 @@ function DomainCard({ domain }: { domain: Domain }) {
     </Card.Root>
   );
 }
-
-// ─── Landing Page ─────────────────────────────────────────────────────────────
 
 export default function Landing() {
   return (

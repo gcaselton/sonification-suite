@@ -69,7 +69,7 @@ export default function Style() {
   };
 
   const goToSonify = (styleRef: string, styleName: string, styleDescription: string) => {
-    navigate("/sonify", {
+    navigate("/planetaria/sonify", {
       state: {
         dataName,
         dataRef,
@@ -90,7 +90,7 @@ export default function Style() {
       styleDescription
     })
 
-    navigate("/data-composer")
+    navigate("/planetaria/data-composer");
   }
 
   const onFileSelect = async (file: File) => {
@@ -100,7 +100,7 @@ export default function Style() {
     try {
       const res = await apiRequest(`${coreAPI}/upload-yaml/`, formData);
       const styleRef = res.file_ref;
-      navigate("/sonify", {
+      navigate("/planetaria/sonify", {
         state: { dataName, dataRef, styleRef, soniType, ra, dec },
       });
     } catch (err: any) {

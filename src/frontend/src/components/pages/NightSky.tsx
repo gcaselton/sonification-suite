@@ -27,7 +27,7 @@ export default function NightSky() {
       "POST",
     );
 
-    navigate("/refine", {
+    navigate("/planetaria/refine", {
       state: {
         dataName: locationName,
         dataRef: response.file_ref,

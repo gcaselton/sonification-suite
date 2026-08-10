@@ -15,6 +15,7 @@ import { useEffect, useState, useRef } from 'react';
 import { coreAPI } from './apiConfig';
 import NightSky from './components/pages/NightSky';
 import { ComposerProvider } from './context/ComposerContext';
+import ScrollToTop from './utils/ScrollToTop';
 
 function App() {
 
@@ -48,24 +49,29 @@ function App() {
       <ColorModeProvider>
         <Box minH="100vh" bg="bg">
           <BrowserRouter>
+            <ScrollToTop />
             <Routes>
               <Route path="/" element={<Landing />} />
-              <Route path="/planetaria" element={<Planetaria />} />
-              <Route path="/light-curves" element={<Lightcurves />} />
-              <Route path="/constellations" element={<Constellations />} />
-              <Route path="/night-sky" element={<NightSky />} />
-              {/* Routes that may need context from the Data Composer feature */}
-              <Route
-                element={
-                  <ComposerProvider>
-                    <Outlet />
-                  </ComposerProvider>
-                }
-              >
-                <Route path="/data-composer" element={<DataComposer />} />
-                <Route path="/refine" element={<Refine />} />
-                <Route path="/style" element={<Style />} />
-                <Route path="/sonify" element={<Sonify />} />
+              <Route path="/planetaria">
+                <Route index element={<Planetaria />} />
+
+                <Route path="light-curves" element={<Lightcurves />} />
+                <Route path="constellations" element={<Constellations />} />
+                <Route path="night-sky" element={<NightSky />} />
+                
+                {/* Routes that may need context from the Data Composer feature */}
+                <Route
+                  element={
+                    <ComposerProvider>
+                      <Outlet />
+                    </ComposerProvider>
+                  }
+                >
+                  <Route path="data-composer" element={<DataComposer />} />
+                  <Route path="refine" element={<Refine />} />
+                  <Route path="style" element={<Style />} />
+                  <Route path="sonify" element={<Sonify />} />
+                </Route>
               </Route>
             </Routes>
           </BrowserRouter>

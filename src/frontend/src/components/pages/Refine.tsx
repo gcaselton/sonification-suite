@@ -44,12 +44,12 @@ export default function Refine() {
                 refined: true,
               });
 
-              navigate("/data-composer");
+              navigate("/planetaria/data-composer");
               return;
             }
 
             // Otherwise, proceed to Style
-            navigate("/style", {
+            navigate("/planetaria/style", {
               state: {
                 dataRef: newRef,
                 dataName,

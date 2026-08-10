@@ -308,7 +308,7 @@ export default function DataComposer() {
     );
 
   const handleRefine = (layer: Layer) => {
-    navigate("/refine", {
+    navigate("/planetaria/refine", {
       state: {
         dataName: layer.dataName,
         dataRef: layer.dataRef,
@@ -319,19 +319,19 @@ export default function DataComposer() {
   };
 
   const handleChooseStyle = (layer: Layer) => {
-    navigate("/style", {
+    navigate("/planetaria/style", {
       state: {
         dataName: layer.dataName,
         dataRef: layer.dataRef,
         layerID: layer.id,
         soniType,
-        userUpload: true // tell custom style menu we are using user data
+        userUpload: true, // tell custom style menu we are using user data
       },
     });
   };
 
   const handleContinueToSonify = () => {
-    navigate("/sonify", { state: { layers, soniType } });
+    navigate("/planetaria/sonify", { state: { layers, soniType } });
   };
 
   const pendingDeleteLayer = layers.find((l) => l.id === pendingDeleteId);

@@ -151,7 +151,7 @@ export default function Constellations() {
     const dataName = constellationName;
     const dataRef = "";
 
-    navigate("/refine", {
+    navigate("/planetaria/refine", {
       state: { dataName, dataRef, soniType }, // Navigate to step 2
     });
   };

@@ -1,18 +1,18 @@
 name: "Windy"
 
-description: "Static noise gets brighter as star brightness increases."
+description: "Static noise gets brighter as the values in Column 2 increase. Uses Column 1 as the time axis."
 
 generator:
   type: "synthesizer"
   preset: "White Noise"
 
 map:
-  - input: "flux"
-    output: "cutoff"
+  - output: 'time'
+  
+  - output: "cutoff"
     output_range: [0.3, 0.75]
 
-  - input: 'time'
-    output: 'time'
+
 
 sources: 'objects'
 
