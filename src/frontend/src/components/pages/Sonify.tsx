@@ -46,6 +46,7 @@ import {
   LuDownload,
   LuLocateFixed,
   LuDatabase,
+  LuSettings2,
 } from "react-icons/lu";
 import { plotData } from "../../utils/plot";
 import ObserverSetup, {
@@ -94,7 +95,9 @@ export default function Sonify() {
   ]);
   // Track the audio system used for the most recently generated sonification.
   // This is used to disable mp3 downloads if system has more channels than mono or stereo.
-  const [generatedAudioSystem, setGeneratedAudioSystem] = useState(defaults.audio_system[0])
+  const [generatedAudioSystem, setGeneratedAudioSystem] = useState(
+    defaults.audio_system[0],
+  );
   const [audioFilename, setAudioFilename] = useState("");
 
   const [soniReady, setSoniReady] = useState(false);
@@ -256,7 +259,7 @@ export default function Sonify() {
     requestSonification().then((fileRef) => {
       setLoading(false);
       if (fileRef) {
-        setGeneratedAudioSystem(audioSystem[0])
+        setGeneratedAudioSystem(audioSystem[0]);
         setAudioKey(Date.now().toString());
         setAudioFilename(`${fileRef}`);
         setSoniReady(true);
@@ -303,30 +306,8 @@ export default function Sonify() {
     setObserverOpen(false);
   };
 
-  const handleDownload = async (format: string) => {
-    const response = await fetch(
-      `${coreAPI}/audio/${audioFilename}?format=${format}&v=${audioKey}`,
-      {
-        credentials: "include",
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error("Failed to download audio.");
-    }
-
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `sonification.${format}`;
-
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-
-    URL.revokeObjectURL(url);
+  const handleEditStyle = async (styleRef: string) => {
+    
   };
 
   const invalidLength =
@@ -405,7 +386,7 @@ export default function Sonify() {
           ],
         },
       ];
-      
+
   const COMPASS = Object.fromEntries(
     ORIENTATIONS.map(({ value, label }) => [value, label]),
   );
@@ -707,24 +688,40 @@ export default function Sonify() {
                             <HStack justify="space-between" w="100%">
                               <Text>{row.value}</Text>
                               {row.downloadable && row.fileRef && (
-                                <Tooltip
-                                  content={`Download ${row.label.toLowerCase()}`}
-                                >
-                                  <IconButton
-                                    aria-label={`Download ${row.label.toLowerCase()}`}
-                                    asChild
-                                    colorPalette="teal"
-                                    size="sm"
-                                    variant="ghost"
+                                <>
+                                  {row.label === "Style" && (
+                                    <Tooltip content="Open in the custom style menu">
+                                      <Button
+                                        size="sm"
+                                        colorPalette="teal"
+                                        variant="subtle"
+                                        onClick={() =>
+                                          handleEditStyle(row.fileRef!)
+                                        }
+                                      >
+                                        <LuSettings2 /> Edit
+                                      </Button>
+                                    </Tooltip>
+                                  )}
+                                  <Tooltip
+                                    content={`Download ${row.label.toLowerCase()}`}
                                   >
-                                    <a
-                                      href={`${coreAPI}/download?file_ref=${encodeURIComponent(row.fileRef)}`}
-                                      style={{ color: "inherit" }}
+                                    <IconButton
+                                      aria-label={`Download ${row.label.toLowerCase()}`}
+                                      asChild
+                                      colorPalette="teal"
+                                      size="sm"
+                                      variant="ghost"
                                     >
-                                      <LuDownload />
-                                    </a>
-                                  </IconButton>
-                                </Tooltip>
+                                      <a
+                                        href={`${coreAPI}/download?file_ref=${encodeURIComponent(row.fileRef)}`}
+                                        style={{ color: "inherit" }}
+                                      >
+                                        <LuDownload />
+                                      </a>
+                                    </IconButton>
+                                  </Tooltip>
+                                </>
                               )}
                             </HStack>
                           </DataList.ItemValue>
@@ -863,18 +860,24 @@ export default function Sonify() {
                             format === "mp3" &&
                             !["stereo", "mono"].includes(generatedAudioSystem);
                           return (
-                            <Tooltip disabled={!mp3Disabled} content="MP3 is only available for Mono or Stereo audio.">
+                            <Tooltip
+                              disabled={!mp3Disabled}
+                              content="MP3 is only available for Mono or Stereo audio."
+                            >
                               <Menu.Item
                                 value={format}
-                                onClick={() => handleDownload(format)}
+                                asChild
                                 disabled={mp3Disabled}
                               >
-                                Download {format.toUpperCase()}
+                                <a
+                                  href={`${coreAPI}/audio/${audioFilename}?format=${format}&v=${audioKey}`}
+                                >
+                                  Download {format.toUpperCase()}
+                                </a>
                               </Menu.Item>
                             </Tooltip>
                           );
-                        }
-                        )}
+                        })}
                       </Menu.Content>
                     </Menu.Positioner>
                   </Portal>

@@ -22,6 +22,7 @@ export default function Style() {
   const dec = location.state.dec ?? null;
   const userUpload = location.state.userUpload;
   const layerID = location.state.layerID ?? null;
+  const editStyle = location.state.editStyle ?? null;
 
   // Custom style menu open/close
   const [customOpen, setCustomOpen] = useState(false);

@@ -1,17 +1,11 @@
-import React, {
+import {
   useEffect,
   useState,
-  createContext,
-  ChangeEvent,
   useRef,
 } from "react";
-import { data, useLocation, useNavigate } from "react-router-dom";
-import StyleCard from "../ui/StyleCard";
-import { BackButton } from "../ui/Buttons";
-import PageContainer from "../ui/PageContainer";
-import { ToggleTip, InfoTip } from "../ui/ToggleTip";
+import { InfoTip } from "../ui/ToggleTip";
 import { Tooltip } from "../ui/Tooltip";
-import { apiUrl, lightCurvesAPI, coreAPI } from "../../apiConfig";
+import { coreAPI } from "../../apiConfig";
 import {
   LuUpload,
   LuX,
@@ -31,13 +25,10 @@ import {
   Checkbox,
   CloseButton,
   Collapsible,
-  Grid,
-  GridItem,
   createListCollection,
   Dialog,
   FileUpload,
   Span,
-  Heading,
   HStack,
   VStack,
   IconButton,
@@ -45,13 +36,9 @@ import {
   Field,
   Slider,
   NumberInput,
-  Link,
-  LinkBox,
-  LinkOverlay,
   SegmentGroup,
   Select,
   Stack,
-  Switch,
   TagsInput,
   Text,
 } from "@chakra-ui/react";
@@ -1275,6 +1262,7 @@ export default function CustomStyleMenu({
               width="30%"
               colorPalette="teal"
               onClick={() => handleApply()}
+              loading={applyLoading}
             >
               Apply
             </Button>
