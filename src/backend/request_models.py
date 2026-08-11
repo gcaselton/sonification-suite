@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, Literal, Tuple
+from typing import Optional, Literal, List
 
 # Define BaseModels for expected API request types
 
@@ -12,7 +12,7 @@ class StyleMetadata(BaseModel):
     customNotes: bool
     rootNote: Optional[str] = None
     harmony: Optional[str] = None
-    octaveRange: Optional[Tuple[int, int]] = None
+    octaveRange: Optional[List[int]] = None
 
 class CustomStyleSettings(BaseModel):
     dataMode: str

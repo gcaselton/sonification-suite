@@ -48,14 +48,12 @@ export default function Style() {
 
   useEffect(() => {
     if (editStyle) {
-
+      setCustomOpen(true)
     }
 
   }, [])
 
-  const convertStyleToSettings = async (styleRef: string) => {
-
-  }
+  
 
   const handleSelectStyle = (style: any) => {
     if (style.name === "Custom") {
@@ -192,6 +190,7 @@ export default function Style() {
         dataRef={dataRef}
         userUpload={userUpload}
         onStyleCreated={handleStyleCreated}
+        editStyle={editStyle}
       />
     </PageContainer>
   );

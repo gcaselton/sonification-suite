@@ -771,7 +771,7 @@ def format_style(settings: CustomStyleSettings):
         "generator": generator,
         "map": settings.map,
         "notes": settings.notes,
-        "metadata": settings.metadata
+        "metadata": settings.metadata.model_dump()
     }
     
     # Add additional fields for Events

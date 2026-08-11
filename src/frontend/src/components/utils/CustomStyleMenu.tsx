@@ -48,6 +48,7 @@ interface CustomStyleMenuProps {
   dataRef: string;
   userUpload: boolean;
   onStyleCreated: (styleRef: string) => void;
+  editStyle?: string
 }
 
 export default function CustomStyleMenu({
@@ -57,6 +58,7 @@ export default function CustomStyleMenu({
   dataRef,
   userUpload,
   onStyleCreated,
+  editStyle
 }: CustomStyleMenuProps) {
   type DataMode = "continuous" | "discrete";
 
@@ -230,6 +232,26 @@ export default function CustomStyleMenu({
         ]
       : filteredHarmonyItems,
   });
+
+  useEffect(() => {
+
+    const convertStyleToSettings = async (styleRef: string) => {
+      const endpoint = `${coreAPI}/convert-style-to-settings/`
+      const payload = { file_ref: styleRef }
+
+      const response = await apiRequest(endpoint, payload)
+
+      setDataMode(response.data_mode);
+      const baseSound = soundOptions.items.find((s) => s.name === response.sound_name);
+      if (baseSound) setSound(baseSound);
+
+      setParameterMappings(response.mappings);
+      
+    };
+    if (editStyle) {
+      convertStyleToSettings(editStyle)
+    }
+  }, []);
 
   // Swap the currently selected harmony for a compatible one if data mode changes
   useEffect(() => {

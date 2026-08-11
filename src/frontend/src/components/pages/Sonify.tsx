@@ -306,9 +306,7 @@ export default function Sonify() {
     setObserverOpen(false);
   };
 
-  const handleEditStyle = async (styleRef: string) => {
-    
-  };
+  const handleEditStyle = async (styleRef: string) => {};
 
   const invalidLength =
     Number(length) > defaults.max_length ||
@@ -851,8 +849,9 @@ export default function Sonify() {
                 <Menu.Root>
                   <Menu.Trigger asChild>
                     <Button colorPalette="teal">
-                    <LuDownload/>
-                    Download</Button>
+                      <LuDownload />
+                      Download
+                    </Button>
                   </Menu.Trigger>
                   <Portal>
                     <Menu.Positioner>
