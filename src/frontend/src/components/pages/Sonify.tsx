@@ -850,7 +850,9 @@ export default function Sonify() {
 
                 <Menu.Root>
                   <Menu.Trigger asChild>
-                    <Button colorPalette="teal">Download</Button>
+                    <Button colorPalette="teal">
+                    <LuDownload/>
+                    Download</Button>
                   </Menu.Trigger>
                   <Portal>
                     <Menu.Positioner>

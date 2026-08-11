@@ -18,6 +18,7 @@ dependencies = [
     "pooch==1.9.0",
     "pychord==1.2.2",
     "pydantic==2.11.5",
+    "pydub==0.25.1",
     "python-multipart>=0.0.20",
     "scipy==1.15.3",
     "skyfield==1.53",
