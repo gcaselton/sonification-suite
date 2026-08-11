@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, Literal
+from typing import Optional, Literal, Tuple
 
 # Define BaseModels for expected API request types
 
@@ -7,12 +7,19 @@ from typing import Optional, Literal
 
 class DataRequest(BaseModel):
     file_ref: str
+    
+class StyleMetadata(BaseModel):
+    customNotes: bool
+    rootNote: Optional[str] = None
+    harmony: Optional[str] = None
+    octaveRange: Optional[Tuple[int, int]] = None
 
 class CustomStyleSettings(BaseModel):
     dataMode: str
     sound: str
     map: list[dict]
     notes: list[str]
+    metadata: StyleMetadata
 
 class SoundRequest(BaseModel):
     sound_name: str

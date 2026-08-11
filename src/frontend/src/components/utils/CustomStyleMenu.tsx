@@ -1,8 +1,4 @@
-import {
-  useEffect,
-  useState,
-  useRef,
-} from "react";
+import { useEffect, useState, useRef } from "react";
 import { InfoTip } from "../ui/ToggleTip";
 import { Tooltip } from "../ui/Tooltip";
 import { coreAPI } from "../../apiConfig";
@@ -139,6 +135,7 @@ export default function CustomStyleMenu({
   const [rootNote, setRootNote] = useState("C");
   const [harmony, setHarmony] = useState("maj");
   const [notes, setNotes] = useState<string[]>([]);
+  const [customNotes, setCustomNotes] = useState(false); // Has the user manually edited notes?
   const [octaveRange, setOctaveRange] = useState<[number, number]>([3, 4]);
 
   const [inputOptions, setInputOptions] = useState(
@@ -222,7 +219,16 @@ export default function CustomStyleMenu({
   });
 
   const harmonyOptions = createListCollection({
-    items: filteredHarmonyItems,
+    items: customNotes
+      ? [
+          ...filteredHarmonyItems,
+          {
+            label: "Custom",
+            value: "custom",
+            category: "Custom",
+          },
+        ]
+      : filteredHarmonyItems,
   });
 
   // Swap the currently selected harmony for a compatible one if data mode changes
@@ -233,13 +239,16 @@ export default function CustomStyleMenu({
   }, [filteredHarmonyItems, harmony]);
 
   const randomiseHarmony = () => {
+    // Randomising switches back to generated notes
+    setCustomNotes(false);
+
     // Filter out current root note
     const rootNotes = rootNoteOptions.items
       .map((item) => item.value)
       .filter((note) => note !== rootNote);
 
-    // Filter out current harmony
-    const harmonies = harmonyOptions.items
+    // Filter out current harmony (and ignore custom)
+    const harmonies = filteredHarmonyItems
       .map((item) => item.value)
       .filter((h) => h !== harmony);
 
@@ -297,6 +306,7 @@ export default function CustomStyleMenu({
   ];
 
   const generateNotes = (): string[] => {
+    setCustomNotes(false);
     let notes: string[] = [];
 
     const rootIndex = noteNames.indexOf(rootNote);
@@ -475,9 +485,38 @@ export default function CustomStyleMenu({
     );
   };
 
+  interface StyleMetadata {
+  /* This metadata is used to re-populate some of the custom style menu fields
+  if users want to edit a given style. */
+    customNotes: boolean;
+    rootNote?: string;
+    harmony?: string;
+    octaveRange?: [number, number];
+  }
+
+  interface StyleSettings {
+    dataMode: DataMode;
+    sound: string;
+    map: ParameterMapping[];
+    notes: string[];
+    metadata: StyleMetadata;
+  }
+
   const saveStyleSettings = async () => {
     const url = `${coreAPI}/save-style-settings/`;
-    const data = {
+
+    const metadata: StyleMetadata = {
+      customNotes,
+      ...(customNotes
+        ? {}
+        : {
+            rootNote, // Only include these if customNotes is false
+            harmony,
+            octaveRange,
+          }),
+    };
+
+    const settings: StyleSettings = {
       dataMode,
       sound: sound.name.replace(/\s*🎹$/, ""),
       map: parameterMappings
@@ -492,11 +531,10 @@ export default function CustomStyleMenu({
             m.output.toLowerCase(),
         })),
       notes: sound.composable ? notes : ["A3"], // Use A3 as the note for non-composable sounds
+      metadata: metadata,
     };
 
-    console.log(notes);
-
-    const response = await apiRequest(url, data);
+    const response = await apiRequest(url, settings);
 
     return response.file_ref;
   };
@@ -516,7 +554,6 @@ export default function CustomStyleMenu({
 
       // Save sound settings and get filepath
       const fileRef = await saveStyleSettings();
-      console.log(fileRef);
 
       const preview_endpoint = `${coreAPI}/preview-style-settings/`;
       const response = await apiRequest(preview_endpoint, {
@@ -575,6 +612,7 @@ export default function CustomStyleMenu({
     // Capitalize notes and remove whitespace
     const normalised = newNotes.map(normaliseNote);
     setNotes(normalised);
+    setCustomNotes(true);
   };
 
   const handleApply = async () => {
@@ -1124,9 +1162,12 @@ export default function CustomStyleMenu({
                         hideWhenDetached: true,
                         sameWidth: true,
                       }}
-                      value={[harmony]}
+                      value={[customNotes ? "custom" : harmony]}
                       onValueChange={(e) => {
-                        setHarmony(e.value[0]);
+                        const value = e.value[0];
+                        if (value === "custom") return;
+                        setCustomNotes(false);
+                        setHarmony(value);
                       }}
                     >
                       <Select.HiddenSelect />
@@ -1226,7 +1267,13 @@ export default function CustomStyleMenu({
             </VStack>
           </Dialog.Body>
           {!hasTimeMapping && (
-            <Text pb={2} pt={2} fontSize="sm" color="fg.muted" textAlign="center">
+            <Text
+              pb={2}
+              pt={2}
+              fontSize="sm"
+              color="fg.muted"
+              textAlign="center"
+            >
               One parameter must be mapped to <strong>Time</strong> to continue.
             </Text>
           )}

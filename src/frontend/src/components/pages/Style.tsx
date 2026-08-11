@@ -33,6 +33,7 @@ export default function Style() {
   // Reference to the hidden file input
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  // Get the relevant styles from the backend on first load
   useEffect(() => {
     fetch(`${coreAPI}/styles/${soniType}`)
       .then((res) => res.json())
@@ -44,6 +45,17 @@ export default function Style() {
         console.error("Failed to fetch presets:", err);
       });
   }, []);
+
+  useEffect(() => {
+    if (editStyle) {
+
+    }
+
+  }, [])
+
+  const convertStyleToSettings = async (styleRef: string) => {
+
+  }
 
   const handleSelectStyle = (style: any) => {
     if (style.name === "Custom") {
