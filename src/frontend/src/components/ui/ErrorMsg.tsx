@@ -1,8 +1,9 @@
 import { Alert, IconButton } from "@chakra-ui/react";
+import { ReactNode } from "react";
 import { LuX } from "react-icons/lu";
 
 type ErrorMsgProps = {
-  message: string;
+  message: ReactNode;
   onClose?: () => void;
 };
 

@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { InfoTip } from "../ui/ToggleTip";
 import { Tooltip } from "../ui/Tooltip";
-import { coreAPI } from "../../apiConfig";
+import { composerAPI, coreAPI } from "../../apiConfig";
 import {
   LuUpload,
   LuX,
@@ -47,8 +47,12 @@ interface CustomStyleMenuProps {
   soniType: string;
   dataRef: string;
   userUpload: boolean;
-  onStyleCreated: (styleRef: string) => void;
-  editStyle?: string
+  onStyleCreated: (
+    styleRef: string,
+    styleName?: string,
+    styleDescription?: string,
+  ) => void;
+  editStyle?: string;
 }
 
 export default function CustomStyleMenu({
@@ -58,7 +62,7 @@ export default function CustomStyleMenu({
   dataRef,
   userUpload,
   onStyleCreated,
-  editStyle
+  editStyle,
 }: CustomStyleMenuProps) {
   type DataMode = "continuous" | "discrete";
 
@@ -92,6 +96,9 @@ export default function CustomStyleMenu({
 
   const [styleName, setStyleName] = useState("");
   const [styleDescription, setStyleDescription] = useState("");
+
+  // Tracks whether we are currently auto-filling the fields from a user's style file
+  const [autoFilling, setAutoFilling] = useState(!!editStyle);
 
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -134,6 +141,11 @@ export default function CustomStyleMenu({
     (m) => m.input && m.output.toLowerCase() === "time",
   );
 
+  // used to auto-open a mapping's options if they have been edited
+  const [openOptions, setOpenOptions] = useState<boolean[]>(
+    parameterMappings.map(() => false),
+  );
+
   const [rootNote, setRootNote] = useState("C");
   const [harmony, setHarmony] = useState("maj");
   const [notes, setNotes] = useState<string[]>([]);
@@ -163,9 +175,6 @@ export default function CustomStyleMenu({
   );
 
   const [applyLoading, setApplyLoading] = useState(false);
-  const [loadingSounds, setLoadingSounds] = useState(true);
-  const [loadingInputs, setLoadingInputs] = useState(true);
-  const [loadingOutputs, setLoadingOutputs] = useState(true);
   const [loadingCustomPreview, setLoadingCustomPreview] = useState(false);
   const [autoMappedTime, setAutoMappedTime] = useState(false);
 
@@ -232,26 +241,6 @@ export default function CustomStyleMenu({
         ]
       : filteredHarmonyItems,
   });
-
-  useEffect(() => {
-
-    const convertStyleToSettings = async (styleRef: string) => {
-      const endpoint = `${coreAPI}/convert-style-to-settings/`
-      const payload = { file_ref: styleRef }
-
-      const response = await apiRequest(endpoint, payload)
-
-      setDataMode(response.data_mode);
-      const baseSound = soundOptions.items.find((s) => s.name === response.sound_name);
-      if (baseSound) setSound(baseSound);
-
-      setParameterMappings(response.mappings);
-      
-    };
-    if (editStyle) {
-      convertStyleToSettings(editStyle)
-    }
-  }, []);
 
   // Swap the currently selected harmony for a compatible one if data mode changes
   useEffect(() => {
@@ -373,16 +362,13 @@ export default function CustomStyleMenu({
     { value: 6, label: "6" },
   ];
 
-  // Update the notes displayed any time root, harmony, or octaveRange changes
+  // Update the notes displayed any time root, harmony, or octaveRange changes (ignore if auto-populating fields)
   useEffect(() => {
-    setNotes(generateNotes());
+    if (!autoFilling) setNotes(generateNotes());
   }, [rootNote, harmony, octaveRange]);
 
   // Get input and output options on first load
   useEffect(() => {
-    setLoadingInputs(true);
-    setLoadingOutputs(true);
-
     const fetchParams = async () => {
       try {
         const [inputs, outputs] = await Promise.all([
@@ -436,9 +422,6 @@ export default function CustomStyleMenu({
         }
       } catch (error) {
         console.error("Error fetching parameters:", error);
-      } finally {
-        setLoadingInputs(false);
-        setLoadingOutputs(false);
       }
     };
 
@@ -447,8 +430,6 @@ export default function CustomStyleMenu({
 
   // Fetch sound options from backend on first load
   useEffect(() => {
-    setLoadingSounds(true);
-
     const fetchSounds = async () => {
       try {
         const response = await fetch(`${coreAPI}/sound_info/`);
@@ -461,8 +442,6 @@ export default function CustomStyleMenu({
         setAllSounds(soundsData);
       } catch (error) {
         console.error("Error fetching sounds:", error);
-      } finally {
-        setLoadingSounds(false);
       }
     };
 
@@ -508,8 +487,11 @@ export default function CustomStyleMenu({
   };
 
   interface StyleMetadata {
-  /* This metadata is used to re-populate some of the custom style menu fields
-  if users want to edit a given style. */
+    /* This metadata is used to re-populate some of the custom style menu fields
+  if users want to edit a given style.  We store the original parameter names
+  (before formatting/swapping with STRAUSS param names), whether a custom note
+  set has been used, and if not, the root note, harmony, and octave range. */
+    mappingParams: { input: string; output: string }[];
     customNotes: boolean;
     rootNote?: string;
     harmony?: string;
@@ -527,7 +509,15 @@ export default function CustomStyleMenu({
   const saveStyleSettings = async () => {
     const url = `${coreAPI}/save-style-settings/`;
 
+    const cleanedMappings = parameterMappings.filter(
+      (m) => m.input.trim() !== "" && m.output.trim() !== "",
+    ); // remove empty mappings
+
     const metadata: StyleMetadata = {
+      mappingParams: cleanedMappings.map((m) => ({
+        input: m.input,
+        output: m.output,
+      })),
       customNotes,
       ...(customNotes
         ? {}
@@ -538,20 +528,20 @@ export default function CustomStyleMenu({
           }),
     };
 
+    console.log(metadata);
+
     const settings: StyleSettings = {
       dataMode,
       sound: sound.name.replace(/\s*🎹$/, ""),
-      map: parameterMappings
-        .filter((m) => m.input.trim() !== "" && m.output.trim() !== "") // remove empty mappings
-        .map((m) => ({
-          ...m,
-          input:
-            inputOptions.items.find((i) => i.value === m.input)?.key ??
-            m.input.toLowerCase(),
-          output:
-            outputOptions.items.find((o) => o.value === m.output)?.key ??
-            m.output.toLowerCase(),
-        })),
+      map: cleanedMappings.map((m) => ({
+        ...m,
+        input:
+          inputOptions.items.find((i) => i.value === m.input)?.key ??
+          m.input.toLowerCase(),
+        output:
+          outputOptions.items.find((o) => o.value === m.output)?.key ??
+          m.output.toLowerCase(),
+      })),
       notes: sound.composable ? notes : ["A3"], // Use A3 as the note for non-composable sounds
       metadata: metadata,
     };
@@ -607,7 +597,65 @@ export default function CustomStyleMenu({
     }
   }, [open]);
 
-  const handleStyleUpload = async (files: File[]) => {
+  useEffect(() => {
+    if (!editStyle || allSounds.length === 0) return;
+
+    const convertStyleToSettings = async (styleRef: string) => {
+      setAutoFilling(true);
+
+      try {
+        const endpoint = `${coreAPI}/convert-style-to-settings/`;
+        const payload = { file_ref: styleRef };
+
+        const response = await apiRequest(endpoint, payload);
+
+        setDataMode(response.data_mode);
+
+        const baseSound = allSounds.find((s) => s.name === response.sound_name);
+        if (baseSound) {
+          setSound(baseSound);
+        }
+
+        const mappings: ParameterMapping[] = response.map.map(
+          (mapping: ParameterMapping, index: number) => ({
+            ...mapping,
+            input: response.metadata.mappingParams[index].input,
+            output: response.metadata.mappingParams[index].output,
+          }),
+        );
+
+        setParameterMappings(mappings);
+
+        setOpenOptions(
+          mappings.map(
+            (mapping) =>
+              mapping.function === "invert" ||
+              (mapping.output_range?.[0] ?? 0) !== 0 ||
+              (mapping.output_range?.[1] ?? 1) !== 1,
+          ),
+        );
+
+        setNotes(response.notes);
+
+        const custom = !!response.metadata.customNotes;
+        setCustomNotes(custom);
+
+        if (!custom) {
+          setRootNote(response.metadata.rootNote);
+          setHarmony(response.metadata.harmony);
+          setOctaveRange(response.metadata.octaveRange);
+        }
+      } finally {
+        setAutoFilling(false);
+      }
+    };
+
+    convertStyleToSettings(editStyle);
+  }, [editStyle, allSounds]);
+
+  const handleUploadStyle = async (files: File[]) => {
+    setErrorMessage("");
+
     const file = files[0];
     if (!file) return;
 
@@ -627,7 +675,39 @@ export default function CustomStyleMenu({
     }
 
     const result = await res.json();
-    onStyleCreated(result.file_ref);
+
+    const isValid = await validateUploadedStyle(result.file_ref);
+
+    if (isValid) {
+      onStyleCreated(
+        result.file_ref,
+        result.style_name,
+        result.style_description,
+      );
+    }
+  };
+
+  const validateUploadedStyle = async (styleRef: string): Promise<boolean> => {
+    const endpoint = `${composerAPI}/validate-layer/`;
+    const payload = { data_ref: dataRef, style_ref: styleRef };
+
+    const response = await apiRequest(endpoint, payload);
+    const missing: string[] = response.missing_columns;
+
+    if (missing.length > 0) {
+      const multiple = missing.length > 1;
+
+      const msg = `This style is not compatible with your chosen dataset. It requires the ${missing.join(
+        ", ",
+      )} column${multiple ? "s" : ""}, which ${
+        multiple ? "are" : "is"
+      } not available in your data. The style may have been created for a different type of data, 
+      such as light curves, constellations, or night sky.`;
+
+      setErrorMessage(msg);
+      return false;
+    }
+    return true;
   };
 
   const handleNotesChange = (newNotes: string[]) => {
@@ -679,7 +759,7 @@ export default function CustomStyleMenu({
                   accept={{ "*/*": [".yaml", ".yml"] }}
                   maxFiles={1}
                   maxFileSize={1 * 1024 * 1024} // 1MB file limit
-                  onFileAccept={({ files }) => handleStyleUpload(files)}
+                  onFileAccept={({ files }) => handleUploadStyle(files)}
                   onFileReject={(details) => {
                     setErrorMessage(
                       `File rejected: ${details.files[0].errors.join(", ")}`,
@@ -899,7 +979,16 @@ export default function CustomStyleMenu({
                           </HStack>
 
                           {/* Options — collapsible */}
-                          <Collapsible.Root>
+                          <Collapsible.Root
+                            open={openOptions[index]}
+                            onOpenChange={(e) => {
+                              setOpenOptions((prev) => {
+                                const next = [...prev];
+                                next[index] = e.open;
+                                return next;
+                              });
+                            }}
+                          >
                             <Collapsible.Trigger>
                               <Collapsible.Context>
                                 {({ open }) => (
@@ -999,6 +1088,7 @@ export default function CustomStyleMenu({
                                       </NumberInput.Root>
                                     </HStack>
 
+                                    {/* Invert */}
                                     <HStack>
                                       <Checkbox.Root
                                         checked={mapping.function === "invert"}
@@ -1026,8 +1116,6 @@ export default function CustomStyleMenu({
                                     </HStack>
                                   </HStack>
                                 </VStack>
-
-                                {/* Invert */}
                               </VStack>
                             </Collapsible.Content>
                           </Collapsible.Root>
@@ -1301,7 +1389,10 @@ export default function CustomStyleMenu({
           )}
           {errorMessage && (
             <HStack px="5">
-              <ErrorMsg message={errorMessage} />
+              <ErrorMsg
+                message={errorMessage}
+                onClose={() => setErrorMessage("")}
+              />
             </HStack>
           )}
           <Dialog.Footer display="flex" justifyContent="center">

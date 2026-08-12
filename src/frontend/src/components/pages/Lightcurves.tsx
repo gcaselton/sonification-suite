@@ -324,12 +324,9 @@ export default function Lightcurves() {
 
   const handleClickSonify = (dataURI: string) => {
     setLoadingId(dataURI);
-    console.log("Sonify button clicked for star:", selectedStar);
-    console.log("Data URI:", dataURI);
     // Call the select lightcurve function with the dataURI
     selectLightcurve(dataURI).then((dataRef) => {
       if (dataRef) {
-        console.log("Lightcurve selected, file ref:", dataRef);
         // Navigate to the style page with the filepath and star name
         const dataName = searchTerm;
         navigate("/planetaria/refine", {
@@ -340,8 +337,6 @@ export default function Lightcurves() {
   };
 
   const handleClickPlot = async (item: Lightcurve | SuggestedData) => {
-    console.log("Plot button clicked for star:", selectedStar);
-
     let fileRef, plotTitle;
 
     if ("dataURI" in item) {
@@ -372,9 +367,7 @@ export default function Lightcurves() {
   };
 
   const handleClickSuggested = (star: any) => {
-    console.log("Star clicked:", star.name);
     const dataRef = star.fileRef;
-    console.log("dataRef:" + dataRef);
     const dataName = star.name;
     const ra = star.ra;
     const dec = star.dec;

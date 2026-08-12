@@ -113,9 +113,9 @@ def validate_layer(request: LayerRequest):
     df = pd.read_csv(data_path)
     
     response = {
-        'missing_columns': [],
-        'nan_columns': [],
-        'insufficient_columns': None
+        'missing_columns': [], # Columns mentioned in style but absent from data
+        'nan_columns': [], # Columns mentioned in style that have NaNs in the data
+        'insufficient_columns': None # More mappings requested than there are columns in data
     }
 
     for i, mapping in enumerate(style["map"]):

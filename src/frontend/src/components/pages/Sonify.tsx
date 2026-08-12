@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import LoadingMessage from "../ui/LoadingMessage";
 import { BackButton } from "../ui/Buttons";
 import PageContainer from "../ui/PageContainer";
@@ -47,6 +47,7 @@ import {
   LuLocateFixed,
   LuDatabase,
   LuSettings2,
+  LuSettings,
 } from "react-icons/lu";
 import { plotData } from "../../utils/plot";
 import ObserverSetup, {
@@ -54,10 +55,12 @@ import ObserverSetup, {
   ORIENTATIONS,
 } from "../utils/ObserverSetup";
 import { Tooltip } from "../ui/Tooltip";
-import { Download } from "lucide-react";
 import { Layer } from "../../context/ComposerContext";
 
 export default function Sonify() {
+
+  const navigate = useNavigate()
+
   // Route states
   const location = useLocation();
   const dataName = location.state.dataName;
@@ -66,6 +69,7 @@ export default function Sonify() {
   const styleDescription = location.state.styleDescription;
   const styleRef = location.state.styleRef;
   const soniType = location.state.soniType;
+  const userUpload = location.state.userUpload;
   const ra = location.state.ra ?? null;
   const dec = location.state.dec ?? null;
   const layers: Layer[] | null = location.state.layers ?? null;
@@ -306,7 +310,14 @@ export default function Sonify() {
     setObserverOpen(false);
   };
 
-  const handleEditStyle = async (styleRef: string) => {};
+  const handleEditStyle = async (styleRef: string) => {
+
+    const editStyle = styleRef
+
+    navigate("/planetaria/style", {
+      state: { dataRef, dataName, soniType, ra, dec, userUpload, editStyle },
+    });
+  };
 
   const invalidLength =
     Number(length) > defaults.max_length ||
@@ -687,7 +698,7 @@ export default function Sonify() {
                               <Text>{row.value}</Text>
                               {row.downloadable && row.fileRef && (
                                 <>
-                                  {row.label === "Style" && (
+                                  {row.label === "Style" && styleName === 'Custom' && (
                                     <Tooltip content="Open in the custom style menu">
                                       <Button
                                         size="sm"
@@ -697,7 +708,7 @@ export default function Sonify() {
                                           handleEditStyle(row.fileRef!)
                                         }
                                       >
-                                        <LuSettings2 /> Edit
+                                        <LuSettings /> Edit
                                       </Button>
                                     </Tooltip>
                                   )}

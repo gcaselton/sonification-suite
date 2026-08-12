@@ -2,7 +2,7 @@ name: Mallets
 
 description: >
   Mallets play the stars from left to right, with bluer/hotter stars playing a higher pitch,
-  and redder/cooler stars playing lower pitches.
+  and redder/cooler stars playing lower pitches. Brighter stars are louder.
 
 generator:
   type: 'sampler'

@@ -69,14 +69,14 @@ export default function Style() {
     goToSonify(style.file_ref, style.name, style.description);
   };
 
-  const handleStyleCreated = (styleRef: string) => {
+  const handleStyleCreated = (styleRef: string, styleName: string = 'Custom', styleDescription: string = "") => {
 
     if (soniType === "data_composer") {
-      goToComposer(styleRef, "Custom", "");
+      goToComposer(styleRef, styleName, styleDescription);
       return;
     }
 
-    goToSonify(styleRef, "Custom", "");
+    goToSonify(styleRef, styleName, styleDescription);
   };
 
   const goToSonify = (styleRef: string, styleName: string, styleDescription: string) => {
@@ -88,6 +88,7 @@ export default function Style() {
         styleName,
         styleDescription,
         soniType,
+        userUpload,
         ra,
         dec,
       },

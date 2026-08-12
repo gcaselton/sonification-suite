@@ -9,6 +9,7 @@ class DataRequest(BaseModel):
     file_ref: str
     
 class StyleMetadata(BaseModel):
+    mappingParams: list[dict]
     customNotes: bool
     rootNote: Optional[str] = None
     harmony: Optional[str] = None

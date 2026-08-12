@@ -374,7 +374,7 @@ export default function ObserverSetup({
           loadingText="Orienting you..."
         >
           <LuTelescope />
-          Observe
+          Continue
         </Button>
       </Flex>
     </VStack>

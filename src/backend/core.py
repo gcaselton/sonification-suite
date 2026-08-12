@@ -5,7 +5,7 @@ from paths import TMP_DIR, STYLE_FILES_DIR, SUGGESTED_DATA_DIR, SYNTHS_DIR, SAMP
 from context import session_id_var
 from utils import resolve_file, is_number, read_YAML_file, write_YAML_file, is_synth, write_sound_to_style
 from generator_mods import GENERATOR_MODS
-from request_models import DataRequest, CustomStyleSettings, SonificationRequest, SoundInfo
+from request_models import DataRequest, CustomStyleSettings, LayerRequest, SonificationRequest, SoundInfo
 import logging, yaml, os, uuid, traceback, base64, gc, re, csv, shutil
 from param_descriptions import INPUTS, OUTPUTS
 from night_sky import handle_observer
@@ -708,7 +708,7 @@ def preview_style_settings(request: DataRequest):
         raise
     
 @router.post('/save-style-settings/')
-def save_sound_settings(settings: CustomStyleSettings):
+def save_style_settings(settings: CustomStyleSettings):
     """
     Save sound settings for the sonification.
 
@@ -781,6 +781,24 @@ def format_style(settings: CustomStyleSettings):
     
     return style
 
+@router.post("/convert-style-to-settings/")
+def convert_style_to_settings(request: DataRequest):
+    
+    style_path = str(resolve_file(request.file_ref))
+    style: dict = read_YAML_file(style_path)
+    
+    settings = {
+        'data_mode': 'continuous' if style['sources'] == 'objects' else 'discrete',
+        'sound_name': style['generator'].get('preset') or style['generator'].get('sample'),
+    }
+    
+    for k in ['map', 'notes', 'metadata']:
+        settings[k] = style[k]
+    
+    print(str(settings))
+    
+    return settings
+
 @router.post("/upload-style/")
 async def upload_style(file: UploadFile = File(...), request: Request = None):
 
@@ -842,6 +860,8 @@ async def upload_style(file: UploadFile = File(...), request: Request = None):
 
     try:
         parsed_yaml = yaml.safe_load(contents)
+        style_name = parsed_yaml.get('name', 'Custom')
+        style_description = parsed_yaml.get('description', "")
     except yaml.YAMLError as e:
         LOG.warning(
             "Style upload rejected | reason=invalid_yaml | session=%s | ip=%s",
@@ -883,6 +903,4 @@ async def upload_style(file: UploadFile = File(...), request: Request = None):
 
     file_ref = f"session:uploads:{new_name}"
     
-    return {"file_ref": file_ref, "parsed": parsed_yaml}
-
-
+    return {"file_ref": file_ref, "style_name": style_name, "style_description": style_description}

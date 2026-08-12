@@ -43,6 +43,8 @@ import {
   LuSlidersHorizontal,
   LuPalette,
   LuCircleHelp,
+  LuSettings2,
+  LuSettings,
 } from "react-icons/lu";
 import ErrorMsg from "../ui/ErrorMsg";
 import HelperDialog from "../data_composer/HelperDialog";
@@ -318,7 +320,7 @@ export default function DataComposer() {
     });
   };
 
-  const handleChooseStyle = (layer: Layer) => {
+  const handleChooseStyle = (layer: Layer, editStyleRef?: string) => {
     navigate("/planetaria/style", {
       state: {
         dataName: layer.dataName,
@@ -326,6 +328,7 @@ export default function DataComposer() {
         layerID: layer.id,
         soniType,
         userUpload: true, // tell custom style menu we are using user data
+        ...(editStyleRef !== undefined && { editStyle: editStyleRef }), // Only pass edit style if provided (e.g. user has clicked the edit button)
       },
     });
   };
@@ -586,13 +589,29 @@ export default function DataComposer() {
                       {layer.styleName ? (
                         <VStack align="start" gap="2">
                           <Text fontWeight="medium">{layer.styleName}</Text>
-                          <Button
-                            size="xs"
-                            variant="outline"
-                            onClick={() => handleChooseStyle(layer)}
-                          >
-                            Change
-                          </Button>
+                          <HStack>
+                            <Button
+                              size="xs"
+                              variant="outline"
+                              onClick={() => handleChooseStyle(layer)}
+                            >
+                              Change
+                            </Button>
+                            {layer.styleName === "Custom" && (
+                              <Tooltip content="Open in the custom style menu">
+                                <Button
+                                  size="xs"
+                                  colorPalette="teal"
+                                  variant="outline"
+                                  onClick={() =>
+                                    handleChooseStyle(layer, layer.styleRef!)
+                                  }
+                                >
+                                  <LuSettings /> Edit
+                                </Button>
+                              </Tooltip>
+                            )}
+                          </HStack>
                         </VStack>
                       ) : (
                         <Tooltip
