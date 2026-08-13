@@ -74,7 +74,7 @@ function makeEmptyLayer(index: number): Layer {
   };
 }
 
-const MAX_LAYERS = 6;
+const MAX_LAYERS = 8;
 
 export default function DataComposer() {
   const navigate = useNavigate();

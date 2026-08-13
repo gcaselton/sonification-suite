@@ -71,6 +71,8 @@ class RefineRequest(BaseModel):
     file_ref: str
     new_range: list[float]
     sigma: int
+    nan_strategy: str
+    fill_value: float
     
 #---------- Night Sky ----------#   
 

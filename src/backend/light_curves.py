@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from pathlib import Path
 from paths import TMP_DIR, STYLE_FILES_DIR, SUGGESTED_DATA_DIR, SAMPLES_DIR
 from context import session_id_var
-import logging, requests, os, base64, hashlib, json, gc, threading
+import logging, requests, os, base64, hashlib, json, gc, threading, time
 
 import lightkurve as lk
 from lightkurve import LightCurve
@@ -246,37 +246,36 @@ def get_identifiers(query: StarQuery):
         print("SIMBAD query failed:", e)
         return [], None, None
 
-
 def download_lightcurve(data_uri):
     """
     This is a shared function used by both /select-lightcurve/ and /plot-lightcurve/.
-    It will give the lightcurve a unique ID, check if it has already been downloaded, and download it if not.
+    It will give the lightcurve a unique ID, check if it has already been downloaded, and download it as CSV if not.
     The purpose of this function is to avoid duplicate downloads (for instance, if a user previews the plot and then selects it for download).
 
     - **data_uri**: The URI of the target lightcurve
-    - Returns: The filepath of the downloaded lightcurve.
+    - Returns: The CSV filepath of the downloaded lightcurve.
     """
 
     # Create a unique (but reproducible) hash of the URI
-    hash = hashlib.md5(data_uri.encode()).hexdigest()
-    ext = os.path.splitext(data_uri)[-1]
-
-    filename = f'{hash}{ext}'
+    uri_hash = hashlib.md5(data_uri.encode()).hexdigest()
+    file_name = f'{uri_hash}.csv'
     session_id = session_id_var.get()
-    filepath = TMP_DIR / session_id / filename
+    filepath = TMP_DIR / session_id / file_name
 
-    if not os.path.exists(filepath):
-
-        # Convert URI to downloadable URL
-        download_url = f'https://mast.stsci.edu/api/v0.1/Download/file?uri={data_uri}'
-
-        # Download and check OK  
-        response = requests.get(download_url)
-        response.raise_for_status()
-
-        # Write to file 
-        with open(filepath, 'wb') as f:
-            f.write(response.content)
+    if not filepath.exists():
+        
+        url = f'https://mast.stsci.edu/api/v0.1/Download/file?uri={data_uri}'
+        lc = lk.read(url)
+        
+        time = lc.time.value
+        flux = lc.flux.value
+        
+        df = pd.DataFrame({
+            "time": np.asarray(time, dtype=np.float64),
+            "flux": np.asarray(flux, dtype=np.float64)
+        })
+        
+        df.to_csv(filepath, index=False)
 
     return filepath
 
@@ -292,6 +291,7 @@ def plot_lightcurve(request: DataRequest):
 
     # Check if the requested light curve is from a search (with data URI) or a local file.
     if (request.file_ref.startswith('mast:')):
+
         filepath = download_lightcurve(request.file_ref)
     else:
         filepath = resolve_file(request.file_ref)
@@ -305,28 +305,9 @@ def plot_lightcurve(request: DataRequest):
 
 def plot_and_format_lc(filepath: str):
 
-    # Check file extension
-    if filepath.endswith('.csv'):
-     
-        df = pd.read_csv(filepath)
-        
-        # Get column names for labels
-        columns = df.columns.tolist()
-        x_label = columns[0] if not is_number(columns[0]) else 'Column 1'
-        y_label = columns[1] if not is_number(columns[1]) else 'Column 2'
-        
-        time = df[columns[0]].values
-        flux = df[columns[1]].values
-        
-    elif filepath.endswith('.fits'):
-
-        # It's a FITS file
-        lc = lk.read(filepath)
-        time = lc.time.value
-        flux = lc.flux.value
-        
-        x_label = 'Time (days)'
-        y_label = 'Flux (electrons per second)'
+    df = pd.read_csv(filepath)
+    time = df['time'].values
+    flux = df['flux'].values  
 
     # Plot and format
     fig = Figure(figsize=(6, 4))
@@ -340,8 +321,8 @@ def plot_and_format_lc(filepath: str):
         alpha=0.9
     )
     
-    ax.set_xlabel(x_label)
-    ax.set_ylabel(y_label)
+    ax.set_xlabel('Time (days)')
+    ax.set_ylabel('Brightness (Flux - electrons per second)')
 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -373,27 +354,18 @@ def select_lightcurve(request: DownloadRequest):
     return {'file_ref': file_ref}
 
 
-@router.post('/get-range/')
+@router.post('/get-range-and-nans/')
 def get_range(request: DataRequest):
 
     filepath = str(resolve_file(request.file_ref))
 
-    if filepath.endswith('.fits'):
-        lc = lk.read(filepath)
-        x = lc.time.value
-        value_range = [float(min(x)), float(max(x))]
+    df = pd.read_csv(filepath)
+    x = df['time'].values
+    value_range = [float(min(x)), float(max(x))]
+    
+    has_nans = bool(df['flux'].isna().any())
 
-    elif filepath.endswith('.csv'):
-        df = pd.read_csv(filepath)
-
-        time_col = df.columns[0]
-
-        x = df[time_col].values
-        value_range = [float(min(x)), float(max(x))]
-    else:
-        raise HTTPException(status_code=400, detail='File extension not supported: ' + request.file_ref.split(':')[-1])
-
-    return{'range': value_range}
+    return{'range': value_range, 'has_nans': has_nans}
 
 
 @router.post('/preview-refined/')
@@ -412,7 +384,6 @@ def preview_refined(request: RefineRequest):
 @router.post('/save-refined/')
 def save_refined(request: RefineRequest):
     
-    # Truncate x-axis to new range
     new_start, new_end = request.new_range
 
     original_filepath = str(resolve_file(request.file_ref))
@@ -423,43 +394,31 @@ def save_refined(request: RefineRequest):
     
     refined_filepath = TMP_DIR / session_id / filename
     refined_ref = f'session:{filename}'
+            
+    df = pd.read_csv(original_filepath)
     
-    if ext == 'fits':
-        lc = lk.read(original_filepath)
-        lc = lc.truncate(new_start, new_end)
-        
-        if request.sigma > 0:
-            # Smooth y axis with Gaussian filter if sigma > 0
-            flux_unit = lc.flux.unit
-            smoothed_flux = gaussian_filter1d(lc.flux.value, request.sigma)
-            lc = lc.copy()
-            lc.flux = smoothed_flux * flux_unit
-            
-        # This is to prevent crashing from missing lightkurve metadata
-        if not hasattr(lc, "centroid_col"):
-            lc.centroid_col = None
-        if not hasattr(lc, "centroid_row"):
-            lc.centroid_row = None
-        
-        lc.to_fits(refined_filepath, overwrite=True)
-            
-    elif ext == 'csv':
-        df = pd.read_csv(original_filepath)
-        
-        time_col = df.columns[0]
-        df_truncated = df[(df[time_col] >= new_start) & (df[time_col] <= new_end)].copy()
-        
-        if request.sigma > 0:
-            
-            y_values = df_truncated.iloc[:, 1].values
-            smoothed_flux = gaussian_filter1d(y_values, request.sigma)
+    # Apply selected NaN strategy
+    if request.nan_strategy == "fill":
+        df = df.fillna(request.fill_value)
 
-            df_truncated.iloc[:, 1] = smoothed_flux
-            
-        df_truncated.to_csv(refined_filepath, index=False)
+    elif request.nan_strategy == "interpolate":
+        df = df.interpolate().bfill().ffill()
+
+    elif request.nan_strategy == "drop":
+        df = df.dropna()
+    
+    # Truncate to new range
+    df_truncated = df[(df['time'] >= new_start) & (df['time'] <= new_end)].copy()
+    
+    if request.sigma > 0:
+        # Smooth data
+        y_values = df_truncated['flux'].values
+        smoothed_flux = gaussian_filter1d(y_values, request.sigma)
+
+        df_truncated['flux'] = smoothed_flux
         
-    else:
-        raise HTTPException(status_code=400, detail='Unsupported file type')
+    df_truncated.to_csv(refined_filepath, index=False)
+        
 
     return {'file_ref': refined_ref}
 

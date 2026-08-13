@@ -19,9 +19,6 @@ from matplotlib.figure import Figure
 from scipy.io import wavfile
 from scipy.signal import spectrogram, resample_poly
 from io import BytesIO
-import lightkurve as lk
-from astropy.io import fits
-from astropy.table import Table
 from pydub import AudioSegment
 
 
@@ -30,8 +27,7 @@ router = APIRouter(prefix='/core')
 logging.basicConfig(level=logging.DEBUG)
 LOG = logging.getLogger(__name__)
 
-# Useful constants for '/upload-data/' endpoint
-ACCEPTED_UPLOAD_FORMATS = ['.csv', '.fits']
+# Maximum upload quota per session
 UPLOAD_QUOTA_MB = 50
 UPLOAD_QUOTA_BYTES = UPLOAD_QUOTA_MB * 1024 * 1024
 
@@ -100,26 +96,13 @@ def generate_sonification(request: SonificationRequest):
             # First, replace base sound name with filepath to the sound
             style_dict = write_sound_to_style(style_filepath, write_to_yml=False)
             
-            # Next, determine data format (CSV, .fits) and convert to DataFrame
+            # Next, validate data format and convert to DataFrame
             data_type = data_filepath.suffix.lower()
-            
-            if data_type == '.fits':
-                    lc = lk.read(str(data_filepath))
-                    time = lc.time.value
-                    flux = lc.flux.value
                     
-                    df = pd.DataFrame({
-                        "time": np.asarray(time, dtype=np.float64),
-                        "flux": np.asarray(flux, dtype=np.float64)
-                    })
-                    
-                    # Interpolate across NaNs for light curves, and fill in empty start and end values
-                    df['flux'] = df['flux'].interpolate().bfill().ffill()
-                    
-            elif data_type == '.csv':
+            if data_type == '.csv':
                     df = pd.read_csv(str(data_filepath), header=0)
             else:
-                    raise ValueError(f'{data_type} file type not suitable for sonification, please use .csv or .fits.')
+                    raise ValueError(f'{data_type} file type not suitable for sonification, please use .csv.')
             
             # Build dict with keyword arguments for sonification function
             kwargs = {
@@ -326,65 +309,6 @@ def download_file(file_ref: str):
 
     return response
 
-def ensure_two_columns(ext: str, contents: bytes):
-    
-    if ext == ".csv":
-        df = pd.read_csv(BytesIO(contents))
-        df = df.dropna(axis=1, how='all') # Remove empty columns
-
-    elif ext == ".fits":
-        with fits.open(BytesIO(contents)) as hdul:
-            # find first table HDU
-            table_hdu = next(
-                (hdu for hdu in hdul if isinstance(hdu, (fits.BinTableHDU, fits.TableHDU))),
-                None
-            )
-
-            if table_hdu is None:
-                raise HTTPException(400, "FITS file contains no table")
-
-            table = Table(table_hdu.data)
-            
-            # convert to dataframe
-            df = table.to_pandas()
-            
-            df.columns = [col.lower() for col in df.columns]
-
-            # find time + flux columns
-            time_col = next((col for col in df.columns if "time" in col), None)
-            flux_col = next((col for col in df.columns if "flux" in col), None)
-
-            if time_col is None or flux_col is None:
-                raise HTTPException(400, "FITS file must contain time and flux columns")
-
-            # select only those columns
-            df = df[[time_col, flux_col]]
-            
-            df = df.rename(columns={
-                time_col: "Time (days)",
-                flux_col: "Flux (electrons per second)"
-            })
-
-
-    else:
-        raise HTTPException(415, "Unsupported file format")
-    
-    # Flag to send to the frontend to inform user that data was sliced
-    reduced = False
-
-    if df.shape[1] < 2:
-        raise HTTPException(400, "Dataset must contain at least two columns")
-    elif df.shape[1] > 2:
-        # reduce to first two columns if needed
-        df = df.iloc[:, :2]
-        reduced = True
-        
-    # If there are no meaningful headers, assign default names
-    if all(is_number(col) for col in df.columns):
-        df.columns = ["Column 1", "Column 2"]
-
-    return df, reduced
-
 
 @router.post('/upload-data/')
 async def upload_data(file: UploadFile, request: Request):
@@ -421,7 +345,7 @@ async def upload_data(file: UploadFile, request: Request):
 
     ext = suffixes[0].lower()
 
-    if ext not in ACCEPTED_UPLOAD_FORMATS:
+    if ext != '.csv':
         LOG.warning(
             "Upload rejected | ext=%s | reason=rejected_extension | session=%s | ip=%s",
             ext,
@@ -430,7 +354,7 @@ async def upload_data(file: UploadFile, request: Request):
         )
         raise HTTPException(
             status_code=415,
-            detail='Uploaded data must be in .csv or .fits format'
+            detail='Uploaded data must be in .csv format'
         )
 
     MAX_SIZE = 10 * 1024 * 1024
@@ -578,7 +502,7 @@ def get_suggested(category: str):
             continue
 
         filenames = {
-            'light_curves': str(file.stem) + '.fits',
+            'light_curves': str(file.stem) + '.csv',
             'constellations': 'hyg.csv'
         }
 

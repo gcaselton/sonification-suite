@@ -20,7 +20,8 @@ import { apiRequest } from "../../utils/requests";
 import { InfoTip } from "../ui/ToggleTip";
 import { LuArrowRight } from "react-icons/lu";
 import { plotData } from "../../utils/plot";
-import { debounce } from "es-toolkit";
+import { debounce, fill } from "es-toolkit";
+import NaNHandler, { NanStrategy } from "../ui/NanHandler";
 
 export default function LightCurves({
   dataName,
@@ -44,6 +45,10 @@ export default function LightCurves({
   // sigma value for data smoothing
   const [sigma, setSigma] = useState(0);
 
+  const [hasNans, setHasNans] = useState(false);
+  const [nanStrategy, setNanStrategy] = useState<NanStrategy>("interpolate");
+  const [fillValue, setFillValue] = useState("0");
+
   const [applyLoading, setApplyLoading] = useState(false);
 
   // fetch plot
@@ -66,13 +71,13 @@ export default function LightCurves({
     };
   }, [dataRef]);
 
-  // fetch cropRange
+  // fetch cropRange and do NaN check on first load
   useEffect(() => {
     if (!dataRef) return;
 
     let mounted = true;
-    async function fetchCropRange() {
-      const endpoint = `${lightCurvesAPI}/get-range/`;
+    async function fetchRangeAndNans() {
+      const endpoint = `${lightCurvesAPI}/get-range-and-nans/`;
       try {
         const payload = { file_ref: dataRef };
         const result = await apiRequest(endpoint, payload, "POST");
@@ -90,6 +95,8 @@ export default function LightCurves({
           setCropValues(r);
           setStartText(String(r[0]));
           setEndText(String(r[1]));
+
+          setHasNans(result.has_nans);
           setSlidersLoading(false);
         }
       } catch (error) {
@@ -97,7 +104,7 @@ export default function LightCurves({
         setSlidersLoading(false);
       }
     }
-    fetchCropRange();
+    fetchRangeAndNans();
     return () => {
       mounted = false;
     };
@@ -113,7 +120,7 @@ export default function LightCurves({
 
   // preview function
   const fetchPreviewPlot = useCallback(
-    async (range: [number, number] | null, sigmaVal: number) => {
+    async (range: [number, number] | null, sigmaVal: number, nanStrategy: NanStrategy, fillValue: string) => {
       if (!range) return;
       setImageLoading(true);
 
@@ -123,6 +130,8 @@ export default function LightCurves({
         file_ref: dataRef,
         new_range: range,
         sigma: sigmaVal,
+        nan_strategy: nanStrategy,
+        fill_value: fillValue
       };
 
       try {
@@ -158,6 +167,8 @@ export default function LightCurves({
       file_ref: dataRef,
       new_range: cropValues,
       sigma: sigma,
+      nan_strategy: nanStrategy,
+      fill_value: fillValue,
     };
 
     const result = await apiRequest(endpoint, payload);
@@ -167,6 +178,16 @@ export default function LightCurves({
     }
 
     setApplyLoading(false);
+  };
+
+  const handleNanStrategyChange = (strategy: NanStrategy) => {
+    setNanStrategy(strategy);
+    fetchPreviewPlot(cropValues, sigma, strategy, fillValue);
+  };
+
+  const handleFillValueChange = (value: string) => {
+    setFillValue(value);
+    fetchPreviewPlot(cropValues, sigma, nanStrategy, value);
   };
 
   const applyButtonOn =
@@ -210,7 +231,7 @@ export default function LightCurves({
       direction={{ base: "column", md: "row" }}
     >
       <Box flex="1" maxWidth={{ base: "100%", md: "50%" }}>
-        <VStack justify="center" gap="16">
+        <VStack justify="center" gap="8">
           {/* render slider only when we have cropRange & cropValues */}
           {!slidersLoading && cropRange && cropValues ? (
             <VStack>
@@ -233,7 +254,7 @@ export default function LightCurves({
                       );
                       setCropValues(([_, end]) => [clamped, end]);
                       setStartText(String(clamped));
-                      fetchPreviewPlot([clamped, cropValues[1]], sigma);
+                      fetchPreviewPlot([clamped, cropValues[1]], sigma, nanStrategy, fillValue);
                     } else {
                       setStartText(String(cropValues[0]));
                     }
@@ -260,7 +281,7 @@ export default function LightCurves({
                       );
                       setCropValues(([start, _]) => [start, clamped]);
                       setEndText(String(clamped));
-                      fetchPreviewPlot([cropValues[0], clamped], sigma);
+                      fetchPreviewPlot([cropValues[0], clamped], sigma, nanStrategy, fillValue);
                     } else {
                       setEndText(String(cropValues[1]));
                     }
@@ -289,7 +310,7 @@ export default function LightCurves({
                   setCropValues(e.value as [number, number]);
                   setStartText(String(e.value[0]));
                   setEndText(String(e.value[1]));
-                  debouncedFetchPreviewPlot(e.value as [number, number], sigma);
+                  debouncedFetchPreviewPlot(e.value as [number, number], sigma, nanStrategy, fillValue);
                 }}
               >
                 <Slider.Control>
@@ -316,7 +337,7 @@ export default function LightCurves({
               animation="fade-in 300ms ease-out"
               onValueChange={(e) => {
                 setSigma(e.value[0]);
-                debouncedFetchPreviewPlot(cropValues, e.value[0]);
+                debouncedFetchPreviewPlot(cropValues, e.value[0], nanStrategy, fillValue);
               }}
             >
               <HStack>
@@ -340,6 +361,14 @@ export default function LightCurves({
             <Box width="100%">
               <Skeleton height="4em" />
             </Box>
+          )}
+          {hasNans && (
+            <NaNHandler
+              strategy={nanStrategy}
+              onStrategyChange={handleNanStrategyChange}
+              fillValue={fillValue}
+              onFillValueChange={handleFillValueChange}
+            />
           )}
           <Box hideBelow="md" width="100%">
             {applyButton}

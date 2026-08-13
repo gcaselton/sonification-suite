@@ -647,40 +647,7 @@ export default function Lightcurves() {
                 </Card.Body>
               </Card.Root>
             ))}
-            <FileUpload.Root
-              disabled={uploadDisabled}
-              accept={{ "*/*": [".csv", ".fits"] }}
-              key={uploadKey}
-              maxFiles={1}
-              maxFileSize={1e7}
-              w="200px"
-              onFileAccept={({ files }) => handleFileAccept(files)}
-              onFileReject={(details) => {
-                setErrorMessage(
-                  `File rejected: ${details.files[0].errors.join(", ")}`,
-                );
-              }}
-              _hover={{ transform: "scale(1.05)" }}
-              transition="transform 0.2s ease"
-              cursor={uploadDisabled ? "disabled" : "pointer"}
-              role="button"
-              aria-label="Upload your data"
-            >
-              <FileUpload.HiddenInput />
-              <FileUpload.Dropzone>
-                <Icon size="lg" color="fg.muted">
-                  {uploading ? <Spinner /> : <LuUpload />}
-                </Icon>
-                <FileUpload.DropzoneContent>
-                  <Box textStyle="md">
-                    {uploading ? "Uploading..." : "Upload your own"}
-                  </Box>
-                  <Box color="fg.muted">
-                    {uploading ? "Please wait" : ".csv, .fits up to 10MB"}
-                  </Box>
-                </FileUpload.DropzoneContent>
-              </FileUpload.Dropzone>
-            </FileUpload.Root>
+            
           </Stack>
           <br />
         </Box>
