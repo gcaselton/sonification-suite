@@ -1,29 +1,33 @@
 import {
   Box,
+  createListCollection,
   Field,
   HStack,
   Input,
+  Portal,
   RadioCard,
+  Select,
   Stack,
   Text,
 } from "@chakra-ui/react";
 import { useState } from "react";
 import { InfoTip } from "./ToggleTip";
+import { fill } from "es-toolkit";
 
-export type NanStrategy = "drop" | "interpolate" | "fill";
+export type NanStrategy = "silence" | "interpolate" | "fill";
 
 interface NaNHandlerProps {
   strategy: NanStrategy;
   onStrategyChange: (strategy: NanStrategy) => void;
-  fillValue: string;
-  onFillValueChange: (value: string) => void;
+  fillWith: string;
+  onFillWithChange: (value: string) => void;
 }
 
 const nanStrategyCards = [
   {
-    value: "drop" as const,
-    title: "Drop rows",
-    description: "Remove any row with a missing value in a selected column.",
+    value: "silence" as const,
+    title: "Silence",
+    description: "Audio will go silent on these values, allowing you to hear the gaps in data.",
   },
   {
     value: "interpolate" as const,
@@ -32,16 +36,26 @@ const nanStrategyCards = [
   },
   {
     value: "fill" as const,
-    title: "Fill with value",
-    description: "Replace missing values with a fixed value.",
+    title: "Fill with...",
+    description: "Replace missing values with a value from the data.",
   },
 ];
+
+const fillOptions = createListCollection({
+  items: [
+    { label: "Minimum", value: "min" },
+    { label: "Maximum", value: "max" },
+    { label: "Mean", value: "mean" },
+    { label: "Median", value: "median" },
+    { label: "Mode", value: "mode" },
+  ],
+});
 
 export default function NaNHandler({
   strategy,
   onStrategyChange,
-  fillValue,
-  onFillValueChange,
+  fillWith,
+  onFillWithChange,
 }: NaNHandlerProps) {
   return (
     <Box animation="fade-in 300ms ease-out">
@@ -70,6 +84,41 @@ export default function NaNHandler({
                   <RadioCard.ItemDescription>
                     {card.description}
                   </RadioCard.ItemDescription>
+
+                  {card.value === "fill" && strategy === "fill" && (
+                    <Select.Root
+                      animation="fade-in 300ms ease-out"
+                      mt="3"
+                      collection={fillOptions}
+                      value={[fillWith]}
+                      onValueChange={(e) => onFillWithChange(e.value[0])}
+                      width="220px"
+                    >
+                      <Select.HiddenSelect />
+
+                      <Select.Control>
+                        <Select.Trigger>
+                          <Select.ValueText />
+                        </Select.Trigger>
+                        <Select.IndicatorGroup>
+                          <Select.Indicator />
+                        </Select.IndicatorGroup>
+                      </Select.Control>
+
+                      <Portal>
+                        <Select.Positioner>
+                          <Select.Content>
+                            {fillOptions.items.map((option) => (
+                              <Select.Item item={option} key={option.value}>
+                                {option.label}
+                                <Select.ItemIndicator />
+                              </Select.Item>
+                            ))}
+                          </Select.Content>
+                        </Select.Positioner>
+                      </Portal>
+                    </Select.Root>
+                  )}
                 </RadioCard.ItemContent>
 
                 <RadioCard.ItemIndicator />
@@ -78,18 +127,6 @@ export default function NaNHandler({
           ))}
         </Stack>
       </RadioCard.Root>
-
-      {strategy === "fill" && (
-        <Field.Root width="auto" mt="3">
-          <Field.Label>Fill value</Field.Label>
-
-          <Input
-            value={fillValue}
-            onBlur={(e) => onFillValueChange(e.target.value)}
-            width="150px"
-          />
-        </Field.Root>
-      )}
     </Box>
   );
 }

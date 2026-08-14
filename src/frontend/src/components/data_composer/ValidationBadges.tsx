@@ -1,6 +1,6 @@
 import { Badge, Spinner, Text, Box } from "@chakra-ui/react";
 import { LuTriangleAlert } from "react-icons/lu";
-import type { Layer } from "../../context/ComposerContext";
+import type { Layer } from "../../types/layers";
 
 interface ValidationBadgesProps {
   layer: Layer;

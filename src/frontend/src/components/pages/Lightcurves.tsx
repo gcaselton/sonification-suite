@@ -49,8 +49,9 @@ import {
   SimpleGrid,
   HStack,
   VisuallyHidden,
-  useBreakpointValue
+  useBreakpointValue,
 } from "@chakra-ui/react";
+import { NavigationState } from "../../types/navigation";
 
 const soniType = "light_curves";
 
@@ -119,7 +120,7 @@ export default function Lightcurves() {
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const searchResultsRef = useRef<HTMLHeadingElement>(null)
+  const searchResultsRef = useRef<HTMLHeadingElement>(null);
 
   // Focus search results for screen readers & scroll into view when ready
   useEffect(() => {
@@ -231,7 +232,7 @@ export default function Lightcurves() {
         setLoading(false);
       }
     }
-  };;
+  };
 
   const selectLightcurve = async (dataURI: string) => {
     // Call the API endpoint to select the lightcurve and get the filepath
@@ -242,76 +243,6 @@ export default function Lightcurves() {
       return result.file_ref;
     } catch (error) {
       console.error("Error fetching sonification:", error);
-    }
-  };
-
-  const handleFileAccept = async (files: FileList | File[]) => {
-    setUploading(true);
-
-    const file = files[0];
-
-    if (!file) {
-      setUploading(false);
-      return;
-    }
-
-    if (file.size > 1e7) {
-      setUploading(false);
-      setErrorMessage("File too large. Maximum size is 10MB.");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const res = await fetch(`${coreAPI}/upload-data/`, {
-      method: "POST",
-      body: formData,
-      credentials: "include",
-    });
-
-    if (!res.ok) {
-      let message = `HTTP ${res.status}`;
-
-      try {
-        const errorData = await res.json();
-        if (errorData?.detail) {
-          message = errorData.detail;
-        }
-      } catch {
-        // response was not JSON (ignore)
-      }
-      setUploading(false);
-      setErrorMessage(message);
-      console.error(message);
-    }
-
-    const result = await res.json();
-
-    const navInfo = {
-      dataRef: result.file_ref,
-      dataName: file.name.split(".")[0],
-      userUpload: true,
-    };
-
-    setUploading(false);
-
-    if (result.reduced) {
-      setDataReduced(true);
-      setPendingNav(navInfo);
-      return;
-    }
-
-    // Navigate to style page with data file path.
-    navigate("/planetaria/refine", { state: { ...navInfo, soniType } });
-  };
-
-  const handleConfirmReduced = () => {
-    setDataReduced(false);
-
-    if (pendingNav) {
-      navigate("/planetaria/refine", { state: { ...pendingNav, soniType } });
-      setPendingNav(null);
     }
   };
 
@@ -328,10 +259,14 @@ export default function Lightcurves() {
     selectLightcurve(dataURI).then((dataRef) => {
       if (dataRef) {
         // Navigate to the style page with the filepath and star name
-        const dataName = searchTerm;
-        navigate("/planetaria/refine", {
-          state: { dataRef, dataName, soniType, ra, dec },
-        });
+        const state: NavigationState = {
+          sourceDataRef: dataRef,
+          dataName: searchTerm,
+          soniType,
+          ra,
+          dec,
+        };
+        navigate("/planetaria/refine", { state });
       }
     });
   };
@@ -367,25 +302,18 @@ export default function Lightcurves() {
   };
 
   const handleClickSuggested = (star: any) => {
-    const dataRef = star.fileRef;
-    const dataName = star.name;
-    const ra = star.ra;
-    const dec = star.dec;
+    const state: NavigationState = {
+      sourceDataRef: star.fileRef,
+      dataName: star.name,
+      soniType,
+      ra: star.ra,
+      dec: star.dec,
+    };
 
-    navigate("/planetaria/refine", {
-      state: { dataRef, dataName, soniType, ra, dec },
-    });
+    console.log('ref at LC: ' + star.fileRef)
+
+    navigate("/planetaria/refine", { state });
   };
-
-  const handleCancelReduced = () => {
-    setDataReduced(false);
-    setPendingNav(null);
-
-    // clear file upload
-    setUploadKey((k) => k + 1);
-  };
-
-  const uploadDisabled = false;
 
   const filterCount = [tessChecked, keplerChecked, k2Checked].filter(
     Boolean,
@@ -399,54 +327,6 @@ export default function Lightcurves() {
             `${lightcurves.length} results found for ${searchTerm}`}
         </div>
       </VisuallyHidden>
-      <Dialog.Root
-        open={dataReduced}
-        onOpenChange={(e) => setDataReduced(e.open)}
-        placement="center"
-        motionPreset="slide-in-bottom"
-        role="alertdialog"
-      >
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.Header>
-              <Dialog.Title>Multiple Columns Detected</Dialog.Title>
-            </Dialog.Header>
-            <Dialog.Body>
-              <VStack align="start" gap={3}>
-                <Text>Your dataset contains more than two columns.</Text>
-                <Text>
-                  This feature currently uses two columns (x and y) for
-                  sonification.
-                </Text>
-                <Text>
-                  Would you like to continue using the first two detected
-                  columns?
-                </Text>
-              </VStack>
-            </Dialog.Body>
-            <Dialog.Footer>
-              <Flex justify="center" w="full" gap={3}>
-                <Dialog.ActionTrigger asChild>
-                  <Button
-                    variant="outline"
-                    colorPalette="teal"
-                    onClick={handleCancelReduced}
-                  >
-                    Cancel
-                  </Button>
-                </Dialog.ActionTrigger>
-                <Button onClick={handleConfirmReduced} colorPalette="teal">
-                  Continue
-                </Button>
-              </Flex>
-            </Dialog.Footer>
-            <Dialog.CloseTrigger asChild>
-              <CloseButton size="sm" onClick={handleCancelReduced} />
-            </Dialog.CloseTrigger>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
       <Heading as="h1">Light Curves</Heading>
       <br />
       <Text textStyle="lg">
@@ -647,7 +527,6 @@ export default function Lightcurves() {
                 </Card.Body>
               </Card.Root>
             ))}
-            
           </Stack>
           <br />
         </Box>

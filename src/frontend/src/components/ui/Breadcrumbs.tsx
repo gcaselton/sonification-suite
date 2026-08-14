@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Breadcrumb, Menu, Portal, HStack, Text, Box } from "@chakra-ui/react";
 import { LuChevronDown } from "react-icons/lu";
+import { NavigationState } from "../../types/navigation";
 
 const DATA_TYPES = [
   { label: "Light Curves", soniType: "light_curves", path: "/planetaria/light-curves" },
@@ -25,16 +26,7 @@ export default function Breadcrumbs() {
   const location = useLocation();
   const navigate = useNavigate();
   const pathname = location.pathname;
-  const state = location.state as
-    | {
-        soniType?: string;
-        dataName?: string;
-        dataRef?: string;
-        ra?: number;
-        dec?: number;
-        userUpload?: boolean;
-      }
-    | undefined;
+  const state = location.state as NavigationState | undefined;
 
   if (pathname === "/") return null;
 

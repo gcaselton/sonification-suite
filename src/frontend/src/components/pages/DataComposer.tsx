@@ -30,7 +30,8 @@ import {
 import PageContainer from "../ui/PageContainer";
 import { Tooltip } from "../ui/Tooltip";
 import { composerAPI, coreAPI } from "../../apiConfig";
-import { useComposer, type Layer } from "../../context/ComposerContext";
+import { useComposer } from "../../context/ComposerContext";
+import { Layer } from "../../types/layers";
 import {
   LuPlus,
   LuCheck,
@@ -52,6 +53,7 @@ import { apiRequest } from "../../utils/requests";
 import UploadDialog from "../data_composer/UploadDialog";
 import DeleteDialog from "../data_composer/DeleteDialog";
 import ValidationBadges from "../data_composer/ValidationBadges";
+import { NavigationState } from "../../types/navigation";
 
 function makeLayerId() {
   return `layer_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -310,31 +312,30 @@ export default function DataComposer() {
     );
 
   const handleRefine = (layer: Layer) => {
-    navigate("/planetaria/refine", {
-      state: {
-        dataName: layer.dataName,
-        dataRef: layer.dataRef,
-        layerID: layer.id,
-        soniType,
-      },
-    });
+    const state: NavigationState = {
+      dataName: layer.dataName,
+      sourceDataRef: layer.dataRef,
+      layerID: layer.id,
+      soniType,
+    };
+    navigate("/planetaria/refine", { state });
   };
 
   const handleChooseStyle = (layer: Layer, editStyleRef?: string) => {
-    navigate("/planetaria/style", {
-      state: {
-        dataName: layer.dataName,
-        dataRef: layer.dataRef,
-        layerID: layer.id,
-        soniType,
-        userUpload: true, // tell custom style menu we are using user data
-        ...(editStyleRef !== undefined && { editStyle: editStyleRef }), // Only pass edit style if provided (e.g. user has clicked the edit button)
-      },
-    });
+    const state: NavigationState = {
+      dataName: layer.dataName,
+      dataRef: layer.dataRef,
+      layerID: layer.id,
+      soniType,
+      userUpload: true, // tell custom style menu we are using user data
+      ...(editStyleRef !== undefined && { editStyle: editStyleRef }), // Only pass edit style if provided (e.g. user has clicked the edit button)
+    };
+    navigate("/planetaria/style", { state });
   };
 
   const handleContinueToSonify = () => {
-    navigate("/planetaria/sonify", { state: { layers, soniType } });
+    const state: NavigationState = { layers, soniType }
+    navigate("/planetaria/sonify", { state });
   };
 
   const pendingDeleteLayer = layers.find((l) => l.id === pendingDeleteId);

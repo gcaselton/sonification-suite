@@ -33,6 +33,7 @@ import {
   useFilter,
   Portal,
 } from "@chakra-ui/react";
+import { NavigationState } from "../../types/navigation";
 
 export const constellations = [
   { label: "Pisces", value: "Pisces" },
@@ -149,11 +150,8 @@ export default function Constellations() {
 
     console.log("Constellation clicked:", constellationName);
     const dataName = constellationName;
-    const dataRef = "";
-
-    navigate("/planetaria/refine", {
-      state: { dataName, dataRef, soniType }, // Navigate to step 2
-    });
+    const state: NavigationState = { dataName, soniType };
+    navigate("/planetaria/refine", { state }); // Navigate to step 2
   };
 
   // Needed to use ComboBox search/filter

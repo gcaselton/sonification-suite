@@ -275,6 +275,13 @@ def download_lightcurve(data_uri):
             "flux": np.asarray(flux, dtype=np.float64)
         })
         
+        first_valid = df["flux"].first_valid_index()
+        last_valid = df["flux"].last_valid_index()
+
+        if first_valid is not None and last_valid is not None:
+            # Chop the start and end off if they are NaN
+            df = df.loc[first_valid:last_valid]
+        
         df.to_csv(filepath, index=False)
 
     return filepath
@@ -303,9 +310,10 @@ def plot_lightcurve(request: DataRequest):
 
 
 
-def plot_and_format_lc(filepath: str):
+def plot_and_format_lc(path_or_df: str | pd.DataFrame):
+    
+    df = pd.read_csv(path_or_df) if isinstance(path_or_df, str) else path_or_df
 
-    df = pd.read_csv(filepath)
     time = df['time'].values
     flux = df['flux'].values  
 
@@ -368,57 +376,73 @@ def get_range(request: DataRequest):
     return{'range': value_range, 'has_nans': has_nans}
 
 
+def refine_light_curve(request: RefineRequest):
+    
+    fill_methods = {
+        "min": lambda x: x.min(),
+        "max": lambda x: x.max(),
+        "mean": lambda x: x.mean(),
+        "median": lambda x: x.median(),
+        "mode": lambda x: x.mode().iloc[0], # Mode returns a Series
+    }
+    
+    filepath = str(resolve_file(request.file_ref))
+    
+    df = pd.read_csv(filepath)
+    
+    # Truncate to new range
+    new_start, new_end = request.new_range
+    df = df[(df['time'] >= new_start) & (df['time'] <= new_end)].copy()
+    
+    nans_after_trim = False
+    
+    # Apply selected NaN strategy
+    if df.isna().any().any():
+        nans_after_trim = True
+        
+        if request.nan_strategy == "fill":
+            fill_value = fill_methods[request.fill_with](df["flux"])
+            df["flux"] = df["flux"].fillna(fill_value)
+
+        elif request.nan_strategy == "interpolate":
+            df['flux'] = df['flux'].interpolate()
+
+        elif request.nan_strategy == "silence":
+            pass # Allow STRAUSS to mask NaNs with silence 
+    
+    if request.sigma > 0:
+        # Smooth data
+        y_values = df['flux'].values
+        smoothed_flux = gaussian_filter1d(y_values, request.sigma)
+
+        df['flux'] = smoothed_flux
+    
+    return df, nans_after_trim
+
+
 @router.post('/preview-refined/')
 def preview_refined(request: RefineRequest):
 
-    refined = save_refined(request)
-
-    filepath = str(resolve_file(refined['file_ref']))
+    refined, nans_after_trim = refine_light_curve(request)
        
     # Plot, format, and convert image to Base64
-    img_base64 = plot_and_format_lc(filepath)
+    img_base64 = plot_and_format_lc(refined)
 
-    return{'image': img_base64}
+    return{'image': img_base64, 'nans_after_trim': nans_after_trim}
 
 
 @router.post('/save-refined/')
 def save_refined(request: RefineRequest):
     
-    new_start, new_end = request.new_range
-
-    original_filepath = str(resolve_file(request.file_ref))
-    
-    ext = original_filepath.split('.')[-1]
+    df, _ = refine_light_curve(request)
+ 
     session_id = session_id_var.get()
-    filename = request.data_name + '_refined.' + ext
-    
+    filename = request.data_name + '_refined.csv'
     refined_filepath = TMP_DIR / session_id / filename
+    
+    df.to_csv(refined_filepath, index=False)
+    
     refined_ref = f'session:{filename}'
-            
-    df = pd.read_csv(original_filepath)
-    
-    # Apply selected NaN strategy
-    if request.nan_strategy == "fill":
-        df = df.fillna(request.fill_value)
-
-    elif request.nan_strategy == "interpolate":
-        df = df.interpolate().bfill().ffill()
-
-    elif request.nan_strategy == "drop":
-        df = df.dropna()
-    
-    # Truncate to new range
-    df_truncated = df[(df['time'] >= new_start) & (df['time'] <= new_end)].copy()
-    
-    if request.sigma > 0:
-        # Smooth data
-        y_values = df_truncated['flux'].values
-        smoothed_flux = gaussian_filter1d(y_values, request.sigma)
-
-        df_truncated['flux'] = smoothed_flux
-        
-    df_truncated.to_csv(refined_filepath, index=False)
-        
 
     return {'file_ref': refined_ref}
 

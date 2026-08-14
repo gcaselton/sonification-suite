@@ -8,6 +8,7 @@ import { apiRequest } from "../../utils/requests";
 
 import { Box, Heading, Stack, Text } from "@chakra-ui/react";
 import { useComposer } from "../../context/ComposerContext";
+import { NavigationState } from "../../types/navigation";
 
 export default function Style() {
   const navigate = useNavigate();
@@ -80,19 +81,18 @@ export default function Style() {
   };
 
   const goToSonify = (styleRef: string, styleName: string, styleDescription: string) => {
-    navigate("/planetaria/sonify", {
-      state: {
-        dataName,
-        dataRef,
-        styleRef,
-        styleName,
-        styleDescription,
-        soniType,
-        userUpload,
-        ra,
-        dec,
-      },
-    });
+    const state: NavigationState = {
+      dataName,
+      dataRef,
+      styleRef,
+      styleName,
+      styleDescription,
+      soniType,
+      userUpload,
+      ra,
+      dec,
+    };
+    navigate("/planetaria/sonify", { state });
   }
 
   const goToComposer = (styleRef: string, styleName: string, styleDescription: string) => {
@@ -112,9 +112,15 @@ export default function Style() {
     try {
       const res = await apiRequest(`${coreAPI}/upload-yaml/`, formData);
       const styleRef = res.file_ref;
-      navigate("/planetaria/sonify", {
-        state: { dataName, dataRef, styleRef, soniType, ra, dec },
-      });
+      const state: NavigationState = {
+        dataName,
+        dataRef,
+        styleRef,
+        soniType,
+        ra,
+        dec,
+      };
+      navigate("/planetaria/sonify", { state });
     } catch (err: any) {
       console.error("File upload failed:", err);
     }

@@ -55,7 +55,8 @@ import ObserverSetup, {
   ORIENTATIONS,
 } from "../utils/ObserverSetup";
 import { Tooltip } from "../ui/Tooltip";
-import { Layer } from "../../context/ComposerContext";
+import { Layer } from "../../types/layers";
+import { NavigationState } from "../../types/navigation";
 
 export default function Sonify() {
 
@@ -312,11 +313,16 @@ export default function Sonify() {
 
   const handleEditStyle = async (styleRef: string) => {
 
-    const editStyle = styleRef
-
-    navigate("/planetaria/style", {
-      state: { dataRef, dataName, soniType, ra, dec, userUpload, editStyle },
-    });
+    const state: NavigationState = {
+      dataRef,
+      dataName,
+      soniType,
+      ra,
+      dec,
+      userUpload,
+      editStyle: styleRef,
+    };
+    navigate("/planetaria/style", { state });
   };
 
   const invalidLength =

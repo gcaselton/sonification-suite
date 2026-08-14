@@ -4,6 +4,7 @@ import { nightSkyAPI } from "../../apiConfig";
 import { apiRequest } from "../../utils/requests";
 import { Box, Heading, Text } from "@chakra-ui/react";
 import ObserverSetup, { ObserverValues } from "../utils/ObserverSetup";
+import { NavigationState } from "../../types/navigation";
 
 export default function NightSky() {
   const soniType = "night_sky";
@@ -27,13 +28,12 @@ export default function NightSky() {
       "POST",
     );
 
-    navigate("/planetaria/refine", {
-      state: {
-        dataName: locationName,
-        dataRef: response.file_ref,
-        soniType,
-      },
-    });
+    const state: NavigationState = {
+      dataName: locationName,
+      sourceDataRef: response.file_ref,
+      soniType
+    };
+    navigate("/planetaria/refine", { state });
   };
 
   return (

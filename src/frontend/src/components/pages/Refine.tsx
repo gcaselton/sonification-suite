@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import PageContainer from "../ui/PageContainer";
 import { Box, Heading, Text, Highlight } from "@chakra-ui/react";
 import { useComposer } from "../../context/ComposerContext";
+import { NavigationState } from "../../types/navigation";
 
 export default function Refine() {
   const navigate = useNavigate();
@@ -10,12 +11,14 @@ export default function Refine() {
   const composer = useComposer();
   
   const dataName = location.state.dataName;
-  const dataRef = location.state.dataRef;
+  const sourceDataRef = location.state.sourceDataRef;
   const soniType = location.state.soniType;
   const ra = location.state.ra ?? null;
   const dec = location.state.dec ?? null;
   const userUpload = location.state.userUpload ?? false;
   const layerID = location.state.layerID ?? null;
+
+  console.log('ref at Refine' + sourceDataRef)
 
   // Dynamically import the menu component
   const Menu = lazy(() => import(`../refine_menus/${soniType}.tsx`));
@@ -33,7 +36,7 @@ export default function Refine() {
       <br />
       <Suspense>
         <Menu
-          dataRef={dataRef}
+          dataRef={sourceDataRef}
           dataName={dataName}
           onApply={(newRef: string, newRa?: number, newDec?: number) => {
 
@@ -49,16 +52,14 @@ export default function Refine() {
             }
 
             // Otherwise, proceed to Style
-            navigate("/planetaria/style", {
-              state: {
-                dataRef: newRef,
-                dataName,
-                soniType,
-                ra: newRa ?? ra,
-                dec: newDec ?? dec,
-                userUpload,
-              },
-            });
+            const state: NavigationState = {
+              ...location.state,
+              dataRef: newRef,
+              ra: newRa ?? ra,
+              dec: newDec ?? dec,
+              userUpload,
+            };
+            navigate("/planetaria/style", { state });
           }}
         />
       </Suspense>

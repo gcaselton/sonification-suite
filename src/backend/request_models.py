@@ -72,7 +72,7 @@ class RefineRequest(BaseModel):
     new_range: list[float]
     sigma: int
     nan_strategy: str
-    fill_value: float
+    fill_with: str
     
 #---------- Night Sky ----------#   
 
@@ -94,7 +94,7 @@ class ComposerRefineRequest(BaseModel):
     file_ref: str
     columns: list[str]
     nan_strategy: Literal["drop", "interpolate", "fill"]
-    fill_value: Optional[float] = None
+    fill_with: Optional[str] = None
     row_range: list[int, int]
     n_preview_rows: Optional[int] = 20
     
