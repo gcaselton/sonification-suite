@@ -57,7 +57,6 @@ export default function LightCurves({
     async function fetchPlot() {
       try {
 
-        console.log('ref: ' + dataRef)
         const base64 = await plotData(dataRef, "light_curves");
         if (!mounted) return;
         setImageSrc(`data:image/svg+xml;base64,${base64}`);

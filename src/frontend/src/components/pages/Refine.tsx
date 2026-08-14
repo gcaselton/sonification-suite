@@ -18,8 +18,6 @@ export default function Refine() {
   const userUpload = location.state.userUpload ?? false;
   const layerID = location.state.layerID ?? null;
 
-  console.log('ref at Refine' + sourceDataRef)
-
   // Dynamically import the menu component
   const Menu = lazy(() => import(`../refine_menus/${soniType}.tsx`));
 

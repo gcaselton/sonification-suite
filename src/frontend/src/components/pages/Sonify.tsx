@@ -314,6 +314,7 @@ export default function Sonify() {
   const handleEditStyle = async (styleRef: string) => {
 
     const state: NavigationState = {
+      ...location.state,
       dataRef,
       dataName,
       soniType,

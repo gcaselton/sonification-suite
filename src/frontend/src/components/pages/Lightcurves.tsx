@@ -310,8 +310,6 @@ export default function Lightcurves() {
       dec: star.dec,
     };
 
-    console.log('ref at LC: ' + star.fileRef)
-
     navigate("/planetaria/refine", { state });
   };
 

@@ -52,6 +52,14 @@ def set_header(request: HeaderRequest):
 
 def refine_data(request: RefineRequest):
     
+    fill_methods = {
+        "min": lambda x: x.min(),
+        "max": lambda x: x.max(),
+        "mean": lambda x: x.mean(),
+        "median": lambda x: x.median(),
+        "mode": lambda x: x.mode().iloc[0], # Mode returns a Series
+    }
+    
     # Load csv into dataframe
     filepath = str(resolve_file(request.file_ref))
     df = pd.read_csv(filepath, header=0)
@@ -61,37 +69,37 @@ def refine_data(request: RefineRequest):
     
     # Apply selected NaN strategy
     if request.nan_strategy == "fill":
-        df = df.fillna(request.fill_value)
+        for col in df.columns:
+            if df[col].isna().any():
+                fill_value = fill_methods[request.fill_with](df[col])
+                df[col] = df[col].fillna(fill_value)       
 
     elif request.nan_strategy == "interpolate":
         df = df.interpolate().bfill().ffill()
 
-    elif request.nan_strategy == "drop":
-        df = df.dropna()
-        
-    # Number of rows available after NaN handling
-    available_rows = len(df)
+    elif request.nan_strategy == "silence":
+        pass # Allow STRAUSS to mask NaNs with silence
     
     # Slice to requested row range
     start, end = request.row_range
     df = df.iloc[start:end]
     
-    return df, available_rows
+    return df
     
 
 @router.post('/preview-refined/')
 def preview_refined(request: RefineRequest):
     
-    df, available_rows = refine_data(request)
+    df = refine_data(request)
     preview = df.head(request.n_preview_rows)
     
-    return {"rows": preview.to_dict(orient="records"), "row_count": available_rows}
+    return {"rows": preview.to_dict(orient="records")}
     
     
 @router.post('/save-refined/')
 def save_refined(request: RefineRequest):
     
-    df, _ = refine_data(request)
+    df = refine_data(request)
 
     filename = f"{uuid.uuid4()}.csv"
     session_id = session_id_var.get()

@@ -82,6 +82,7 @@ export default function Style() {
 
   const goToSonify = (styleRef: string, styleName: string, styleDescription: string) => {
     const state: NavigationState = {
+      ...location.state,
       dataName,
       dataRef,
       styleRef,
@@ -113,6 +114,7 @@ export default function Style() {
       const res = await apiRequest(`${coreAPI}/upload-yaml/`, formData);
       const styleRef = res.file_ref;
       const state: NavigationState = {
+        ...location.state,
         dataName,
         dataRef,
         styleRef,

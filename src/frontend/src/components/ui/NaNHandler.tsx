@@ -10,9 +10,7 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { useState } from "react";
 import { InfoTip } from "./ToggleTip";
-import { fill } from "es-toolkit";
 
 export type NanStrategy = "silence" | "interpolate" | "fill";
 
@@ -62,7 +60,7 @@ export default function NaNHandler({
       <HStack mb="2">
         <Text fontWeight="bold">Missing values</Text>
         <InfoTip
-          content="One or more selected columns contain missing values. Choose how they should be handled before sonifying."
+          content="One or more columns contain missing values. Choose how they should be handled before sonifying."
           positioning={{ placement: "right" }}
         />
       </HStack>

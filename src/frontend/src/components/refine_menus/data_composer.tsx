@@ -23,20 +23,18 @@ import { apiRequest } from "../../utils/requests";
 import { InfoTip } from "../ui/ToggleTip";
 import { LuArrowRight, LuTriangleAlert } from "react-icons/lu";
 import { debounce } from "es-toolkit";
+import NaNHandler, { NanStrategy } from "../ui/NaNHandler";
 
 interface ColumnInfo {
   name: string;
   NaNs: number;
 }
 
-type NanStrategy = "drop" | "interpolate" | "fill";
-
 export default function DataComposer({
   dataName,
   dataRef,
   onApply,
 }: RefineMenuProps) {
-
   // Column metadata, fetched once on mount
   const [columns, setColumns] = useState<ColumnInfo[]>([]);
   const [selectedColumns, setSelectedColumns] = useState<Set<string>>(
@@ -47,12 +45,11 @@ export default function DataComposer({
   const [columnsError, setColumnsError] = useState("");
 
   // Missing-value handling
-  const [nanStrategy, setNanStrategy] = useState<NanStrategy>('fill');
-  const [fillValue, setFillValue] = useState("0");
+  const [nanStrategy, setNanStrategy] = useState<NanStrategy>("fill");
+  const [fillWith, setFillWith] = useState("mean");
 
   // Row range
   const [rowRange, setRowRange] = useState<[number, number]>([0, 0]);
-  const [effectiveRowCount, setEffectiveRowCount] = useState(0);
 
   // Preview (re-fetched whenever the above change)
   const [previewRows, setPreviewRows] = useState<Record<string, unknown>[]>([]);
@@ -66,7 +63,7 @@ export default function DataComposer({
   );
 
   // How many rows to preview in the table
-  const N_PREVIEW_ROWS = 15
+  const N_PREVIEW_ROWS = 15;
 
   // ---- Fetch column metadata on mount ----
   useEffect(() => {
@@ -81,7 +78,7 @@ export default function DataComposer({
       try {
         const result = await apiRequest(
           endpoint,
-          { file_ref: dataRef},
+          { file_ref: dataRef },
           "POST",
         );
         if (!mounted) return;
@@ -91,7 +88,6 @@ export default function DataComposer({
           new Set(result.columns.map((c: ColumnInfo) => c.name)),
         );
         setTotalRows(result.total_rows);
-        setEffectiveRowCount(result.total_rows);
         setRowRange([0, result.total_rows]);
       } catch (err) {
         if (!mounted) return;
@@ -112,7 +108,7 @@ export default function DataComposer({
     async (
       cols: string[],
       strategy: NanStrategy,
-      fill: string,
+      fillWith: string,
       range: [number, number],
     ) => {
       if (!dataRef || cols.length === 0) return;
@@ -124,15 +120,14 @@ export default function DataComposer({
         file_ref: dataRef,
         columns: cols,
         nan_strategy: strategy,
-        fill_value: strategy === "fill" ? Number(fill) : undefined,
+        fill_with: strategy === "fill" ? fillWith : undefined,
         row_range: range,
-        n_preview_rows: N_PREVIEW_ROWS
+        n_preview_rows: N_PREVIEW_ROWS,
       };
 
       try {
         const result = await apiRequest(endpoint, payload, "POST");
         setPreviewRows(result.rows);
-        setEffectiveRowCount(result.row_count);
       } catch (err) {
         console.error("Error previewing data:", err);
         setPreviewError("Unable to generate a preview.");
@@ -159,18 +154,10 @@ export default function DataComposer({
     debouncedFetchPreview(
       Array.from(selectedColumns),
       nanStrategy,
-      fillValue,
+      fillWith,
       rowRange,
     );
-  }, [selectedColumns, nanStrategy, fillValue, rowRange, columnsLoading]);
-
-  // Update row count if 'Drop rows' is used
-  useEffect(() => {
-    setRowRange(([start, end]) => [
-      Math.min(start, effectiveRowCount),
-      Math.min(end, effectiveRowCount),
-    ]);
-  }, [effectiveRowCount]);
+  }, [selectedColumns, nanStrategy, fillWith, rowRange, columnsLoading]);
 
   // ---- Handlers ----
 
@@ -194,7 +181,7 @@ export default function DataComposer({
       file_ref: dataRef,
       columns: Array.from(selectedColumns),
       nan_strategy: nanStrategy,
-      fill_value: nanStrategy === "fill" ? fillValue : undefined,
+      fill_with: nanStrategy === "fill" ? fillWith : undefined,
       row_range: rowRange,
     };
 
@@ -209,24 +196,6 @@ export default function DataComposer({
       setApplyLoading(false);
     }
   };
-
-  const nanStrategyCards = [
-    {
-      value: "drop",
-      title: "Drop rows",
-      description: "Remove any row with a missing value in a selected column.",
-    },
-    {
-      value: "interpolate",
-      title: "Interpolate",
-      description: "Estimate missing numeric values from surrounding rows.",
-    },
-    {
-      value: "fill",
-      title: "Fill with value",
-      description: "Replace missing values with a fixed value.",
-    },
-  ];
 
   return (
     <Stack
@@ -251,83 +220,45 @@ export default function DataComposer({
             ) : columnsError ? (
               <ErrorMsg message={columnsError} />
             ) : (
-                <VStack
-                  align="stretch"
-                  gap="1"
-                  borderWidth="1px"
-                  borderRadius="md"
-                  p="3"
-                >
-                  {columns.map((col) => (
-                    <HStack key={col.name} justify="space-between">
-                      <Checkbox.Root
-                        checked={selectedColumns.has(col.name)}
-                        onCheckedChange={(e) =>
-                          handleToggleColumn(col.name, !!e.checked)
-                        }
-                      >
-                        <Checkbox.HiddenInput />
-                        <Checkbox.Control />
-                        <Checkbox.Label>
-                          {col.name}
-                        </Checkbox.Label>
-                      </Checkbox.Root>
-                      {col.NaNs > 0 && (
-                        <Badge colorPalette="orange" size="sm" gap="1">
-                          <LuTriangleAlert />
-                          {col.NaNs} missing value{col.NaNs > 1 && 's'}
-                        </Badge>
-                      )}
-                    </HStack>
-                  ))}
-                </VStack>
+              <VStack
+                align="stretch"
+                gap="1"
+                borderWidth="1px"
+                borderRadius="md"
+                p="3"
+              >
+                {columns.map((col) => (
+                  <HStack key={col.name} justify="space-between">
+                    <Checkbox.Root
+                      checked={selectedColumns.has(col.name)}
+                      onCheckedChange={(e) =>
+                        handleToggleColumn(col.name, !!e.checked)
+                      }
+                    >
+                      <Checkbox.HiddenInput />
+                      <Checkbox.Control />
+                      <Checkbox.Label>{col.name}</Checkbox.Label>
+                    </Checkbox.Root>
+                    {col.NaNs > 0 && (
+                      <Badge colorPalette="orange" size="sm" gap="1">
+                        <LuTriangleAlert />
+                        {col.NaNs} missing value{col.NaNs > 1 && "s"}
+                      </Badge>
+                    )}
+                  </HStack>
+                ))}
+              </VStack>
             )}
           </Box>
 
           {/* Missing values */}
           {!columnsLoading && hasNanColumns && (
-            <Box animation="fade-in 300ms ease-out">
-              <HStack mb="2">
-                <Text fontWeight="bold">Missing values</Text>
-                <InfoTip
-                  content="One or more selected columns contain missing values. Choose how they should be handled before sonifying."
-                  positioning={{ placement: "right" }}
-                />
-              </HStack>
-              <RadioCard.Root
-                value={nanStrategy}
-                colorPalette="teal"
-                onValueChange={(e) => setNanStrategy(e.value as NanStrategy)}
-              >
-                <Stack gap="2">
-                  {nanStrategyCards.map((card) => (
-                    <RadioCard.Item key={card.value} value={card.value}>
-                      <RadioCard.ItemHiddenInput />
-                      <RadioCard.ItemControl>
-                        <RadioCard.ItemContent>
-                          <RadioCard.ItemText>{card.title}</RadioCard.ItemText>
-                          <RadioCard.ItemDescription>
-                            {card.description}
-                          </RadioCard.ItemDescription>
-                        </RadioCard.ItemContent>
-                        <RadioCard.ItemIndicator />
-                      </RadioCard.ItemControl>
-                    </RadioCard.Item>
-                  ))}
-                </Stack>
-              </RadioCard.Root>
-
-              {nanStrategy === "fill" && (
-                <Field.Root width="auto" mt="3">
-                  <Field.Label>Fill value</Field.Label>
-                  <Input
-                    value={fillValue}
-                    onChange={(e) => setFillValue(e.target.value)}
-                    width="150px"
-                  />
-                </Field.Root>
-              )}
-            </Box>
+            <NaNHandler
+              strategy={nanStrategy}
+              onStrategyChange={setNanStrategy}
+              fillWith={fillWith}
+              onFillWithChange={setFillWith}
+            />
           )}
 
           {/* Row range */}
@@ -345,7 +276,7 @@ export default function DataComposer({
                 step={1}
                 colorPalette="teal"
                 min={0}
-                max={effectiveRowCount}
+                max={totalRows}
                 value={rowRange}
                 minStepsBetweenThumbs={1}
                 onValueChange={(e) => setRowRange(e.value as [number, number])}
@@ -358,7 +289,7 @@ export default function DataComposer({
                 </Slider.Control>
               </Slider.Root>
               <Text fontSize="sm" color="fg.muted" mt="1">
-                Rows {rowRange[0] + 1}–{rowRange[1]} of {effectiveRowCount}
+                Rows {rowRange[0] + 1}–{rowRange[1]} of {totalRows}
               </Text>
             </Box>
           )}
@@ -379,7 +310,10 @@ export default function DataComposer({
         <VStack align="stretch" gap="3">
           {!columnsLoading && (
             <Text fontSize="sm" color="fg.muted">
-              {totalRows} rows{totalRows > N_PREVIEW_ROWS && ` (previewing first ${N_PREVIEW_ROWS})`} · {columns.length} columns
+              {totalRows} rows
+              {totalRows > N_PREVIEW_ROWS &&
+                ` (previewing first ${N_PREVIEW_ROWS})`}{" "}
+              · {columns.length} columns
               {hasNanColumns &&
                 ` · ${columns.filter((c) => selectedColumns.has(c.name) && c.NaNs > 0).length} with missing values`}
             </Text>
@@ -390,7 +324,6 @@ export default function DataComposer({
           ) : previewError ? (
             <ErrorMsg message={previewError} />
           ) : previewRows.length > 0 ? (
-            
             <Box overflowX="auto" animation="fade-in 300ms ease-out">
               <Table.Root size="sm" interactive>
                 <Table.Header>
