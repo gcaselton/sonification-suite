@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Alert,
   ActionBar,
@@ -26,6 +26,7 @@ import {
   Field,
   Checkbox,
   Spinner,
+  useLocaleContext,
 } from "@chakra-ui/react";
 import PageContainer from "../ui/PageContainer";
 import { Tooltip } from "../ui/Tooltip";
@@ -80,6 +81,7 @@ const MAX_LAYERS = 8;
 
 export default function DataComposer() {
   const navigate = useNavigate();
+  const location = useLocation();
   const soniType = "data_composer";
 
   const { layers, setLayers, updateLayer } = useComposer();
@@ -334,7 +336,7 @@ export default function DataComposer() {
   };
 
   const handleContinueToSonify = () => {
-    const state: NavigationState = { layers, soniType }
+    const state: NavigationState = { ...location.state, layers, soniType }
     navigate("/planetaria/sonify", { state });
   };
 

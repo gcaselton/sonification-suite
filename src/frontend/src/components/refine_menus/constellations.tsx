@@ -226,7 +226,7 @@ export default function Constellations({
         </VStack>
       </Box>
 
-      <Box flex="1">
+      <Box flex="1" borderWidth="1px" borderRadius="md">
         {imageLoading ? (
           <LoadingMessage msg="" icon="pulsar" />
         ) : imageSrc ? (

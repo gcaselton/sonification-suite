@@ -116,7 +116,7 @@ export default function NightSky({ dataRef, dataName, onApply }: RefineMenuProps
         </VStack>
       </Box>
 
-      <Box width="100%">
+      <Box width="100%" borderWidth="1px" borderRadius="md">
         {imageLoading ? (
           <LoadingMessage msg="" icon="pulsar" />
         ) : imageSrc ? (

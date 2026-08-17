@@ -59,8 +59,7 @@ import { Layer } from "../../types/layers";
 import { NavigationState } from "../../types/navigation";
 
 export default function Sonify() {
-
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   // Route states
   const location = useLocation();
@@ -115,7 +114,9 @@ export default function Sonify() {
   // States to control data plot
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState(true);
-  const [activePlot, setActivePlot] = useState<"data" | "spectrogram">("data");
+  const [activePlot, setActivePlot] = useState<"data" | "spectrogram">(
+    soniType === "data_composer" ? "spectrogram" : "data",
+  );
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
@@ -239,7 +240,6 @@ export default function Sonify() {
 
     try {
       const response = await apiRequest(url, data);
-      console.log("Sonification result:", response);
 
       if (response.alt_az) {
         setAltAz(response.alt_az);
@@ -312,7 +312,6 @@ export default function Sonify() {
   };
 
   const handleEditStyle = async (styleRef: string) => {
-
     const state: NavigationState = {
       ...location.state,
       dataRef,
@@ -406,8 +405,6 @@ export default function Sonify() {
   const COMPASS = Object.fromEntries(
     ORIENTATIONS.map(({ value, label }) => [value, label]),
   );
-
-  console.log(summaries)
 
   // Place on dome option should only display for these sonification types
   const placeOnDomeModes = ["light_curves", "constellations"];
@@ -774,8 +771,8 @@ export default function Sonify() {
           </form>
           <br />
         </Box>
-        <Box width={{ base: "100%", lg: "50%" }}>
-          {soniReady && (
+        <VStack width={{ base: "100%", lg: "50%" }}>
+          {soniReady && soniType !== "data_composer" && (
             <Flex justify="center" mb={2}>
               <SegmentGroup.Root
                 value={activePlot}
@@ -808,41 +805,73 @@ export default function Sonify() {
               </SegmentGroup.Root>
             </Flex>
           )}
-
-          {activePlot === "data" &&
-            (imageLoading ? (
-              <LoadingMessage msg="" icon="pulsar" />
-            ) : imageSrc ? (
-              <Image
-                src={imageSrc}
-                alt={`A plot of the ${dataName} ${formatSoniType(soniType)}`}
-                rounded="md"
-                animation="fade-in 300ms ease-out"
-              />
+          <Box
+            borderWidth="1px"
+            borderRadius="md"
+            minH="400px"
+            minW="400px"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+          >
+            {soniType === "data_composer" ? (
+              !soniReady ? (
+                <Box px={20} textAlign="center">
+                  <VStack gap={3}>
+                    <LuAudioLines size={40} />
+                    <Text color="fg.muted" maxW="350px">
+                      Generate your sonification to view its spectrogram.
+                    </Text>
+                  </VStack>
+                </Box>
+              ) : specLoading ? (
+                <LoadingMessage msg="Generating spectrogram..." icon="pulsar" />
+              ) : specImage ? (
+                <Image
+                  src={`data:image/png;base64,${specImage}`}
+                  alt="Spectrogram of the generated sonification"
+                  rounded="md"
+                  animation="fade-in 300ms ease-out"
+                />
+              ) : (
+                <ErrorMsg message="Unable to generate spectrogram." />
+              )
             ) : (
-              <ErrorMsg
-                message="Unable to plot data."
-                onClose={() => setErrorMessage("")}
-              />
-            ))}
+              <>
+                {activePlot === "data" &&
+                  (imageLoading ? (
+                    <LoadingMessage msg="" icon="pulsar" />
+                  ) : imageSrc ? (
+                    <Image
+                      src={imageSrc}
+                      alt={`A plot of the ${dataName} ${formatSoniType(soniType)}`}
+                      rounded="md"
+                      animation="fade-in 300ms ease-out"
+                    />
+                  ) : (
+                    <ErrorMsg message="Unable to plot data." />
+                  ))}
 
-          {activePlot === "spectrogram" &&
-            (specLoading ? (
-              <LoadingMessage msg="Generating spectrogram..." icon="pulsar" />
-            ) : specImage ? (
-              <Image
-                src={`data:image/png;base64,${specImage}`}
-                alt="Spectrogram"
-                rounded="md"
-                animation="fade-in 300ms ease-out"
-              />
-            ) : (
-              <ErrorMsg
-                message="Unable to generate spectrogram."
-                onClose={() => setErrorMessage("")}
-              />
-            ))}
-        </Box>
+                {activePlot === "spectrogram" &&
+                  (specLoading ? (
+                    <LoadingMessage
+                      msg="Generating spectrogram..."
+                      icon="pulsar"
+                    />
+                  ) : specImage ? (
+                    <Image
+                      src={`data:image/png;base64,${specImage}`}
+                      alt="Spectrogram"
+                      rounded="md"
+                      animation="fade-in 300ms ease-out"
+                    />
+                  ) : (
+                    <ErrorMsg message="Unable to generate spectrogram." />
+                  ))}
+              </>
+            )}
+          </Box>
+        </VStack>
       </Stack>
       <ActionBar.Root open={soniClicked}>
         <ActionBar.Positioner zIndex={1400}>

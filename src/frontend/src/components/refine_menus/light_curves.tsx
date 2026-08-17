@@ -261,7 +261,12 @@ export default function LightCurves({
                       );
                       setCropValues(([_, end]) => [clamped, end]);
                       setStartText(String(clamped));
-                      fetchPreviewPlot([clamped, cropValues[1]], sigma, nanStrategy, fillWith);
+                      fetchPreviewPlot(
+                        [clamped, cropValues[1]],
+                        sigma,
+                        nanStrategy,
+                        fillWith,
+                      );
                     } else {
                       setStartText(String(cropValues[0]));
                     }
@@ -288,7 +293,12 @@ export default function LightCurves({
                       );
                       setCropValues(([start, _]) => [start, clamped]);
                       setEndText(String(clamped));
-                      fetchPreviewPlot([cropValues[0], clamped], sigma, nanStrategy, fillWith);
+                      fetchPreviewPlot(
+                        [cropValues[0], clamped],
+                        sigma,
+                        nanStrategy,
+                        fillWith,
+                      );
                     } else {
                       setEndText(String(cropValues[1]));
                     }
@@ -317,7 +327,12 @@ export default function LightCurves({
                   setCropValues(e.value as [number, number]);
                   setStartText(String(e.value[0]));
                   setEndText(String(e.value[1]));
-                  debouncedFetchPreviewPlot(e.value as [number, number], sigma, nanStrategy, fillWith);
+                  debouncedFetchPreviewPlot(
+                    e.value as [number, number],
+                    sigma,
+                    nanStrategy,
+                    fillWith,
+                  );
                 }}
               >
                 <Slider.Control>
@@ -344,7 +359,12 @@ export default function LightCurves({
               animation="fade-in 300ms ease-out"
               onValueChange={(e) => {
                 setSigma(e.value[0]);
-                debouncedFetchPreviewPlot(cropValues, e.value[0], nanStrategy, fillWith);
+                debouncedFetchPreviewPlot(
+                  cropValues,
+                  e.value[0],
+                  nanStrategy,
+                  fillWith,
+                );
               }}
             >
               <HStack>
@@ -383,7 +403,7 @@ export default function LightCurves({
         </VStack>
       </Box>
 
-      <Box flex="1">
+      <Box flex="1" borderWidth="1px" borderRadius="md">
         {imageLoading ? (
           <LoadingMessage msg="" icon="pulsar" />
         ) : imageSrc ? (

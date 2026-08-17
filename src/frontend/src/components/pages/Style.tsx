@@ -103,7 +103,8 @@ export default function Style() {
       styleDescription
     })
 
-    navigate("/planetaria/data-composer");
+    const state: NavigationState = { ...location.state }
+    navigate("/planetaria/data-composer", { state });
   }
 
   const onFileSelect = async (file: File) => {
