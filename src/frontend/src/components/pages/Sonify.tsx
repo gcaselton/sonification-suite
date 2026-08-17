@@ -407,6 +407,8 @@ export default function Sonify() {
     ORIENTATIONS.map(({ value, label }) => [value, label]),
   );
 
+  console.log(summaries)
+
   // Place on dome option should only display for these sonification types
   const placeOnDomeModes = ["light_curves", "constellations"];
 
@@ -705,25 +707,26 @@ export default function Sonify() {
                               <Text>{row.value}</Text>
                               {row.downloadable && row.fileRef && (
                                 <>
-                                  {row.label === "Style" && styleName === 'Custom' && (
-                                    <Tooltip content="Open in the custom style menu">
-                                      <Button
-                                        size="sm"
-                                        colorPalette="teal"
-                                        variant="subtle"
-                                        onClick={() =>
-                                          handleEditStyle(row.fileRef!)
-                                        }
-                                      >
-                                        <LuSettings /> Edit
-                                      </Button>
-                                    </Tooltip>
-                                  )}
+                                  {row.label === "Style" &&
+                                    row.value === "Custom" && (
+                                      <Tooltip content="Open in the custom style menu">
+                                        <Button
+                                          size="sm"
+                                          colorPalette="teal"
+                                          variant="subtle"
+                                          onClick={() =>
+                                            handleEditStyle(row.fileRef!)
+                                          }
+                                        >
+                                          <LuSettings /> Edit
+                                        </Button>
+                                      </Tooltip>
+                                    )}
                                   <Tooltip
-                                    content={`Download ${row.label.toLowerCase()}`}
+                                    content={`Download ${row.label.toLowerCase()}${row.label === "Style" ? " file" : ""}`}
                                   >
                                     <IconButton
-                                      aria-label={`Download ${row.label.toLowerCase()}`}
+                                      aria-label={`Download ${row.label.toLowerCase()}${row.label === "Style" ? " file" : ""}`}
                                       asChild
                                       colorPalette="teal"
                                       size="sm"
