@@ -5,6 +5,7 @@ import { BackButton } from "../ui/Buttons";
 import PageContainer from "../ui/PageContainer";
 import ErrorMsg from "../ui/ErrorMsg";
 import { InfoTip } from "../ui/ToggleTip";
+import SpecHelper from "../ui/SpecHelper";
 import {
   apiUrl,
   lightCurvesAPI,
@@ -40,6 +41,7 @@ import {
   HStack,
   VisuallyHidden,
   Menu,
+  Link,
 } from "@chakra-ui/react";
 import {
   LuAudioLines,
@@ -48,6 +50,7 @@ import {
   LuDatabase,
   LuSettings2,
   LuSettings,
+  LuCircleHelp,
 } from "react-icons/lu";
 import { plotData } from "../../utils/plot";
 import ObserverSetup, {
@@ -57,6 +60,7 @@ import ObserverSetup, {
 import { Tooltip } from "../ui/Tooltip";
 import { Layer } from "../../types/layers";
 import { NavigationState } from "../../types/navigation";
+import AudioDownloadButton from "../ui/AudioDownloadButton";
 
 export default function Sonify() {
   const navigate = useNavigate();
@@ -110,6 +114,7 @@ export default function Sonify() {
   // States to control spectrogram
   const [specLoading, setSpecLoading] = useState(false);
   const [specImage, setSpecImage] = useState<string | null>(null);
+  const [specHelperOpen, setSpecHelperOpen] = useState(false);
 
   // States to control data plot
   const [imageSrc, setImageSrc] = useState<string | null>(null);
@@ -420,6 +425,7 @@ export default function Sonify() {
               : ""}
         </div>
       </VisuallyHidden>
+      <SpecHelper open={specHelperOpen} onOpenChange={setSpecHelperOpen} />
       <Heading as="h1">Step 4: Sonify</Heading>
       <br />
       <Text textStyle="lg">
@@ -678,7 +684,7 @@ export default function Sonify() {
                 <Text flexShrink="0">Summary</Text>
                 <Separator w="100%" size="lg" />
               </HStack>
-              {summaries.map((summary) => (
+              {summaries.map((summary, i) => (
                 <DataList.Root
                   key={summary.layerLabel}
                   orientation="horizontal"
@@ -688,9 +694,21 @@ export default function Sonify() {
                   pb={4}
                 >
                   {layers && (
-                    <Heading textAlign="center" size="sm" color="teal">
-                      {summary.layerLabel}
-                    </Heading>
+                    <HStack justify="center" gap={4}>
+                      <Heading textAlign="center" size="md" color="teal">
+                        {summary.layerLabel}
+                      </Heading>
+                      {soniReady && (
+                        <AudioDownloadButton
+                          audioFileRef={`session:layer_${i + 1}.wav`}
+                          audioKey={audioKey}
+                          audioSystem={generatedAudioSystem}
+                          variant='subtle'
+                          size='sm'
+                          iconOnly
+                        />
+                      )}
+                    </HStack>
                   )}
                   {summary.rows.map(
                     (row) =>
@@ -871,6 +889,19 @@ export default function Sonify() {
               </>
             )}
           </Box>
+          {activePlot === "spectrogram" && specImage && (
+            <Link
+              onClick={() => setSpecHelperOpen(true)}
+              color="teal.500"
+              cursor="pointer"
+              whiteSpace="nowrap"
+            >
+              <HStack gap="2">
+                <LuCircleHelp />
+                <Text>What am I looking at?</Text>
+              </HStack>
+            </Link>
+          )}
         </VStack>
       </Stack>
       <ActionBar.Root open={soniClicked}>
@@ -896,49 +927,16 @@ export default function Sonify() {
                   style={{ flex: 1 }}
                 />
 
-                <Menu.Root>
-                  <Menu.Trigger asChild>
-                    <Button colorPalette="teal">
-                      <LuDownload />
-                      Download
-                    </Button>
-                  </Menu.Trigger>
-                  <Portal>
-                    <Menu.Positioner>
-                      <Menu.Content>
-                        {downloadFormats.map((format) => {
-                          const mp3Disabled =
-                            format === "mp3" &&
-                            !["stereo", "mono"].includes(generatedAudioSystem);
-                          return (
-                            <Tooltip
-                              disabled={!mp3Disabled}
-                              content="MP3 is only available for Mono or Stereo audio."
-                            >
-                              <Menu.Item
-                                value={format}
-                                asChild
-                                disabled={mp3Disabled}
-                              >
-                                <a
-                                  href={`${coreAPI}/audio/${audioFilename}?format=${format}&v=${audioKey}`}
-                                >
-                                  Download {format.toUpperCase()}
-                                </a>
-                              </Menu.Item>
-                            </Tooltip>
-                          );
-                        })}
-                      </Menu.Content>
-                    </Menu.Positioner>
-                  </Portal>
-                </Menu.Root>
+                <AudioDownloadButton
+                  audioFileRef={audioFilename}
+                  audioKey={audioKey}
+                  audioSystem={generatedAudioSystem}
+                />
               </HStack>
             )}
           </ActionBar.Content>
         </ActionBar.Positioner>
       </ActionBar.Root>
-      <Box h="4em" />
     </PageContainer>
   );
 }

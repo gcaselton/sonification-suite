@@ -79,13 +79,16 @@ def get_uploads_dir_size(uploads_dir: str) -> int:
 @router.post('/generate-sonification/')
 def generate_sonification(request: SonificationRequest):
     
+    session_id = session_id_var.get()
+    session_dir = TMP_DIR / session_id
+    
     if int(request.duration) > 300:
         raise HTTPException(status_code=400, detail="Sonification too long, maximum length = 5 minutes.")
     
     # Initialise AudioFigure
     fig = AudioFigure(system=request.system)
     
-    for layer in request.layers:
+    for i, layer in enumerate(request.layers, start=1):
         
         # Resolve data and style file names to actual paths in backend
         data_filepath = resolve_file(layer.data_ref)
@@ -130,7 +133,16 @@ def generate_sonification(request: SonificationRequest):
             kwargs['style'] = str(write_YAML_file(style_dict))
             
             # Add layer to the AudioFigure and sonify
-            fig.sonify(df, **kwargs)
+            soni = fig.sonify(df, **kwargs)
+            
+            n_layers = len(request.layers)
+            
+            if n_layers > 1:
+                # Save individual layers so users can download them if desired
+                soni.render(progress=False)
+                layer_name = f'layer_{i}.wav'
+                layer_path = session_dir / layer_name
+                soni.save(layer_path)
             
         except HTTPException:
             raise
@@ -142,20 +154,52 @@ def generate_sonification(request: SonificationRequest):
                 detail=f"{type(e).__name__}: {str(e)}"
             )
         
-    session_id = session_id_var.get()
-
     if not session_id:
         raise HTTPException(status_code=400, detail="No session cookie found")
     
-    category = FORMATTED_FILENAMES[request.category]
-    ext = '.wav'
-    filename = f'{request.data_name} {category}{ext}'
-    filepath = TMP_DIR / session_id / filename
+    filename = 'audio_figure.wav'
+    filepath = session_dir / filename
     fig.save(filepath)
+    
+    cleanup_old_layers(session_id, n_layers)
 
     file_ref = f'session:{filename}'
 
     return {'file_ref': file_ref, 'alt_az': alt_az}
+
+
+def cleanup_old_layers(session_id: str, n_layers: int):
+    """ 
+    Delete any audio files in the user's session directory where the suffix is greater
+    than the number of layers. All layers get written to disk as e.g. layer_1.wav, layer_2.wav etc.
+    This function removes any lingering 'layer_6.wav' from a previous sonification if the 
+    next sonification generated only has 5 layers, for example.
+
+    Args:
+        session_id (str): The user's session ID
+        n_layers (int): The number of layers in the most recently generated sonification.
+    """
+    
+    session_dir = TMP_DIR / session_id
+    if not session_dir.exists():
+        return
+    
+    for file in session_dir.iterdir():
+        if not file.is_file():
+            continue
+        if file.suffix.lower() not in {".wav", ".mp3"}:
+            continue
+
+        match = re.search(r"_(\d+)$", file.stem)
+
+        if not match:
+            continue
+
+        layer_number = int(match.group(1))
+
+        if layer_number > n_layers or file.suffix.lower() == ".mp3":
+            # Delete the file, and delete any lingering mp3s from previous downloads
+            file.unlink()
     
     
 @router.post('/generate-spectrogram/')
