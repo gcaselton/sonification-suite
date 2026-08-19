@@ -61,7 +61,9 @@ We also thank the following individuals for their contributions during the testi
 - Colin Hutcheson - Birmingham Museums
 - Alex Shepard - INTUITIVE Planetarium, at the US Space & Rocket Center, Home of Space Camp
 - Matthew Nutter - Sherwood Observatory
-- Claire Greenwell
+- Claire Greenwell - Durham University
+- Peter Hayton - Newcastle University
+- Daniel Hayton - Newcastle University
 
 ## Data and Archives
 
@@ -98,3 +100,5 @@ Matplotlib
 Pandas
 SciPy
 NumPy
+
+## Images
