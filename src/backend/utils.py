@@ -6,6 +6,8 @@ from pychord import Chord
 from pychord.utils import transpose_note
 from strauss.notes import notesharps
 import os, yaml, uuid, random
+import pandas as pd
+import numpy as np
 
 def resolve_file(file_ref: str) -> Path:
     """
@@ -104,6 +106,32 @@ def write_sound_to_style(style_filepath: Path | str, write_to_yml=True):
     style_dict['generator'][sound_key] = str(sound_path)
     
     return write_YAML_file(style_dict) if write_to_yml else style_dict
+
+def is_time_series(df: pd.DataFrame, style: dict):
+    
+    # Find time axis in the style
+    for i, mapping in enumerate(style['map']):
+        if mapping['output'] in ['time', 'time_evo']:
+            # Time axis is either specified with a column name or index in the 'input' field,
+            # Or if no input is specified, use the order of the mappings
+            time_axis = mapping.get('input', i)
+            break
+        
+    if isinstance(time_axis, int):
+        time_column = df.iloc[:, time_axis]
+    else:
+        time_column = df[time_axis]
+
+    diffs = time_column.diff().dropna()
+    
+    evenly_spaced = np.allclose(
+        diffs,
+        diffs.iloc[0],
+        rtol=1e-5,
+        atol=1e-8,
+    )
+    
+    return evenly_spaced
 
 
 def update_style(style_filepath: Path | str, observer: dict | None = None):

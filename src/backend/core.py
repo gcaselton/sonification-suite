@@ -3,7 +3,7 @@ from fastapi.responses import FileResponse
 from pathlib import Path
 from paths import TMP_DIR, STYLE_FILES_DIR, SUGGESTED_DATA_DIR, SYNTHS_DIR, SAMPLES_DIR
 from context import session_id_var
-from utils import resolve_file, is_number, read_YAML_file, write_YAML_file, is_synth, write_sound_to_style
+from utils import resolve_file, is_number, read_YAML_file, write_YAML_file, is_synth, write_sound_to_style, is_time_series
 from generator_mods import GENERATOR_MODS
 from request_models import DataRequest, CustomStyleSettings, LayerRequest, SonificationRequest, SoundInfo
 import logging, yaml, os, uuid, traceback, base64, gc, re, csv, shutil
@@ -106,7 +106,11 @@ def generate_sonification(request: SonificationRequest):
                     df = pd.read_csv(str(data_filepath), header=0)
             else:
                     raise ValueError(f'{data_type} file type not suitable for sonification, please use .csv.')
-            
+                
+            # Determine whether it is safe to downsample the data
+            if is_time_series(df, style_dict):
+                style_dict['max_notes_per_sec'] = 15
+                
             # Build dict with keyword arguments for sonification function
             kwargs = {
                 'duration': request.duration
@@ -744,7 +748,6 @@ def format_style(settings: CustomStyleSettings):
     
     # Add additional fields for Events
     if sources == 'events':
-        style['max_notes_per_sec'] = 15
         style['pitch_binning'] = 'uniform'
     
     return style
