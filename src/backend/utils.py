@@ -117,17 +117,15 @@ def is_time_series(df: pd.DataFrame, style: dict):
             time_axis = mapping.get('input', i)
             break
         
-    if isinstance(time_axis, int):
-        time_column = df.iloc[:, time_axis]
-    else:
-        time_column = df[time_axis]
+    time_column = df.iloc[:, time_axis] if isinstance(time_axis, int) else df[time_axis]
 
-    diffs = time_column.diff().dropna()
-    
+    # Check spacing between first 10 rows
+    diffs = time_column.head(10).diff().dropna()
+
     evenly_spaced = np.allclose(
         diffs,
         diffs.iloc[0],
-        rtol=1e-5,
+        rtol=1e-3,
         atol=1e-8,
     )
     

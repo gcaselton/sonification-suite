@@ -14,7 +14,7 @@ interface AudioDownloadButtonProps {
   audioKey: string | number;
   audioSystem: string;
   variant?: ButtonProps["variant"];
-  size: ButtonProps["size"];
+  size?: ButtonProps["size"];
   iconOnly?: boolean;
 }
 
