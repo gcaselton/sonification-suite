@@ -5,6 +5,7 @@ import {
   Checkbox,
   Code,
   Collapsible,
+  CheckboxCard,
   Field,
   Heading,
   Image,
@@ -51,15 +52,23 @@ import { apiRequest } from "../../utils/requests";
 import { plotData } from "../../utils/plot";
 import { InfoTip } from "../ui/ToggleTip";
 import { Tooltip } from "../ui/Tooltip";
-import { LuSquareDashed, LuWaypoints, LuArrowRightLeft, LuArrowRight, LuGripVertical } from "react-icons/lu";
-import { Star, SortableStarItem } from "../ui/SortableStarItem";
+import {
+  LuSquareDashed,
+  LuWaypoints,
+  LuArrowRightLeft,
+  LuArrowRight,
+  LuGripVertical,
+} from "react-icons/lu";
+import { ConstellationPlot, Star } from "../ui/ConstellationPlot";
 
 export default function Constellations({
   dataRef,
   dataName,
   onApply,
 }: RefineMenuProps) {
-  const [imageSrc, setImageSrc] = useState<string | null>(null);
+  // const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [shapeImage, setShapeImage] = useState<string | null>(null);
+  const [boundariesImage, setBoundariesImage] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState(true);
 
   // number of stars
@@ -68,8 +77,9 @@ export default function Constellations({
   const [applyLoading, setApplyLoading] = useState(false);
   const [filterType, setFilterType] = useState<string | null>("shape");
 
+  const [customOrder, setCustomOrder] = useState(false);
   const [stars, setStars] = useState<Star[]>([]);
-  const [starsLoading, setStarsLoading] = useState(false);
+  const [lines, setLines] = useState<[number, number][]>([]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -78,27 +88,50 @@ export default function Constellations({
     }),
   );
 
+  // initial plot
+  useEffect(() => {
+    const fetchPlots = async () => {
+      setImageLoading(true);
+
+      const endpoint = `${constellationsAPI}/get-and-plot/`;
+      const shapePayload = {
+        name: dataName,
+        by_shape: true,
+        n_stars: nStars,
+      };
+      const boundaryPayload = {
+        name: dataName,
+        by_shape: false,
+        n_stars: nStars,
+      };
+
+      // update image states
+      const shapeResult = await apiRequest(endpoint, shapePayload);
+      setShapeImage(`data:image/svg+xml;base64,${shapeResult.image}`);
+      const boundaryResult = await apiRequest(endpoint, boundaryPayload);
+      setBoundariesImage(`data:image/svg+xml;base64,${boundaryResult.image}`);
+
+      setImageLoading(false);
+    };
+    fetchPlots()
+  }, []);
+
   // initial plot + star list, when switching to shape mode (or nStars changes for boundaries)
   useEffect(() => {
     const num = Number(nStars);
     if (isNaN(num) || num < 1 || num > 1000 || !Number.isInteger(num)) return;
 
     const handler = setTimeout(() => {
-      if (filterType === "shape") {
-        fetchStarsAndPlot();
-      } else {
-        plotConstellation();
-      }
+      plotConstellation()
     }, 300);
 
     return () => clearTimeout(handler);
-  }, [nStars, filterType]);
+  }, [nStars]);
 
-  const fetchStarsAndPlot = async () => {
+  const plotInteractive = async () => {
     setImageLoading(true);
-    setStarsLoading(true);
 
-    const endpoint = `${constellationsAPI}/get-and-plot/`;
+    const endpoint = `${constellationsAPI}/get-plotting-data/`;
     const payload = {
       name: dataName,
       by_shape: true,
@@ -107,40 +140,9 @@ export default function Constellations({
 
     const result = await apiRequest(endpoint, payload);
 
-    setImageSrc(`data:image/svg+xml;base64,${result.image}`);
-    setStars(result.stars); // [{ id, label }, ...] in default order
+    setLines(result.lines);
+    setStars(result.stars);
     setImageLoading(false);
-    setStarsLoading(false);
-  };
-
-  // re-plot (labels only) when the order changes via drag
-  const replotWithOrder = async (orderedStars: Star[]) => {
-    setImageLoading(true);
-
-    const endpoint = `${constellationsAPI}/get-and-plot/`;
-    const payload = {
-      name: dataName,
-      by_shape: true,
-      n_stars: nStars,
-      order: orderedStars.map((s) => s.id),
-    };
-
-    const result = await apiRequest(endpoint, payload);
-    setImageSrc(`data:image/svg+xml;base64,${result.image}`);
-    setImageLoading(false);
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    setStars((prev) => {
-      const oldIndex = prev.findIndex((s) => s.id === active.id);
-      const newIndex = prev.findIndex((s) => s.id === over.id);
-      const reordered = arrayMove(prev, oldIndex, newIndex);
-      replotWithOrder(reordered); // fire and forget; consider debouncing if drags are rapid
-      return reordered;
-    });
   };
 
   // request plot from backend
@@ -155,12 +157,21 @@ export default function Constellations({
     };
 
     const result = await apiRequest(endpoint, payload);
+    const image = `data:image/svg+xml;base64,${result.image}`;
 
     // update image state
-    setImageSrc(`data:image/svg+xml;base64,${result.image}`);
-
+    if (filterType === 'shape'){
+      setShapeImage(image)
+    }
+    else {
+      setBoundariesImage(image)
+    }
     setImageLoading(false);
   };
+
+  const handleFilterChange = (filter: string | null) => {
+    
+  }
 
   const handleClickApply = async () => {
     setApplyLoading(true);
@@ -249,37 +260,24 @@ export default function Constellations({
           <Collapsible.Root open={filterType === "shape"}>
             <Collapsible.Content>
               <Box pt={{ base: 6, md: 0 }} maxH="320px" overflowY="auto">
-                <Text fontWeight="medium" mb="2">
-                  Play order
-                </Text>
-                {starsLoading ? (
-                  <VStack gap="2" align="stretch">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Skeleton key={i} height="40px" borderRadius="md" />
-                    ))}
-                  </VStack>
-                ) : (
-                  <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEnd}
-                  >
-                    <SortableContext
-                      items={stars.map((s) => s.id)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      <VStack gap="2" align="stretch">
-                        {stars.map((star, i) => (
-                          <SortableStarItem
-                            key={star.id}
-                            star={star}
-                            order={i + 1}
-                          />
-                        ))}
-                      </VStack>
-                    </SortableContext>
-                  </DndContext>
-                )}
+                <CheckboxCard.Root
+                  colorPalette="teal"
+                  checked={customOrder}
+                  onCheckedChange={(e) => setCustomOrder(!!e.checked)}
+                >
+                  <CheckboxCard.HiddenInput />
+                  <CheckboxCard.Control>
+                    <CheckboxCard.Content>
+                      <CheckboxCard.Label>
+                        Choose custom order
+                      </CheckboxCard.Label>
+                      <CheckboxCard.Description>
+                        Select the stars in the order you want to hear them
+                      </CheckboxCard.Description>
+                    </CheckboxCard.Content>
+                    <CheckboxCard.Indicator />
+                  </CheckboxCard.Control>
+                </CheckboxCard.Root>
               </Box>
             </Collapsible.Content>
           </Collapsible.Root>
@@ -326,9 +324,11 @@ export default function Constellations({
       <Box flex="1" borderWidth="1px" borderRadius="md">
         {imageLoading ? (
           <LoadingMessage msg="" icon="pulsar" />
-        ) : imageSrc ? (
+        ) : customOrder ? (
+          <ConstellationPlot stars={stars} lines={lines} />
+        ) : shapeImage && boundariesImage ? (
           <Image
-            src={imageSrc}
+            src={filterType === 'shape' ? shapeImage! : boundariesImage!}
             alt={`A plot of the ${nStars} brightest stars in ${dataName}.`}
             animation="fade-in 300ms ease-out"
             rounded="md"

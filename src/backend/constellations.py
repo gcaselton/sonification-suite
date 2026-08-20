@@ -326,6 +326,34 @@ def plot_and_format_constellation(df: pd.DataFrame, lines: bool, order: list[int
 
     return img_base64
 
+@router.post("/get-plotting-data/")
+async def get_plotting_data(request: ConstellationRequest):
+    stars = get_constellation(
+        request.name,
+        by_shape=True
+    )
+    
+    const = get_const_from_df(stars.set_index("hip"))
+
+    lines = [
+        [int(hip_a), int(hip_b)]
+        for hip_a, hip_b in CONST_SHAPES[const]
+        if hip_a in stars["hip"].values
+        and hip_b in stars["hip"].values
+    ]
+    
+    stars = [
+        {
+            'id': int(row.hip),
+            'ra': float(row.ra_corrected),
+            'dec': float(row.dec),
+            'display_name': row.display_name 
+        }
+        for row in stars.itertuples()
+    ]
+    
+    return {'lines': lines, 'stars': stars}
+
 @router.post("/get-and-plot/")
 async def plot_constellation(request: ConstellationRequest):
 
