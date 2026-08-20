@@ -1,4 +1,6 @@
 site_name: Sonification Suite
+site_description: Documentation for the Sonification Suite
+site_url: !ENV READTHEDOCS_CANONICAL_URL
 
 nav:
   - Home: index.md

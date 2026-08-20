@@ -200,7 +200,7 @@ def get_const_from_df(df: pd.DataFrame):
 
 
 
-def plot_and_format_constellation(df: pd.DataFrame, lines: bool):
+def plot_and_format_constellation(df: pd.DataFrame, lines: bool, order: list[int] | None):
 
     if df.empty:
         raise ValueError("No stars available to plot.")
@@ -227,19 +227,19 @@ def plot_and_format_constellation(df: pd.DataFrame, lines: bool):
     # Normalise B-V to prevent the extremes of the colormap (dark colours on dark background)
     bv_norm = Normalize(vmin=-0.3, vmax=2.0, clip=True)
 
-    # Plot stars and colour based on colour index (B-V)
-    scatter = ax.scatter(
-        x,
-        y,
-        s=sizes,
-        c=df["colour"].values,
-        cmap='RdYlBu_r',
-        norm=bv_norm,
-        zorder=2
-    )
-
-    # Legend for colour index
-    fig.colorbar(scatter, ax=ax, label='B-V Colour Index')
+    if not order:
+        # Plot stars and colour based on colour index (B-V)
+        scatter = ax.scatter(
+            x,
+            y,
+            s=sizes,
+            c=df["colour"].values,
+            cmap='RdYlBu_r',
+            norm=bv_norm,
+            zorder=2
+        )
+        # Legend for colour index
+        fig.colorbar(scatter, ax=ax, label='B-V Colour Index')
 
     # Add connecting lines if plotting shapes
     if lines:
@@ -270,19 +270,43 @@ def plot_and_format_constellation(df: pd.DataFrame, lines: bool):
     
     # Invert x axis so RA increases left to right
     ax.invert_xaxis()
-
-    # Label stars with proper names if available (using unwrapped RA)
-    for i, row in df.iterrows():
-        if pd.notna(row['proper']) and str(row['proper']).strip() != "":
-            ax.text(
-                row['ra_corrected'] + offset_ra,
-                row['dec'] + offset_dec,
-                row['proper'],
-                color='white',
-                fontsize=8,
-                ha='left',
-                va='bottom'
-            )
+    
+    if order:
+        # Label stars with their order number
+        for i, hip_id in enumerate(order, start=1):
+            if hip_id in df.index:
+                ra = df.loc[hip_id, "ra_corrected"]
+                dec = df.loc[hip_id, "dec"]
+                ax.annotate(
+                    str(i),
+                    (ra, dec),
+                    xytext=(0, 0),
+                    textcoords="offset points",
+                    color="black",
+                    fontsize=8,
+                    ha="center",
+                    va="center",
+                    bbox=dict(
+                        boxstyle="circle,pad=0.2",
+                        facecolor="#ffffff",
+                        edgecolor="white",
+                        linewidth=1,
+                    ),
+                    zorder=4,
+                )
+    else:
+        # Label stars with proper names if available (using unwrapped RA)
+        for i, row in df.iterrows():
+            if pd.notna(row['proper']) and str(row['proper']).strip() != "":
+                ax.text(
+                    row['ra_corrected'] + offset_ra,
+                    row['dec'] + offset_dec,
+                    row['proper'],
+                    color='white',
+                    fontsize=8,
+                    ha='left',
+                    va='bottom'
+                )
 
     # Add labels
     ax.set_xlabel("RA")
@@ -302,7 +326,6 @@ def plot_and_format_constellation(df: pd.DataFrame, lines: bool):
 
     return img_base64
 
-
 @router.post("/get-and-plot/")
 async def plot_constellation(request: ConstellationRequest):
 
@@ -316,9 +339,18 @@ async def plot_constellation(request: ConstellationRequest):
     # Index by hipparcos ID
     filtered_stars = filtered_stars.set_index('hip')
 
-    image = plot_and_format_constellation(filtered_stars, lines=request.by_shape)
+    image = plot_and_format_constellation(filtered_stars, request.by_shape, request.order)
+    
+    response = {'image': image}
+    
+    if request.by_shape:
+        # Build Star items for drag-and-drop ordering
+        response['stars'] = [
+            {'id': star.Index, 'label': star.display_name}
+            for star in filtered_stars.itertuples()
+    ]
 
-    return {'image': image}
+    return response
 
 @router.post("/get-max-magnitude/")
 async def get_magnitude(request: ConstellationRequest):

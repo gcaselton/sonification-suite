@@ -48,6 +48,7 @@ class ConstellationRequest(BaseModel):
     name: str
     by_shape: bool = True
     n_stars: int
+    order: Optional[list[int]] = None
 
 class NStarsRequest(BaseModel):
     name: str

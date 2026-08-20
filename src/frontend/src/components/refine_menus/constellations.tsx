@@ -67,7 +67,6 @@ export default function Constellations({
 
   const [applyLoading, setApplyLoading] = useState(false);
   const [filterType, setFilterType] = useState<string | null>("shape");
-  const warning = "";
 
   const [stars, setStars] = useState<Star[]>([]);
   const [starsLoading, setStarsLoading] = useState(false);
