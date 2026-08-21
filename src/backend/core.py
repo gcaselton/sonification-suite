@@ -110,7 +110,17 @@ def generate_sonification(request: SonificationRequest):
             # Determine whether it is safe to downsample the data
             if is_time_series(df, style_dict):
                 style_dict['max_notes_per_sec'] = 15
-                
+            
+            # Overwrite any time mappings if using a custom star order for constellations
+            if request.category == 'constellations' and 'custom_order' in df.columns:
+                print('hi there')
+                for m in style_dict['map']:
+                    if m['output'] == 'time':
+                        m['input'] = 'custom_order'
+                        break
+            
+            print(style_dict)
+            
             # Build dict with keyword arguments for sonification function
             kwargs = {
                 'duration': request.duration
@@ -504,8 +514,7 @@ def get_inputs(file_ref: str, soni_type: str, user_upload: bool = False ):
             for col in df.columns
         ]
 
-    else:
- 
+    else:   
         inputs = [
             {
                 'name': INPUTS[soni_type][col]['name'], 
@@ -514,7 +523,16 @@ def get_inputs(file_ref: str, soni_type: str, user_upload: bool = False ):
             }
             for col in INPUTS[soni_type]
         ]
-    
+        
+        # Add custom order column if user has chosen a custom constellation order
+        if soni_type == 'constellations' and 'custom_order' in pd.read_csv(filepath).columns:
+            inputs.append(
+                    {
+                    'name': 'Custom Order',
+                    'desc': 'Your chosen star order - map this to Time',
+                    'key': 'custom_order'
+                    }
+            )
 
     return inputs
 

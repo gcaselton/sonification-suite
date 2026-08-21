@@ -200,7 +200,7 @@ def get_const_from_df(df: pd.DataFrame):
 
 
 
-def plot_and_format_constellation(df: pd.DataFrame, lines: bool, order: list[int] | None):
+def plot_and_format_constellation(df: pd.DataFrame, lines: bool):
 
     if df.empty:
         raise ValueError("No stars available to plot.")
@@ -227,19 +227,18 @@ def plot_and_format_constellation(df: pd.DataFrame, lines: bool, order: list[int
     # Normalise B-V to prevent the extremes of the colormap (dark colours on dark background)
     bv_norm = Normalize(vmin=-0.3, vmax=2.0, clip=True)
 
-    if not order:
-        # Plot stars and colour based on colour index (B-V)
-        scatter = ax.scatter(
-            x,
-            y,
-            s=sizes,
-            c=df["colour"].values,
-            cmap='RdYlBu_r',
-            norm=bv_norm,
-            zorder=2
-        )
-        # Legend for colour index
-        fig.colorbar(scatter, ax=ax, label='B-V Colour Index')
+    # Plot stars and colour based on colour index (B-V)
+    scatter = ax.scatter(
+        x,
+        y,
+        s=sizes,
+        c=df["colour"].values,
+        cmap='RdYlBu_r',
+        norm=bv_norm,
+        zorder=2
+    )
+    # Legend for colour index
+    fig.colorbar(scatter, ax=ax, label='B-V Colour Index')
 
     # Add connecting lines if plotting shapes
     if lines:
@@ -270,43 +269,19 @@ def plot_and_format_constellation(df: pd.DataFrame, lines: bool, order: list[int
     
     # Invert x axis so RA increases left to right
     ax.invert_xaxis()
-    
-    if order:
-        # Label stars with their order number
-        for i, hip_id in enumerate(order, start=1):
-            if hip_id in df.index:
-                ra = df.loc[hip_id, "ra_corrected"]
-                dec = df.loc[hip_id, "dec"]
-                ax.annotate(
-                    str(i),
-                    (ra, dec),
-                    xytext=(0, 0),
-                    textcoords="offset points",
-                    color="black",
-                    fontsize=8,
-                    ha="center",
-                    va="center",
-                    bbox=dict(
-                        boxstyle="circle,pad=0.2",
-                        facecolor="#ffffff",
-                        edgecolor="white",
-                        linewidth=1,
-                    ),
-                    zorder=4,
-                )
-    else:
-        # Label stars with proper names if available (using unwrapped RA)
-        for i, row in df.iterrows():
-            if pd.notna(row['proper']) and str(row['proper']).strip() != "":
-                ax.text(
-                    row['ra_corrected'] + offset_ra,
-                    row['dec'] + offset_dec,
-                    row['proper'],
-                    color='white',
-                    fontsize=8,
-                    ha='left',
-                    va='bottom'
-                )
+   
+    # Label stars with proper names if available (using unwrapped RA)
+    for i, row in df.iterrows():
+        if pd.notna(row['proper']) and str(row['proper']).strip() != "":
+            ax.text(
+                row['ra_corrected'] + offset_ra,
+                row['dec'] + offset_dec,
+                row['proper'],
+                color='white',
+                fontsize=8,
+                ha='left',
+                va='bottom'
+            )
 
     # Add labels
     ax.set_xlabel("RA")
@@ -367,18 +342,9 @@ async def plot_constellation(request: ConstellationRequest):
     # Index by hipparcos ID
     filtered_stars = filtered_stars.set_index('hip')
 
-    image = plot_and_format_constellation(filtered_stars, request.by_shape, request.order)
-    
-    response = {'image': image}
-    
-    if request.by_shape:
-        # Build Star items for drag-and-drop ordering
-        response['stars'] = [
-            {'id': star.Index, 'label': star.display_name}
-            for star in filtered_stars.itertuples()
-    ]
+    image = plot_and_format_constellation(filtered_stars, request.by_shape)
 
-    return response
+    return {'image': image}
 
 @router.post("/get-max-magnitude/")
 async def get_magnitude(request: ConstellationRequest):
@@ -435,7 +401,19 @@ async def save_refined(request: ConstellationRequest):
     stars = get_constellation(request.name, request.by_shape)
     refined_stars = stars.head(request.n_stars).copy() if not request.by_shape else stars
     
-    # compute 'center' of constellation for spatial audio
+    if request.by_shape:
+        if request.order:
+            print(request.order)
+            # Add the custom order column
+            order_map = {hip: i for i, hip in enumerate(request.order, start=1)}
+            refined_stars["custom_order"] = refined_stars["hip"].map(order_map)
+        else:
+            refined_stars = stars
+    else:
+        # Constellation boundary
+        refined_stars = stars.head(request.n_stars).copy()
+    
+    # compute 'center' of constellation for optional 'Place on Dome' feature
     ra, dec = constellation_center(refined_stars)
 
     # save to tmp directory (overwriting any existing dataset)

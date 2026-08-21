@@ -401,7 +401,7 @@ export default function CustomStyleMenu({
 
         // Auto-map time → time if both exist (case-insensitive)
         const timeInput = inputItems.find(
-          (i) => i.value.toLowerCase() === "time",
+          (i) => (i.value.toLowerCase() === "time" || i.value === 'Custom Order'),
         );
 
         const timeOutput = outputItems.find(
@@ -447,18 +447,6 @@ export default function CustomStyleMenu({
 
     fetchSounds();
   }, []);
-
-  // Check if time is mapped (necessary to save custom style)
-  useEffect(() => {
-    const hasTimeMapping = parameterMappings.some(
-      (m) =>
-        m.input.toLowerCase() === "time" && m.output.toLowerCase() === "time",
-    );
-
-    if (!hasTimeMapping) {
-      setAutoMappedTime(false);
-    }
-  }, [parameterMappings]);
 
   const addMapping = () => {
     setParameterMappings((prev) => [
@@ -802,7 +790,7 @@ export default function CustomStyleMenu({
                     <Alert.Indicator />
                     <Alert.Content>
                       <Alert.Description>
-                        Automatically mapped Time to Time
+                        Automatically mapped Time
                       </Alert.Description>
                     </Alert.Content>
                     <CloseButton

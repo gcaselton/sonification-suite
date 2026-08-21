@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import PageContainer from "../ui/PageContainer";
-import { Box, Heading, Text, Highlight } from "@chakra-ui/react";
+import { Box, Heading, Text, Highlight, Separator } from "@chakra-ui/react";
 import { useComposer } from "../../context/ComposerContext";
 import { NavigationState } from "../../types/navigation";
 
@@ -30,14 +30,12 @@ export default function Refine() {
           {`Optionally, edit the ${dataName} dataset`}
         </Highlight>
       </Text>
-      <br />
-      <br />
+      <br/>
       <Suspense>
         <Menu
           dataRef={sourceDataRef}
           dataName={dataName}
           onApply={(newRef: string, newRa?: number, newDec?: number) => {
-
             // Go back to Data Composer with new data ref if we came from there
             if (soniType === "data_composer") {
               composer.updateLayer(layerID, {
