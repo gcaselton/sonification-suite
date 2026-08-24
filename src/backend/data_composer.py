@@ -6,6 +6,7 @@ from request_models import DataRequest, ComposerRefineRequest as RefineRequest, 
 from utils import resolve_file, read_YAML_file
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_numeric_dtype
 import uuid
 
 
@@ -67,23 +68,24 @@ def refine_data(request: RefineRequest):
     # Reduce df to only selected columns
     df = df[request.columns]
     
+    # Ignore non-numeric columns
+    numeric_cols = df.select_dtypes(include="number").columns
+    
     # Apply selected NaN strategy
     if request.nan_strategy == "fill":
-        for col in df.columns:
-            if df[col].isna().any():
+        for col in numeric_cols:
+            if df[col].isna().any() and not df[col].isna().all():
                 fill_value = fill_methods[request.fill_with](df[col])
                 df[col] = df[col].fillna(fill_value)       
-
     elif request.nan_strategy == "interpolate":
-        df = df.interpolate().bfill().ffill()
-
+        df[numeric_cols] = df[numeric_cols].interpolate().bfill().ffill()
     elif request.nan_strategy == "silence":
         pass # Allow STRAUSS to mask NaNs with silence
     
     # Slice to requested row range
     start, end = request.row_range
     df = df.iloc[start:end]
-    
+        
     return df
     
 
@@ -92,8 +94,11 @@ def preview_refined(request: RefineRequest):
     
     df = refine_data(request)
     preview = df.head(request.n_preview_rows)
-    
-    return {"rows": preview.to_dict(orient="records")}
+        
+    return {
+        # Convert NaNs to Python None to allow JSON encoding in response
+        "rows": preview.astype(object).where(pd.notna(preview), None).to_dict(orient="records")
+    }
     
     
 @router.post('/save-refined/')
@@ -123,7 +128,7 @@ def validate_layer(request: LayerRequest):
     response = {
         'missing_columns': [], # Columns mentioned in style but absent from data
         'nan_columns': [], # Columns mentioned in style that have NaNs in the data
-        'insufficient_columns': None # More mappings requested than there are columns in data
+        'insufficient_columns': None, # More mappings requested than there are columns in data
     }
 
     for i, mapping in enumerate(style["map"]):
@@ -149,11 +154,10 @@ def validate_layer(request: LayerRequest):
                 }
                 break
                 
-            elif df.iloc[:, i].isna().any():
+            elif df.iloc[:, i].isna().any() or not is_numeric_dtype(df.iloc[:, i]):
+                # Flag non-numeric columns as well as NaNs.
+                # We don't do this above where input is specified because non-numeric columns are
+                # greyed out in the custom style menu, so can't be written into a style file.
                 response['nan_columns'].append(df.columns[i])
 
     return response
-
-
-# @router.post('/plot/')
-# def plot(request: )

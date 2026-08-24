@@ -211,8 +211,9 @@ export default function DataComposer({
             <HStack mb="2">
               <Text fontWeight="bold">Columns</Text>
               <InfoTip
-                content="Choose which columns to keep. You can leave columns unmapped later in Style, but hiding them here keeps things tidy."
+                content="Choose which columns to keep. If using a suggested style, columns will be mapped in the order they appear here."
                 positioning={{ placement: "right" }}
+                contentProps={{ maxW: "300px" }}
               />
             </HStack>
             {columnsLoading ? (
@@ -306,7 +307,7 @@ export default function DataComposer({
         </VStack>
       </Box>
 
-      <Box flex="1" width="100%">
+      <Box flex="1" width="100%" maxWidth={{ base: "100%", md: "50%" }}>
         <VStack align="stretch" gap="3">
           {!columnsLoading && (
             <Text fontSize="sm" color="fg.muted">

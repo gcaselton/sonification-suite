@@ -1,22 +1,23 @@
 from fastapi import APIRouter, HTTPException
-
-from pydantic import BaseModel
-from pathlib import Path
 from paths import TMP_DIR, STYLE_FILES_DIR, SUGGESTED_DATA_DIR
 from context import session_id_var
-import logging, base64, uuid, gc
+import logging, base64, gc
 
-import numpy as np
 import pandas as pd
+
 import matplotlib
 matplotlib.use("Agg") 
+matplotlib.rcParams['font.family'] = 'monospace' # This sets the monospace font globally for all plots!
+
 from matplotlib.figure import Figure
 from matplotlib.colors import Normalize
+from matplotlib.patches import FancyArrowPatch
 from io import BytesIO
 from utils import resolve_file
 from request_models import DataRequest, NStarsRequest, ConstellationRequest
 from skyfield.data import stellarium
 from skyfield.api import load
+
 router = APIRouter(prefix='/constellations')
 
 CATEGORY = 'constellations'
@@ -269,7 +270,29 @@ def plot_and_format_constellation(df: pd.DataFrame, lines: bool):
     
     # Invert x axis so RA increases left to right
     ax.invert_xaxis()
-   
+    
+    # Indicate direction of increasing RA
+    arrow = FancyArrowPatch(
+        (0.85, 0.03),
+        (0.15, 0.03),
+        transform=ax.transAxes,
+        arrowstyle="->",
+        mutation_scale=15,
+        linewidth=1.5,
+        color="white",
+    )
+    ax.add_patch(arrow)
+
+    ax.text(
+        0.5,
+        0.04,
+        "(RA increases)",
+        transform=ax.transAxes,
+        color="white",
+        ha="center",
+        va="bottom",
+    )
+    
     # Label stars with proper names if available (using unwrapped RA)
     for i, row in df.iterrows():
         if pd.notna(row['proper']) and str(row['proper']).strip() != "":
@@ -284,8 +307,8 @@ def plot_and_format_constellation(df: pd.DataFrame, lines: bool):
             )
 
     # Add labels
-    ax.set_xlabel("RA")
-    ax.set_ylabel("Dec")
+    ax.set_xlabel("Right Ascension (RA)")
+    ax.set_ylabel("Declination (Dec)")
     ax.set_xticks([])
     ax.set_yticks([])
 

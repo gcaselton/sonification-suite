@@ -54,7 +54,7 @@ export default function ValidationBadges({
             <Text as="span" fontWeight="bold">
               {layer.nanColumns.join(", ")}
             </Text>{" "}
-            contain{nNan > 1 ? "" : "s"} missing data. Use{" "}
+            contain{nNan > 1 ? "" : "s"} non-numeric or missing data. Use{" "}
             <Text as="span" fontWeight="bold">
               Refine
             </Text>{" "}

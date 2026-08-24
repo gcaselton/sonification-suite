@@ -40,6 +40,7 @@ import {
 } from "@chakra-ui/react";
 import { apiRequest } from "../../utils/requests";
 import { groupBy } from "es-toolkit";
+import { itemsEqual } from "@dnd-kit/sortable/dist/utilities";
 
 interface CustomStyleMenuProps {
   open: boolean;
@@ -89,6 +90,7 @@ export default function CustomStyleMenu({
     name: string;
     desc: string;
     key: string;
+    numeric?: boolean;
   }
 
   // Determine whether we need to force 'Discrete' data mode or not
@@ -158,6 +160,7 @@ export default function CustomStyleMenu({
       value: string;
       description: string;
       key: string;
+      numeric: boolean | undefined;
     }>({
       items: [],
     }),
@@ -387,6 +390,7 @@ export default function CustomStyleMenu({
           value: input.name,
           description: input.desc,
           key: input.key,
+          numeric: input.numeric,
         }));
 
         const outputItems = outputs.map((output) => ({
@@ -396,12 +400,18 @@ export default function CustomStyleMenu({
           key: output.key,
         }));
 
-        setInputOptions(createListCollection({ items: inputItems }));
+        // Disable inputs with non-numeric data
+        setInputOptions(
+          createListCollection({
+            items: inputItems,
+            isItemDisabled: (item) => item.numeric === false,
+          }),
+        );
         setOutputOptions(createListCollection({ items: outputItems }));
 
         // Auto-map time → time if both exist (case-insensitive)
         const timeInput = inputItems.find(
-          (i) => (i.value.toLowerCase() === "time" || i.value === 'Custom Order'),
+          (i) => i.value.toLowerCase() === "time" || i.value === "Custom Order",
         );
 
         const timeOutput = outputItems.find(
@@ -842,27 +852,46 @@ export default function CustomStyleMenu({
                                 </Select.Control>
                                 <Select.Positioner>
                                   <Select.Content maxH="200px" overflowY="auto">
-                                    {inputOptions.items.map((option) => (
-                                      <Select.Item
-                                        item={option}
-                                        key={option.value}
-                                      >
-                                        <Stack>
-                                          <Select.ItemText>
-                                            {option.label}
-                                          </Select.ItemText>
-                                          {option.description && (
-                                            <Span
-                                              color="fg.muted"
-                                              textStyle="xs"
-                                            >
-                                              {option.description}
-                                            </Span>
-                                          )}
-                                        </Stack>
-                                        <Select.ItemIndicator />
-                                      </Select.Item>
-                                    ))}
+                                    {inputOptions.items.map((option) => {
+                                      const disabled = option.numeric === false;
+                                      const item = (
+                                        <Select.Item
+                                          item={option}
+                                          key={option.value}
+                                          _disabled={{
+                                            opacity: 0.4,
+                                            cursor: "not-allowed",
+                                            pointerEvents: "auto",
+                                          }}
+                                        >
+                                          <Stack>
+                                            <Select.ItemText>
+                                              {option.label}
+                                            </Select.ItemText>
+                                            {option.description && (
+                                              <Span
+                                                color="fg.muted"
+                                                textStyle="xs"
+                                              >
+                                                {option.description}
+                                              </Span>
+                                            )}
+                                          </Stack>
+                                          <Select.ItemIndicator />
+                                        </Select.Item>
+                                      );
+
+                                      return (
+                                        <Tooltip
+                                          openDelay={200}
+                                          key={option.value}
+                                          disabled={!disabled}
+                                          content="This column contains non-numeric data"
+                                        >
+                                          {item}
+                                        </Tooltip>
+                                      );
+                                    })}
                                   </Select.Content>
                                 </Select.Positioner>
                               </Select.Root>

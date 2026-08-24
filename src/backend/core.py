@@ -504,12 +504,16 @@ def get_inputs(file_ref: str, soni_type: str, user_upload: bool = False ):
     
     if filepath.endswith('.csv') and user_upload:
         df = pd.read_csv(filepath, header=0)
+        
+        # Find which columns contain numeric data
+        numeric_cols = df.select_dtypes(include="number").columns
             
         inputs = [
             {
                 'name': col, 
                 'desc': '',
-                'key': col
+                'key': col,
+                'numeric': col in numeric_cols
             }
             for col in df.columns
         ]
@@ -519,7 +523,8 @@ def get_inputs(file_ref: str, soni_type: str, user_upload: bool = False ):
             {
                 'name': INPUTS[soni_type][col]['name'], 
                 'desc': INPUTS[soni_type][col]['desc'],
-                'key': col
+                'key': col,
+                'numeric': True
             }
             for col in INPUTS[soni_type]
         ]
@@ -530,7 +535,8 @@ def get_inputs(file_ref: str, soni_type: str, user_upload: bool = False ):
                     {
                     'name': 'Custom Order',
                     'desc': 'Your chosen star order - map this to Time',
-                    'key': 'custom_order'
+                    'key': 'custom_order',
+                    'numeric': True
                     }
             )
 

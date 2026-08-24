@@ -30,12 +30,12 @@ const nanStrategyCards = [
   {
     value: "interpolate" as const,
     title: "Interpolate",
-    description: "Estimate missing numeric values from surrounding rows.",
+    description: "Estimate missing numbers from surrounding rows.",
   },
   {
     value: "fill" as const,
     title: "Fill with...",
-    description: "Replace missing values with a value from the data.",
+    description: "Replace missing numbers with a value from the same column.",
   },
 ];
 

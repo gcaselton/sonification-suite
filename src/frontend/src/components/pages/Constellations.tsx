@@ -249,7 +249,7 @@ export default function Constellations() {
                 overflow="hidden"
               >
                 <img
-                  src={getImage(suggestion.name, ".png")}
+                  src={getImage(suggestion.name, ".svg")}
                   alt={`Outline of the ${suggestion.name} constellation, overlaid with its associated mythological figure.`}
                   style={{
                     width: "100%",
