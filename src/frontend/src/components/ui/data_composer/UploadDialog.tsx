@@ -10,9 +10,9 @@ import {
   Portal,
   VStack,
 } from "@chakra-ui/react";
-import ErrorMsg from "../ui/ErrorMsg";
-import { composerAPI, coreAPI } from "../../apiConfig";
-import { apiRequest } from "../../utils/requests";
+import ErrorMsg from "../ErrorMsg";
+import { composerAPI, coreAPI } from "../../../apiConfig";
+import { apiRequest } from "../../../utils/requests";
 
 interface UploadDialogProps {
   open: boolean;
@@ -143,7 +143,7 @@ export default function UploadDialog({
                   <Field.Root>
                     <Field.Label fontWeight="semibold">Upload file</Field.Label>
 
-                    <Input asChild>
+                    <Input asChild cursor="button">
                       <FileUpload.Trigger>
                         <FileUpload.FileText />
                       </FileUpload.Trigger>

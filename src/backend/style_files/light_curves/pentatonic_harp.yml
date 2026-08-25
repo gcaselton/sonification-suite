@@ -1,6 +1,6 @@
-name: "Japanese Harp"
+name: "Pentatonic Harp"
 
-description: "Harp plays a Japanese hirajoshi scale, where pitch increases with brightness."
+description: "Harp plays an E Minor Pentatonic scale, where pitch increases with brightness."
 
 generator:
   type: "sampler"
@@ -18,8 +18,8 @@ map:
   - input: "flux"
     output: "pitch"
 
-notes: ["C3", "D3", "D#3", "G3", "G#3", "C4", "D4", "D#4", "G4", "G#4", "C5"]
+notes: ["E2", "G2", "A2", "B2", "D3", "E3", "G3", "A3", "B3", "D4", "E4"]
 
 sources: "events"
-max_notes_per_sec: 15
+max_notes_per_sec: 10
 pitch_binning: "uniform"

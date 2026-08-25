@@ -1,0 +1,23 @@
+name: "Pentatonic Harp"
+
+description: "Harp plays an E Minor Pentatonic scale, where pitch increases with brightness."
+
+generator:
+  type: "sampler"
+  sample: "Harp"
+  preset: "staccato"
+  mods:
+    volume_envelope:
+      use: "on"
+      R: 1
+
+map:
+  - output: "time"
+
+  - output: "pitch"
+
+notes: ["E2", "G2", "A2", "B2", "D3", "E3", "G3", "A3", "B3", "D4", "E4"]
+
+sources: "events"
+max_notes_per_sec: 10
+pitch_binning: "uniform"

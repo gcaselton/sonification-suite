@@ -15,7 +15,7 @@ export interface Layer {
 
   // Validation
   missingColumns: string[]; // columns mapped in Style but not present in data
-  nanColumns: string[]; // columns mapped in Style but contain NaNs
+  nonNumericColumns: string[]; // columns mapped in Style but contain non-numeric data
   insufficientColumns: InsufficientColumns | null;
 }
 

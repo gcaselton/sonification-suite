@@ -34,6 +34,7 @@ import { ClickableConstellation, Star } from "../ui/ClickableConstellation";
 export default function Constellations({
   dataRef,
   dataName,
+  isAsterism,
   onApply,
 }: RefineMenuProps) {
   // const [imageSrc, setImageSrc] = useState<string | null>(null);
@@ -55,8 +56,6 @@ export default function Constellations({
   const [stars, setStars] = useState<Star[]>([]);
   const [lines, setLines] = useState<[number, number][]>([]);
   const [interactiveLoading, setInteractiveLoading] = useState(false);
-
-  console.log(order)
 
   // Fetch stick figure on first load
   useEffect(() => {
@@ -158,31 +157,37 @@ export default function Constellations({
       description: `Sonify the stars that make up the classic shape of ${dataName}`,
       icon: <LuWaypoints />,
     },
-    {
-      value: "boundaries",
-      title: "Boundaries",
-      description: (
-        <>
-          Sonify the brightest stars within the{" "}
-          <Link
-            href="https://en.wikipedia.org/wiki/IAU_designated_constellations"
-            color="teal.500"
-            textDecoration="underline"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            constellation boundaries
-          </Link>
-        </>
-      ),
-      icon: <LuSquareDashed />,
-    },
+    ...(!isAsterism
+      ? [
+          {
+            value: "boundaries",
+            title: "Boundaries",
+            description: (
+              <>
+                Sonify the brightest stars within the{" "}
+                <Link
+                  href="https://en.wikipedia.org/wiki/IAU_designated_constellations"
+                  color="teal.500"
+                  textDecoration="underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  constellation boundaries
+                </Link>
+              </>
+            ),
+            icon: <LuSquareDashed />,
+          },
+        ]
+      : []),
   ];
 
   // Track whether or not to disable the continue button
   const invalidNStars =
     filterType === "boundaries" &&
-    (Number(nStars) > MAX_STARS || !Number.isInteger(Number(nStars)) || Number(nStars) < 0);
+    (Number(nStars) > MAX_STARS ||
+      !Number.isInteger(Number(nStars)) ||
+      Number(nStars) < 0);
   const unselectedStars =
     filterType === "shape" && customOrderOn && order.length !== stars.length;
 
@@ -293,70 +298,91 @@ export default function Constellations({
           </Box>
         </VStack>
       </Box>
+      <Box flex='1'>
+        <Box flex="1" borderWidth="1px" borderRadius="md">
+          {filterType === "shape" &&
+            (customOrderOn ? (
+              interactiveLoading ? (
+                <LoadingMessage msg="" icon="pulsar" />
+              ) : (
+                <>
+                  <Flex direction="column" gap={3} p={4}>
+                    <HStack minH="8" gap={5}>
+                      <Text fontSize="sm" color="fg.muted">
+                        {order.length === 0
+                          ? "Click the stars in the order you'd like them to play."
+                          : `${order.length} of ${stars.length} stars selected`}
+                      </Text>
+                      {order.length > 1 && (
+                        <Button
+                          animation="fade-in 300ms ease-out"
+                          colorPalette="teal"
+                          size="xs"
+                          variant="surface"
+                          onClick={() => setOrder([])}
+                        >
+                          <LuRotateCcw />
+                          Reset
+                        </Button>
+                      )}
+                    </HStack>
 
-      <Box flex="1" borderWidth="1px" borderRadius="md">
-        {filterType === "shape" &&
-          (customOrderOn ? (
-            interactiveLoading ? (
+                    <ClickableConstellation
+                      stars={stars}
+                      lines={lines}
+                      order={order}
+                      onOrderChange={setOrder}
+                    />
+                  </Flex>
+                </>
+              )
+            ) : shapeLoading ? (
               <LoadingMessage msg="" icon="pulsar" />
+            ) : shapeImage ? (
+              <Image
+                src={shapeImage}
+                alt={`The stick figure shape of ${dataName}.`}
+                animation="fade-in 300ms ease-out"
+                rounded="md"
+              />
             ) : (
-              <>
-                <Flex direction="column" gap={3} p={4}>
-                  <HStack minH="8" gap={5}>
-                    <Text fontSize="sm" color="fg.muted">
-                      {order.length === 0
-                        ? "Click the stars in the order you'd like them to play."
-                        : `${order.length} of ${stars.length} stars selected`}
-                    </Text>
-                    {order.length > 1 && (
-                      <Button
-                        animation="fade-in 300ms ease-out"
-                        colorPalette="teal"
-                        size="xs"
-                        variant="surface"
-                        onClick={() => setOrder([])}
-                      >
-                        <LuRotateCcw />
-                        Reset
-                      </Button>
-                    )}
-                  </HStack>
-
-                  <ClickableConstellation
-                    stars={stars}
-                    lines={lines}
-                    order={order}
-                    onOrderChange={setOrder}
-                  />
-                </Flex>
-              </>
-            )
-          ) : shapeLoading ? (
-            <LoadingMessage msg="" icon="pulsar" />
-          ) : shapeImage ? (
-            <Image
-              src={shapeImage}
-              alt={`The stick figure shape of ${dataName}.`}
-              animation="fade-in 300ms ease-out"
-              rounded="md"
-            />
-          ) : (
-            <ErrorMsg message="Unable to plot data." />
-          ))}
-        {filterType === "boundaries" &&
-          (boundariesLoading ? (
-            <LoadingMessage msg="" icon="pulsar" />
-          ) : boundariesImage ? (
-            <Image
-              src={boundariesImage}
-              alt={`A plot of the brightest ${nStars} in ${dataName}.`}
-              animation="fade-in 300ms ease-out"
-              rounded="md"
-            />
-          ) : (
-            <ErrorMsg message="Unable to plot data." />
-          ))}
+              <ErrorMsg message="Unable to plot data." />
+            ))}
+          {filterType === "boundaries" &&
+            (boundariesLoading ? (
+              <LoadingMessage msg="" icon="pulsar" />
+            ) : boundariesImage ? (
+              <Image
+                src={boundariesImage}
+                alt={`A plot of the brightest ${nStars} in ${dataName}.`}
+                animation="fade-in 300ms ease-out"
+                rounded="md"
+              />
+            ) : (
+              <ErrorMsg message="Unable to plot data." />
+            ))}
+        </Box>
+        <Text textAlign="center" fontSize="xs" color="fg.muted" mt={4}>
+          <Link
+            href="https://github.com/Stellarium/stellarium-skycultures/tree/master/western"
+            color="gray.400"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Western Skyculture
+          </Link>{" "}
+          lines by Stellarium's team{" "}
+          <Link
+            href="https://creativecommons.org/licenses/by-sa/4.0/"
+            color="gray.400"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            (CC BY-SA)
+          </Link>
+        </Text>
       </Box>
+
       <Box w="100%" display={{ base: "block", md: "none" }}>
         <Tooltip
           content={

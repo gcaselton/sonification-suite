@@ -40,7 +40,6 @@ import {
 } from "@chakra-ui/react";
 import { apiRequest } from "../../utils/requests";
 import { groupBy } from "es-toolkit";
-import { itemsEqual } from "@dnd-kit/sortable/dist/utilities";
 
 interface CustomStyleMenuProps {
   open: boolean;
@@ -813,6 +812,10 @@ export default function CustomStyleMenu({
                   </Alert.Root>
                 )}
                 {parameterMappings.map((mapping, index) => {
+                  const isCustomOrder =
+                    mapping.input === "Custom Order" &&
+                    mapping.output === "Time" &&
+                    autoMappedTime;
                   return (
                     <Card.Root key={index} variant="elevated" size="sm">
                       <Card.Body>
@@ -997,6 +1000,7 @@ export default function CustomStyleMenu({
 
                           {/* Options — collapsible */}
                           <Collapsible.Root
+                            hidden={isCustomOrder} // Disable options for custom constellation order
                             open={openOptions[index]}
                             onOpenChange={(e) => {
                               setOpenOptions((prev) => {

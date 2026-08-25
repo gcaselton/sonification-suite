@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import PageContainer from "../ui/PageContainer";
 import { getImage } from "../../utils/assets";
 import { Tooltip } from "../ui/Tooltip";
-import { LuExternalLink, LuFilm, LuLayers3 } from "react-icons/lu";
+import { LuExternalLink, LuFilm, LuLayers3, LuStar } from "react-icons/lu";
 
 import {
   Box,
@@ -24,6 +24,7 @@ import {
   IconButton,
   chakra,
   HStack,
+  Badge,
 } from "@chakra-ui/react";
 import { apiUrl } from "../../apiConfig";
 
@@ -43,7 +44,7 @@ const astroTypes: AstroType[] = [
   },
   {
     name: "Constellations",
-    description: "Hear the unique qualities of the 88 constellations.",
+    description: "Hear the unique qualities of famous star patterns.",
     page: "/planetaria/constellations",
   },
   {
@@ -162,6 +163,18 @@ export default function Planetaria() {
                     </Icon>
                   )}
                 </Card.Title>
+                {astroType.name === "Constellations" && (
+                  <Badge
+                    animation="scale-in 500ms ease-out"
+                    colorPalette="teal"
+                    width="fit-content"
+                    alignSelf="center"
+                    mb="2"
+                  >
+                    <LuStar />
+                    Now with Asterisms!
+                  </Badge>
+                )}
                 <Card.Description>{astroType.description}</Card.Description>
               </Card.Body>
             </Card.Root>

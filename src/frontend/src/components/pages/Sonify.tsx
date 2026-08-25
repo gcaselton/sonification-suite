@@ -5,7 +5,7 @@ import { BackButton } from "../ui/Buttons";
 import PageContainer from "../ui/PageContainer";
 import ErrorMsg from "../ui/ErrorMsg";
 import { InfoTip } from "../ui/ToggleTip";
-import SpecHelper from "../ui/SpecHelper";
+import SpecHelper from "../ui/sonify/SpecHelper";
 import {
   apiUrl,
   lightCurvesAPI,
@@ -21,11 +21,9 @@ import {
   createListCollection,
   Checkbox,
   CloseButton,
-  DataList,
   Dialog,
   Field,
   Heading,
-  IconButton,
   Image,
   Tag,
   Input,
@@ -40,16 +38,13 @@ import {
   Select,
   HStack,
   VisuallyHidden,
-  Menu,
   Link,
 } from "@chakra-ui/react";
 import {
   LuAudioLines,
-  LuDownload,
   LuLocateFixed,
   LuDatabase,
   LuSettings2,
-  LuSettings,
   LuCircleHelp,
 } from "react-icons/lu";
 import { plotData } from "../../utils/plot";
@@ -61,6 +56,7 @@ import { Tooltip } from "../ui/Tooltip";
 import { Layer } from "../../types/layers";
 import { NavigationState } from "../../types/navigation";
 import AudioDownloadButton from "../ui/AudioDownloadButton";
+import { SummaryList, SummaryData } from "../ui/sonify/SummaryComponents";
 
 export default function Sonify() {
   const navigate = useNavigate();
@@ -179,7 +175,7 @@ export default function Sonify() {
     }
 
     const fetchDataRange = async () => {
-      const url_range = `${lightCurvesAPI}/get-range/`;
+      const url_range = `${lightCurvesAPI}/get-range-and-nans/`;
       const data = {
         file_ref: dataRef,
       };
@@ -346,21 +342,7 @@ export default function Sonify() {
     return Number(coord).toFixed(2);
   }
 
-  const downloadFormats = ["wav", "mp3"];
-
-  interface SummaryRow {
-    label: string;
-    value: string;
-    downloadable: boolean;
-    fileRef?: string;
-  }
-
-  interface SummarySection {
-    layerLabel?: string;
-    rows: SummaryRow[];
-  }
-
-  const summaries: SummarySection[] = layers
+  const summaries: SummaryData[] = layers
     ? layers.map((l) => ({
         layerLabel: l.label,
         rows: [
@@ -678,113 +660,14 @@ export default function Sonify() {
               </Button>
 
               {/* Summary section */}
-
-              <HStack w="100%">
-                <Separator w="100%" size="lg" />
-                <Text flexShrink="0">Summary</Text>
-                <Separator w="100%" size="lg" />
-              </HStack>
-              {summaries.map((summary, i) => (
-                <DataList.Root
-                  key={summary.layerLabel}
-                  orientation="horizontal"
-                  divideY="1px"
-                  variant="bold"
-                  w="100%"
-                  pb={4}
-                >
-                  {layers && (
-                    <HStack justify="center" gap={4}>
-                      <Heading textAlign="center" size="md" color="teal">
-                        {summary.layerLabel}
-                      </Heading>
-                      {soniReady && (
-                        <AudioDownloadButton
-                          audioFileRef={`session:layer_${i + 1}.wav`}
-                          audioKey={audioKey}
-                          audioSystem={generatedAudioSystem}
-                          variant='subtle'
-                          size='sm'
-                          iconOnly
-                        />
-                      )}
-                    </HStack>
-                  )}
-                  {summary.rows.map(
-                    (row) =>
-                      row.value !== "" && (
-                        <DataList.Item key={row.label} pt="4" width="100%">
-                          <DataList.ItemLabel fontWeight="bold">
-                            {row.label}
-                          </DataList.ItemLabel>
-                          <DataList.ItemValue>
-                            <HStack justify="space-between" w="100%">
-                              <Text>{row.value}</Text>
-                              {row.downloadable && row.fileRef && (
-                                <>
-                                  {row.label === "Style" &&
-                                    row.value === "Custom" && (
-                                      <Tooltip content="Open in the custom style menu">
-                                        <Button
-                                          size="sm"
-                                          colorPalette="teal"
-                                          variant="subtle"
-                                          onClick={() =>
-                                            handleEditStyle(row.fileRef!)
-                                          }
-                                        >
-                                          <LuSettings /> Edit
-                                        </Button>
-                                      </Tooltip>
-                                    )}
-                                  <Tooltip
-                                    content={`Download ${row.label.toLowerCase()}${row.label === "Style" ? " file" : ""}`}
-                                  >
-                                    <IconButton
-                                      aria-label={`Download ${row.label.toLowerCase()}${row.label === "Style" ? " file" : ""}`}
-                                      asChild
-                                      colorPalette="teal"
-                                      size="sm"
-                                      variant="ghost"
-                                    >
-                                      <a
-                                        href={`${coreAPI}/download?file_ref=${encodeURIComponent(row.fileRef)}`}
-                                        style={{ color: "inherit" }}
-                                      >
-                                        <LuDownload />
-                                      </a>
-                                    </IconButton>
-                                  </Tooltip>
-                                </>
-                              )}
-                            </HStack>
-                          </DataList.ItemValue>
-                        </DataList.Item>
-                      ),
-                  )}
-
-                  {altAz && (
-                    <>
-                      <DataList.Item key="altitude" pt="4">
-                        <DataList.ItemLabel fontWeight="bold">
-                          Altitude
-                        </DataList.ItemLabel>
-                        <DataList.ItemValue>
-                          {formatCoord(altAz[0])}°
-                        </DataList.ItemValue>
-                      </DataList.Item>
-                      <DataList.Item key="azimuth" pt="4">
-                        <DataList.ItemLabel fontWeight="bold">
-                          Azimuth
-                        </DataList.ItemLabel>
-                        <DataList.ItemValue>
-                          {formatCoord(altAz[1])}°
-                        </DataList.ItemValue>
-                      </DataList.Item>
-                    </>
-                  )}
-                </DataList.Root>
-              ))}
+              <SummaryList
+                summaries={summaries}
+                layers={!!layers}
+                altAz={altAz}
+                formatCoord={formatCoord}
+                handleEditStyle={handleEditStyle}
+                audioSystem={{ audioKey, generatedAudioSystem, soniReady }}
+              />
             </VStack>
           </form>
           <br />

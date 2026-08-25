@@ -12,7 +12,7 @@ export default function ValidationBadges({
   validating,
 }: ValidationBadgesProps) {
   const nMissing = layer.missingColumns.length;
-  const nNan = layer.nanColumns.length;
+  const nNonNumeric = layer.nonNumericColumns.length;
 
   return (
     <Box
@@ -46,15 +46,17 @@ export default function ValidationBadges({
         </Badge>
       )}
 
-      {nNan > 0 && (
+      {nNonNumeric > 0 && (
         <Badge colorPalette="orange" gap="1">
           <LuTriangleAlert />
           <Text as="span">
-            Column{nNan > 1 ? "s" : ""}{" "}
+            Column{nNonNumeric > 1 ? "s" : ""}{" "}
             <Text as="span" fontWeight="bold">
-              {layer.nanColumns.join(", ")}
+              {layer.nonNumericColumns.join(", ")}
             </Text>{" "}
-            contain{nNan > 1 ? "" : "s"} non-numeric or missing data. Use{" "}
+            contain{nNonNumeric > 1 ? "" : "s"} non-numeric data. Please de-select{" "}
+            {nNonNumeric > 1 ? "these" : "this"} column
+            {nNonNumeric > 1 ? "s" : ""} in{" "}
             <Text as="span" fontWeight="bold">
               Refine
             </Text>{" "}

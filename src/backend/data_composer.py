@@ -127,7 +127,7 @@ def validate_layer(request: LayerRequest):
     
     response = {
         'missing_columns': [], # Columns mentioned in style but absent from data
-        'nan_columns': [], # Columns mentioned in style that have NaNs in the data
+        'non_numeric_columns': [], # Columns mentioned in style that contain non-numeric data
         'insufficient_columns': None, # More mappings requested than there are columns in data
     }
 
@@ -135,11 +135,8 @@ def validate_layer(request: LayerRequest):
         # Column names specified in style file
         if "input" in mapping:
             col = mapping["input"]
-
             if col not in df.columns and col not in response['missing_columns']:
                 response['missing_columns'].append(col)
-            elif df[col].isna().any() and col not in response['nan_columns']:
-                response['nan_columns'].append(col)
 
         else:
             # No column name in style means STRAUSS maps columns in order (likely a suggested style)
@@ -154,10 +151,10 @@ def validate_layer(request: LayerRequest):
                 }
                 break
                 
-            elif df.iloc[:, i].isna().any() or not is_numeric_dtype(df.iloc[:, i]):
-                # Flag non-numeric columns as well as NaNs.
+            elif not is_numeric_dtype(df.iloc[:, i]):
+                # Flag non-numeric columns.
                 # We don't do this above where input is specified because non-numeric columns are
                 # greyed out in the custom style menu, so can't be written into a style file.
-                response['nan_columns'].append(df.columns[i])
+                response['non_numeric_columns'].append(df.columns[i])
 
     return response

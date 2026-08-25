@@ -17,6 +17,7 @@ export default function Refine() {
   const dec = location.state.dec ?? null;
   const userUpload = location.state.userUpload ?? false;
   const layerID = location.state.layerID ?? null;
+  const isAsterism = location.state.isAsterism ?? false;
 
   // Dynamically import the menu component
   const Menu = lazy(() => import(`../refine_menus/${soniType}.tsx`));
@@ -35,6 +36,7 @@ export default function Refine() {
         <Menu
           dataRef={sourceDataRef}
           dataName={dataName}
+          isAsterism={isAsterism}
           onApply={(newRef: string, newRa?: number, newDec?: number) => {
             // Go back to Data Composer with new data ref if we came from there
             if (soniType === "data_composer") {

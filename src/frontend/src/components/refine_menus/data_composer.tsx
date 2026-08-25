@@ -45,7 +45,7 @@ export default function DataComposer({
   const [columnsError, setColumnsError] = useState("");
 
   // Missing-value handling
-  const [nanStrategy, setNanStrategy] = useState<NanStrategy>("fill");
+  const [nanStrategy, setNanStrategy] = useState<NanStrategy>("silence");
   const [fillWith, setFillWith] = useState("mean");
 
   // Row range

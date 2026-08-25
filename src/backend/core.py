@@ -109,18 +109,16 @@ def generate_sonification(request: SonificationRequest):
                 
             # Determine whether it is safe to downsample the data
             if is_time_series(df, style_dict):
-                style_dict['max_notes_per_sec'] = 15
+                 style_dict['max_notes_per_sec'] = style_dict.get('max_notes_per_sec') or 15
             
             # Overwrite any time mappings if using a custom star order for constellations
             if request.category == 'constellations' and 'custom_order' in df.columns:
-                print('hi there')
                 for m in style_dict['map']:
                     if m['output'] == 'time':
                         m['input'] = 'custom_order'
+                        m['function'] = None # Remove any previous invert functions
                         break
-            
-            print(style_dict)
-            
+                        
             # Build dict with keyword arguments for sonification function
             kwargs = {
                 'duration': request.duration

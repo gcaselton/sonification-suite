@@ -49,11 +49,11 @@ import {
   LuSettings,
 } from "react-icons/lu";
 import ErrorMsg from "../ui/ErrorMsg";
-import HelperDialog from "../data_composer/HelperDialog";
+import HelperDialog from "../ui/data_composer/HelperDialog";
 import { apiRequest } from "../../utils/requests";
-import UploadDialog from "../data_composer/UploadDialog";
-import DeleteDialog from "../data_composer/DeleteDialog";
-import ValidationBadges from "../data_composer/ValidationBadges";
+import UploadDialog from "../ui/data_composer/UploadDialog";
+import DeleteDialog from "../ui/data_composer/DeleteDialog";
+import ValidationBadges from "../ui/data_composer/ValidationBadges";
 import { NavigationState } from "../../types/navigation";
 
 function makeLayerId() {
@@ -72,7 +72,7 @@ function makeEmptyLayer(index: number): Layer {
     styleName: null,
     styleDescription: null,
     missingColumns: [],
-    nanColumns: [],
+    nonNumericColumns: [],
     insufficientColumns: null,
   };
 }
@@ -158,7 +158,7 @@ export default function DataComposer() {
       styleName: null,
       styleDescription: null,
       missingColumns: [],
-      nanColumns: [],
+      nonNumericColumns: [],
       insufficientColumns: null,
     });
 
@@ -287,7 +287,7 @@ export default function DataComposer() {
       // Add any missing/invalid columns to the layer (this renders a warning badge on that layer)
       updateLayer(layer.id, {
         missingColumns: result.missing_columns,
-        nanColumns: result.nan_columns,
+        nonNumericColumns: result.non_numeric_columns,
         insufficientColumns: result.insufficient_columns,
       });
     } finally {
@@ -309,7 +309,7 @@ export default function DataComposer() {
         l.styleName &&
         !isEditingData(l) &&
         l.missingColumns.length === 0 &&
-        l.nanColumns.length === 0 &&
+        l.nonNumericColumns.length === 0 &&
         !l.insufficientColumns,
     );
 
@@ -393,8 +393,6 @@ export default function DataComposer() {
               (l) => l.id !== layer.id && l.dataName,
             );
 
-            const nMissing = layer.missingColumns.length;
-            const nNan = layer.nanColumns.length;
             return (
               <Card.Root
                 key={layer.id}
@@ -655,7 +653,7 @@ export default function DataComposer() {
                 styleName: null,
                 styleDescription: null,
                 missingColumns: [],
-                nanColumns: [],
+                nonNumericColumns: [],
                 insufficientColumns: null,
               });
 

@@ -94,7 +94,7 @@ class MagRequest(BaseModel):
 class ComposerRefineRequest(BaseModel):
     file_ref: str
     columns: list[str]
-    nan_strategy: Literal["drop", "interpolate", "fill"]
+    nan_strategy: Literal["silence", "interpolate", "fill"]
     fill_with: Optional[str] = None
     row_range: list[int, int]
     n_preview_rows: Optional[int] = 20

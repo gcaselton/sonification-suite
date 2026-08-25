@@ -59,7 +59,7 @@ def _load_patterns(path):
     patterns = {}
 
     for entry in skyculture.get('constellations', []):
-        name = entry['common_name']['english']
+        name = entry['common_name']['native']
         patterns[name] = {
             'type': 'constellation',
             'iau': entry.get('iau'),
@@ -68,11 +68,17 @@ def _load_patterns(path):
 
     for entry in skyculture.get('asterisms', []):
         if entry.get('is_ray_helper', False): continue
+        
+        edges = _edges_from_lines(entry['lines'])
+        if not edges:
+            # Some asterisms don't have associated lines
+            continue
+        
         name = entry['common_name']['english']
         patterns[name] = {
             'type': 'asterism',
             'iau': None,
-            'edges': _edges_from_lines(entry['lines']),
+            'edges': edges
         }
 
     return patterns
@@ -91,6 +97,7 @@ def _get_pattern(pattern_name: str) -> dict:
 def get_constellation(pattern_name: str, by_shape: bool = True) -> pd.DataFrame:
 
     pattern = _get_pattern(pattern_name)
+    print(pattern)
 
     # load CSV
     df = pd.read_csv(HYG_DATA)
@@ -339,18 +346,23 @@ async def get_plotting_data(request: ConstellationRequest):
 
 @router.post("/get-and-plot/")
 async def plot_constellation(request: ConstellationRequest):
+    
+    try:
 
-    # select constellation or asterism
-    stars_sorted = get_constellation(request.name, by_shape=request.by_shape)
+        # select constellation or asterism
+        stars_sorted = get_constellation(request.name, by_shape=request.by_shape)
 
-    # choose top N stars if not filtering by shape
-    N = request.n_stars
-    filtered_stars = stars_sorted.head(N).copy() if not request.by_shape else stars_sorted
+        # choose top N stars if not filtering by shape
+        N = request.n_stars
+        filtered_stars = stars_sorted.head(N).copy() if not request.by_shape else stars_sorted
 
-    # Index by hipparcos ID
-    filtered_stars = filtered_stars.set_index('hip')
+        # Index by hipparcos ID
+        filtered_stars = filtered_stars.set_index('hip')
 
-    image = plot_and_format_constellation(filtered_stars, request.by_shape)
+        image = plot_and_format_constellation(filtered_stars, request.by_shape)
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     return {'image': image}
 

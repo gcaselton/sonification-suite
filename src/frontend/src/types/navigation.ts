@@ -14,4 +14,5 @@ export interface NavigationState {
     editStyle?: string;
     layers?: Layer[];
     layerID?: string;
+    isAsterism?: boolean;
   }

@@ -48,6 +48,7 @@ export default function LightCurves({
   const [hasNans, setHasNans] = useState(false);
   const [nanStrategy, setNanStrategy] = useState<NanStrategy>("interpolate");
   const [fillWith, setFillWith] = useState("min");
+  const [nanHandled, setNanHandled] = useState(false);
 
   const [applyLoading, setApplyLoading] = useState(false);
 
@@ -103,6 +104,7 @@ export default function LightCurves({
           // Make sure NaNs are handled in the plot from the start
           if (result.has_nans) {
             fetchPreviewPlot(r, sigma, nanStrategy, fillWith);
+            setNanHandled(true);
           }
         }
       } catch (error) {
@@ -197,7 +199,7 @@ export default function LightCurves({
     fetchPreviewPlot(cropValues, sigma, nanStrategy, value);
   };
 
-  const applyButtonOn =
+  const slidersMoved =
     cropValues && cropRange
       ? cropValues![0] == cropRange![0] &&
         cropValues![1] == cropRange![1] &&
@@ -205,6 +207,8 @@ export default function LightCurves({
         ? false
         : true
       : false;
+      
+  const applyButtonOn = slidersMoved || nanHandled
 
   // Apply button component separate to TSX as we use it in different places depending on viewport size
   const applyButton = !slidersLoading ? (
