@@ -43,7 +43,6 @@ export default function Breadcrumbs() {
     steps.push({
       label: currentDataType.label,
       path: currentDataType.path,
-      isMenu: true,
     });
   }
 
@@ -78,37 +77,6 @@ export default function Breadcrumbs() {
                     <Breadcrumb.CurrentLink color="teal.500">
                       {step.label}
                     </Breadcrumb.CurrentLink>
-                  ) : step.isMenu ? (
-                    <Menu.Root>
-                      <Menu.Trigger asChild>
-                        <HStack
-                          as="button"
-                          gap="1"
-                          opacity={0.7}
-                          _hover={{ opacity: 1 }}
-                          transition="opacity 0.15s ease"
-                          cursor="pointer"
-                        >
-                          <Text>{step.label}</Text>
-                          <LuChevronDown size={16} />
-                        </HStack>
-                      </Menu.Trigger>
-                      <Portal>
-                        <Menu.Positioner>
-                          <Menu.Content>
-                            {DATA_TYPES.map((dt) => (
-                              <Menu.Item
-                                key={dt.soniType}
-                                value={dt.soniType}
-                                onClick={() => navigate(dt.path)}
-                              >
-                                {dt.label}
-                              </Menu.Item>
-                            ))}
-                          </Menu.Content>
-                        </Menu.Positioner>
-                      </Portal>
-                    </Menu.Root>
                   ) : (
                     <Breadcrumb.Link
                       onClick={() =>

@@ -56,7 +56,8 @@ import { Tooltip } from "../ui/Tooltip";
 import { Layer } from "../../types/layers";
 import { NavigationState } from "../../types/navigation";
 import AudioDownloadButton from "../ui/AudioDownloadButton";
-import { SummaryList, SummaryData } from "../ui/sonify/SummaryComponents";
+import { SummaryList, LayerSummary } from "../ui/sonify/SummaryComponents";
+import { formatCoord, formatSoniType } from "../../utils/formatting";
 
 export default function Sonify() {
   const navigate = useNavigate();
@@ -331,61 +332,26 @@ export default function Sonify() {
     length === "0" ||
     length.includes("-");
 
-  function formatSoniType(value: string) {
-    return value
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (c) => c.toLowerCase())
-      .replace(/s$/, "");
-  }
+  
 
-  function formatCoord(coord: string) {
-    return Number(coord).toFixed(2);
-  }
+  
 
-  const summaries: SummaryData[] = layers
+  const summaries: LayerSummary[] = layers
     ? layers.map((l) => ({
         layerLabel: l.label,
-        rows: [
-          {
-            label: "Description",
-            value: l.styleDescription!,
-            downloadable: false,
-          },
-          {
-            label: "Data",
-            value: l.dataName!,
-            downloadable: true,
-            fileRef: l.dataRef!,
-          },
-          {
-            label: "Style",
-            value: l.styleName!,
-            downloadable: true,
-            fileRef: l.styleRef!,
-          },
-        ],
+        description: l.styleDescription!,
+        dataName: l.dataName!,
+        styleName: l.styleName!,
+        dataRef: l.dataRef,
+        styleRef: l.styleRef,
       }))
     : [
         {
-          rows: [
-            {
-              label: "Description",
-              value: styleDescription,
-              downloadable: false,
-            },
-            {
-              label: "Data",
-              value: dataName,
-              downloadable: true,
-              fileRef: dataRef,
-            },
-            {
-              label: "Style",
-              value: styleName,
-              downloadable: true,
-              fileRef: styleRef,
-            },
-          ],
+          description: styleDescription,
+          dataName: dataName,
+          styleName: styleName,
+          dataRef,
+          styleRef,
         },
       ];
 
@@ -662,11 +628,11 @@ export default function Sonify() {
               {/* Summary section */}
               <SummaryList
                 summaries={summaries}
-                layers={!!layers}
                 altAz={altAz}
-                formatCoord={formatCoord}
                 handleEditStyle={handleEditStyle}
-                audioSystem={{ audioKey, generatedAudioSystem, soniReady }}
+                soniReady={soniReady}
+                audioKey={audioKey}
+                audioSystem={generatedAudioSystem}
               />
             </VStack>
           </form>

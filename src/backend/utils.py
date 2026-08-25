@@ -110,12 +110,7 @@ def write_sound_to_style(style_filepath: Path | str, write_to_yml=True):
 def is_time_series(df: pd.DataFrame, style: dict):
     
     # Find time axis in the style
-    for i, mapping in enumerate(style['map']):
-        if mapping['output'] in ['time', 'time_evo']:
-            # Time axis is either specified with a column name or index in the 'input' field,
-            # Or if no input is specified, use the order of the mappings
-            time_axis = mapping.get('input', i)
-            break
+    time_axis = get_time_axis(style)
         
     time_column = df.iloc[:, time_axis] if isinstance(time_axis, int) else df[time_axis]
 
@@ -130,6 +125,13 @@ def is_time_series(df: pd.DataFrame, style: dict):
     )
     
     return evenly_spaced
+
+def get_time_axis(style):
+    for i, mapping in enumerate(style['map']):
+            if mapping['output'] in ['time', 'time_evo']:
+                # Time axis is either specified with a column name or index in the 'input' field,
+                # Or if no input is specified, use the order of the mappings
+                return mapping.get('input', i)
 
 
 def update_style(style_filepath: Path | str, observer: dict | None = None):

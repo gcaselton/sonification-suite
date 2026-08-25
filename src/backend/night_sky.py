@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 
 from pydantic import BaseModel
 from pathlib import Path
-from paths import TMP_DIR, STYLE_FILES_DIR, SUGGESTED_DATA_DIR
+from paths import TMP_DIR, HYG_DATA
 from context import session_id_var
 import logging, base64, uuid, gc
 
@@ -21,7 +21,6 @@ from skyfield.api import load, Star, wgs84
 from timezonefinder import TimezoneFinder
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
-from typing import Literal
 
 LOG = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
@@ -65,6 +64,14 @@ EPH = load('de421.bsp')
 EARTH = EPH['earth']
 
 LOG.info("Ephemeris loaded")
+
+HYG = pd.read_csv(HYG_DATA)
+HYG_NAMES = (
+    HYG
+    .dropna(subset=["hip"])
+    .drop_duplicates("hip")
+    .set_index("hip")["display_name"]
+)
 
 TF = TimezoneFinder()
 
@@ -142,6 +149,8 @@ def get_star_data(request: NightSkyRequest):
 
     # Build dataframe to save
     star_data = pd.DataFrame({
+        "display_name": HYG_NAMES.reindex(HIP_DF.index[above_horizon]).values,
+        "hip": HIP_DF.index[above_horizon],
         "azimuth_rad": az.radians[above_horizon],
         "altitude_deg": alt.degrees[above_horizon],
         "magnitude": HIP_DF['magnitude'][above_horizon].values + 1e-2*np.random.random(above_horizon.sum()),

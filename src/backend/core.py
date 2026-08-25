@@ -3,7 +3,7 @@ from fastapi.responses import FileResponse
 from pathlib import Path
 from paths import TMP_DIR, STYLE_FILES_DIR, SUGGESTED_DATA_DIR, SYNTHS_DIR, SAMPLES_DIR
 from context import session_id_var
-from utils import resolve_file, is_number, read_YAML_file, write_YAML_file, is_synth, write_sound_to_style, is_time_series
+from utils import resolve_file, get_time_axis, read_YAML_file, write_YAML_file, is_synth, write_sound_to_style, is_time_series
 from generator_mods import GENERATOR_MODS
 from request_models import DataRequest, CustomStyleSettings, LayerRequest, SonificationRequest, SoundInfo
 import logging, yaml, os, uuid, traceback, base64, gc, re, csv, shutil
@@ -141,11 +141,24 @@ def generate_sonification(request: SonificationRequest):
             else:
                 alt_az = None
             
+            if request.category in ['constellations', 'night_sky']:
+                # Get display names and sort them in the order the events will play
+                time_axis = get_time_axis(style_dict)
+                time_column = df.iloc[:, time_axis] if isinstance(time_axis, int) else df[time_axis]
+                df_sorted = df.copy().iloc[np.argsort(time_column.to_numpy())]
+                
             # Add style to kwargs
             kwargs['style'] = str(write_YAML_file(style_dict))
             
             # Add layer to the AudioFigure and sonify
             soni = fig.sonify(df, **kwargs)
+            
+            # Get the mapping table and write to CSV
+            table: pd.DataFrame = fig.get_table(name=f'sonification_{i}')
+            if df_sorted is not None:
+                table['display_name'] = df_sorted['display_name'].to_list()
+            table_path = session_dir / f'mapping_table_{i}.csv'
+            table.to_csv(table_path, index=False)
             
             n_layers = len(request.layers)
             
@@ -181,36 +194,44 @@ def generate_sonification(request: SonificationRequest):
 
 
 def cleanup_old_layers(session_id: str, n_layers: int):
-    """ 
-    Delete any audio files in the user's session directory where the suffix is greater
-    than the number of layers. All layers get written to disk as e.g. layer_1.wav, layer_2.wav etc.
-    This function removes any lingering 'layer_6.wav' from a previous sonification if the 
-    next sonification generated only has 5 layers, for example.
+    """
+    Delete old audio files and mapping table CSVs from the user's session
+    directory where the layer number is greater than the number of layers.
+
+    Audio files are named e.g. ``layer_1.wav`` and ``layer_2.mp3``.
+    Mapping tables are named e.g. ``mapping_table_1.csv``.
 
     Args:
         session_id (str): The user's session ID
-        n_layers (int): The number of layers in the most recently generated sonification.
+        n_layers (int): The number of layers in the most recently generated
+            sonification.
     """
-    
+
     session_dir = TMP_DIR / session_id
     if not session_dir.exists():
         return
-    
+
     for file in session_dir.iterdir():
         if not file.is_file():
             continue
-        if file.suffix.lower() not in {".wav", ".mp3"}:
-            continue
 
-        match = re.search(r"_(\d+)$", file.stem)
+        suffix = file.suffix.lower()
+
+        # Audio files: layer_1.wav / layer_1.mp3
+        # Mapping tables: mapping_table_layer_1.csv
+        if suffix in {".wav", ".mp3"}:
+            match = re.search(r"^layer_(\d+)$", file.stem)
+        elif suffix == ".csv":
+            match = re.search(r"^mapping_table_(\d+)$", file.stem)
+        else:
+            continue
 
         if not match:
             continue
 
         layer_number = int(match.group(1))
 
-        if layer_number > n_layers or file.suffix.lower() == ".mp3":
-            # Delete the file, and delete any lingering mp3s from previous downloads
+        if layer_number > n_layers or suffix == ".mp3":
             file.unlink()
     
     

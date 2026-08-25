@@ -233,7 +233,7 @@ export default function DataComposer() {
               styleName: null,
               styleDescription: null,
               missingColumns: [],
-              nanColumns: [],
+              nonNumericColumns: [],
               insufficientColumns: null,
             }
           : l,
@@ -271,7 +271,7 @@ export default function DataComposer() {
   }, [layers]);
 
   // Ensure the dataset and style are compatible
-  // That is, ensure the mapped columns in Style exist in the data and they don't contain NaNs
+  // That is, ensure the mapped columns in Style exist in the data and they don't contain non-numeric data
   const validateLayer = async (layer: Layer) => {
     setValidatingLayerIds((prev) => new Set(prev).add(layer.id));
 
