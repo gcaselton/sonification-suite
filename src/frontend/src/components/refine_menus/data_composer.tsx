@@ -13,6 +13,9 @@ import {
   VStack,
   HStack,
   Input,
+  Select,
+  Portal,
+  createListCollection,
 } from "@chakra-ui/react";
 import { RefineMenuProps } from "./RefineMenu";
 import { useState, useEffect, useMemo, useCallback } from "react";
@@ -33,8 +36,10 @@ interface ColumnInfo {
 export default function DataComposer({
   dataName,
   dataRef,
+  idColumn: prevIdColumn,
   onApply,
 }: RefineMenuProps) {
+
   // Column metadata, fetched once on mount
   const [columns, setColumns] = useState<ColumnInfo[]>([]);
   const [selectedColumns, setSelectedColumns] = useState<Set<string>>(
@@ -43,6 +48,8 @@ export default function DataComposer({
   const [totalRows, setTotalRows] = useState(0);
   const [columnsLoading, setColumnsLoading] = useState(true);
   const [columnsError, setColumnsError] = useState("");
+
+  const [idColumn, setIdColumn] = useState<string | null>(prevIdColumn ?? null);
 
   // Missing-value handling
   const [nanStrategy, setNanStrategy] = useState<NanStrategy>("silence");
@@ -102,6 +109,29 @@ export default function DataComposer({
       mounted = false;
     };
   }, [dataRef]);
+
+  // create the options for the Identifier column select
+  const idColumnOptions = useMemo(
+    () =>
+      createListCollection({
+        items: [
+          ...columns
+            .filter((col) => selectedColumns.has(col.name))
+            .map((col) => ({
+              label: col.name,
+              value: col.name,
+            })),
+        ],
+      }),
+    [columns, selectedColumns],
+  );
+
+  // Clear the Identifier column select if the chosen column gets deselected
+  useEffect(() => {
+    if (!columnsLoading && idColumn && !selectedColumns.has(idColumn)) {
+      setIdColumn(null);
+    }
+  }, [columnsLoading, selectedColumns, idColumn]);
 
   // ---- Fetch preview whenever refine settings change ----
   const fetchPreview = useCallback(
@@ -188,7 +218,7 @@ export default function DataComposer({
     try {
       const result = await apiRequest(endpoint, payload, "POST");
       if (onApply) {
-        onApply(result.file_ref);
+        onApply(result.file_ref, idColumn);
       }
     } catch (err) {
       console.error("Error saving refined data:", err);
@@ -251,6 +281,51 @@ export default function DataComposer({
               </VStack>
             )}
           </Box>
+
+          <Field.Root width="fit-content">
+            <Select.Root
+              collection={idColumnOptions}
+              value={idColumn ? [idColumn] : []}
+              onValueChange={(e) => {
+                setIdColumn(e.value[0] ?? null);
+              }}
+            >
+              <Select.HiddenSelect />
+              <HStack>
+                <Text fontWeight="bold">Identifier column</Text>
+                <InfoTip
+                  content="Choose a column that identifies each row in your data. After sonifying, this column will be included in the downloadable Mapping Table, helping you identify which data point is being mapped to each event. This is useful when each row represents a discrete object, such as a star. The column is not used for sonification."
+                  positioning={{ placement: "right" }}
+                  contentProps={{ maxW: "400px" }}
+                />
+              </HStack>
+
+              <Select.Control>
+                <Select.Trigger>
+                  <Select.ValueText placeholder="None" />
+                </Select.Trigger>
+                <Select.IndicatorGroup>
+                  <Select.Indicator />
+                </Select.IndicatorGroup>
+              </Select.Control>
+              <Portal>
+                <Select.Positioner>
+                  <Select.Content>
+                    {idColumnOptions.items.map((item, i) => (
+                      <Select.Item item={item} key={i}>
+                        {item.label}
+                        <Select.ItemIndicator />
+                      </Select.Item>
+                    ))}
+                  </Select.Content>
+                </Select.Positioner>
+              </Portal>
+            </Select.Root>
+            <Field.HelperText>
+              Optionally choose a column to identify each row in the Mapping
+              Table.
+            </Field.HelperText>
+          </Field.Root>
 
           {/* Missing values */}
           {!columnsLoading && hasNanColumns && (

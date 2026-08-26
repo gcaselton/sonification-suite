@@ -323,7 +323,7 @@ export default function ObserverSetup({
           <Field.Label>Orientation</Field.Label>
           <InfoTip
             portalled={false}
-            content="Which direction are you facing?"
+            content="Which direction are you/your dome facing?"
             positioning={{ placement: "right" }}
           />
         </HStack>

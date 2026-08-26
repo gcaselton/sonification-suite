@@ -17,6 +17,7 @@ export default function Refine() {
   const dec = location.state.dec ?? null;
   const userUpload = location.state.userUpload ?? false;
   const layerID = location.state.layerID ?? null;
+  const idColumn = location.state.idColumn ?? null;
   const isAsterism = location.state.isAsterism ?? false;
 
   // Dynamically import the menu component
@@ -37,11 +38,13 @@ export default function Refine() {
           dataRef={sourceDataRef}
           dataName={dataName}
           isAsterism={isAsterism}
-          onApply={(newRef: string, newRa?: number, newDec?: number) => {
+          idColumn={idColumn}
+          onApply={(newRef: string, idColumn?: string, newRa?: number, newDec?: number) => {
             // Go back to Data Composer with new data ref if we came from there
             if (soniType === "data_composer") {
               composer.updateLayer(layerID, {
                 dataRef: newRef,
+                idColumn: idColumn,
                 refined: true,
               });
 

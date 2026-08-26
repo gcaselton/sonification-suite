@@ -21,7 +21,12 @@ map:
     output: "time"
 
   - input: "relative_az"
-    output: "pan"
+    output: "azimuth"
+
+  - input: "altitude_deg"
+    input_range: [0, 180]
+    output: "polar"
+    function: "invert"
 
 notes: ["C#3", "F#3", "G#3", "D#4", "F4"]
 

@@ -7,6 +7,7 @@ export interface Layer {
   dataRef: string | null;
   reusedFromLayerId: string | null;
   refined: boolean;
+  idColumn: string | null;
 
   // Style info
   styleRef: string | null;

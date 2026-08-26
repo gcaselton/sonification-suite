@@ -68,6 +68,7 @@ function makeEmptyLayer(index: number): Layer {
     dataRef: null,
     reusedFromLayerId: null,
     refined: false,
+    idColumn: null,
     styleRef: null,
     styleName: null,
     styleDescription: null,
@@ -154,6 +155,7 @@ export default function DataComposer() {
       dataName: source.dataName,
       dataRef: source.dataRef,
       refined: source.refined,
+      idColumn: source.idColumn,
       styleRef: null,
       styleName: null,
       styleDescription: null,
@@ -229,6 +231,7 @@ export default function DataComposer() {
               dataName: null,
               dataRef: null,
               refined: false,
+              idColumn: null,
               styleRef: null,
               styleName: null,
               styleDescription: null,
@@ -318,6 +321,7 @@ export default function DataComposer() {
       dataName: layer.dataName,
       sourceDataRef: layer.dataRef,
       layerID: layer.id,
+      idColumn: layer.idColumn,
       soniType,
     };
     navigate("/planetaria/refine", { state });

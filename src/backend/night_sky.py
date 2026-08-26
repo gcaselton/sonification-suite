@@ -97,8 +97,8 @@ def handle_observer(observer: dict):
     # Corrected for STRAUSS, so 0 and 360 are behind, 90 degs is left, 180 straight ahead etc.
     azimuth = (az.degrees - np.degrees(direction) + 180) % 360
     
-    # Fixed polar values in STRAUSS go from 0 (nadir) to 180 (zenith)
-    polar = 90 + alt.degrees
+    # STRAUSS polar angle: 0° = zenith, 90° = horizon, 180° = nadir
+    polar = 90 - alt.degrees
     
     return {
         'STRAUSS_inputs': {

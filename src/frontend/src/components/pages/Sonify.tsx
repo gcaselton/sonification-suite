@@ -213,6 +213,7 @@ export default function Sonify() {
         layers.map((l) => ({
           data_ref: l.dataRef,
           style_ref: l.styleRef,
+          id_column: l.idColumn
         }))
       : [
           // Otherwise, send just the one wrapped in an array

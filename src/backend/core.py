@@ -85,6 +85,9 @@ def generate_sonification(request: SonificationRequest):
     if int(request.duration) > 300:
         raise HTTPException(status_code=400, detail="Sonification too long, maximum length = 5 minutes.")
     
+    # Check if we are sonifying star data (we use this to label the mapping table)
+    is_stars = request.category in ['constellations', 'night_sky']
+    
     # Initialise AudioFigure
     fig = AudioFigure(system=request.system)
     
@@ -109,7 +112,7 @@ def generate_sonification(request: SonificationRequest):
                 
             # Determine whether it is safe to downsample the data
             if is_time_series(df, style_dict):
-                 style_dict['max_notes_per_sec'] = style_dict.get('max_notes_per_sec') or 15
+                 style_dict['max_notes_per_sec'] = style_dict.get('max_notes_per_sec') or 10
             
             # Overwrite any time mappings if using a custom star order for constellations
             if request.category == 'constellations' and 'custom_order' in df.columns:
@@ -118,6 +121,9 @@ def generate_sonification(request: SonificationRequest):
                         m['input'] = 'custom_order'
                         m['function'] = None # Remove any previous invert functions
                         break
+                    
+            # Swap azimuth for pan if not using 5.1/7.1
+            
                         
             # Build dict with keyword arguments for sonification function
             kwargs = {
@@ -140,12 +146,16 @@ def generate_sonification(request: SonificationRequest):
                 alt_az = [position_info['display_values'][value] for value in ['altitude', 'azimuth']]
             else:
                 alt_az = None
-            
-            if request.category in ['constellations', 'night_sky']:
-                # Get display names and sort them in the order the events will play
-                time_axis = get_time_axis(style_dict)
-                time_column = df.iloc[:, time_axis] if isinstance(time_axis, int) else df[time_axis]
-                df_sorted = df.copy().iloc[np.argsort(time_column.to_numpy())]
+
+            # Add identifier column for mapping table if necessary
+            if request.category == 'data_composer' and layer.id_column:
+                source_names = df[layer.id_column].to_list()
+            elif is_stars:
+                source_names = df['display_name'].to_list()
+            else:
+                source_names = None
+                
+            kwargs['source_names'] = source_names
                 
             # Add style to kwargs
             kwargs['style'] = str(write_YAML_file(style_dict))
@@ -153,10 +163,23 @@ def generate_sonification(request: SonificationRequest):
             # Add layer to the AudioFigure and sonify
             soni = fig.sonify(df, **kwargs)
             
-            # Get the mapping table and write to CSV
+            # Get the mapping table
             table: pd.DataFrame = fig.get_table(name=f'sonification_{i}')
-            if df_sorted is not None:
-                table['display_name'] = df_sorted['display_name'].to_list()
+            
+            if is_stars:
+                table.rename(columns={'Source': 'Star Name'}, inplace=True)
+                # Add Hipparcos IDs
+                table['HIP'] = table['Star Name'].map(
+                    df.set_index('display_name')['hip']
+                )
+                
+                # Move the column next to display name
+                cols = list(table.columns)
+                cols.remove(('HIP', ''))
+                cols.insert(cols.index(('Star Name', '')) + 1, ('HIP', ''))
+                table = table[cols]
+            
+            # Save mapping table to CSV
             table_path = session_dir / f'mapping_table_{i}.csv'
             table.to_csv(table_path, index=False)
             
