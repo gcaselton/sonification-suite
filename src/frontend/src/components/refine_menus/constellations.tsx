@@ -15,7 +15,7 @@ import {
   HStack,
 } from "@chakra-ui/react";
 
-import { RefineMenuProps } from "./RefineMenu";
+import { RefineMenuProps } from "../../types/refine_menu";
 import { useState, useEffect } from "react";
 import LoadingMessage from "../ui/LoadingMessage";
 import ErrorMsg from "../ui/ErrorMsg";
@@ -145,7 +145,12 @@ export default function Constellations({
     const result = await apiRequest(endpoint, payload);
 
     if (onApply) {
-      onApply(result.file_ref, result.ra, result.dec);
+      onApply({
+        newRef: result.file_ref,
+        newRa: result.ra,
+        newDec: result.dec,
+        nStars: filterType === "boundaries" ? Number(nStars) : undefined
+      });
     }
     setApplyLoading(false);
   };
@@ -184,10 +189,13 @@ export default function Constellations({
 
   // Track whether or not to disable the continue button
   const invalidNStars =
-    filterType === "boundaries" &&
-    (Number(nStars) > MAX_STARS ||
-      !Number.isInteger(Number(nStars)) ||
-      Number(nStars) < 0);
+    (filterType === "boundaries" &&
+      (Number(nStars) > MAX_STARS ||
+        !Number.isInteger(Number(nStars)) ||
+        Number(nStars) < 1)) ||
+    nStars.length === 0;
+
+  // whether a user has clicked on all of the stars yet (if picking custom order)
   const unselectedStars =
     filterType === "shape" && customOrderOn && order.length !== stars.length;
 

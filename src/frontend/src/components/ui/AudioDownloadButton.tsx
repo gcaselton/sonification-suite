@@ -4,18 +4,18 @@ import {
   IconButton,
   Menu,
   Portal,
+  Toast,
 } from "@chakra-ui/react";
 import { LuDownload } from "react-icons/lu";
 import { coreAPI } from "../../apiConfig";
 import { Tooltip } from "./Tooltip";
 
+
 interface AudioDownloadButtonProps {
   audioFileRef: string;
   audioKey: string | number;
   audioSystem: string;
-  variant?: ButtonProps["variant"];
-  size?: ButtonProps["size"];
-  iconOnly?: boolean;
+  onDownload: () => void;
 }
 
 const downloadFormats = ["wav", "mp3"] as const;
@@ -24,23 +24,15 @@ export default function AudioDownloadButton({
   audioFileRef,
   audioKey,
   audioSystem,
-  variant = "solid",
-  size = "md",
-  iconOnly = false,
+  onDownload,
 }: AudioDownloadButtonProps) {
-  console.log(audioSystem);
   return (
+
     <Menu.Root>
       <Menu.Trigger asChild>
-        {iconOnly ? (
-          <IconButton colorPalette="teal" size={size} variant={variant}>
-            <LuDownload />
-          </IconButton>
-        ) : (
-          <Button colorPalette="teal" size={size} variant={variant}>
-            <LuDownload /> Download
-          </Button>
-        )}
+        <Button colorPalette="teal" >
+          <LuDownload /> Download
+        </Button>
       </Menu.Trigger>
 
       <Portal>
@@ -55,7 +47,7 @@ export default function AudioDownloadButton({
                   disabled={!mp3Disabled}
                   content="MP3 is only available for Mono or Stereo audio."
                 >
-                  <Menu.Item value={format} asChild disabled={mp3Disabled}>
+                  <Menu.Item value={format} asChild disabled={mp3Disabled} onClick={onDownload}>
                     <a
                       href={`${coreAPI}/audio/${audioFileRef}?format=${format}&v=${audioKey}`}
                     >

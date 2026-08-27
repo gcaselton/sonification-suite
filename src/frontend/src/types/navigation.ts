@@ -16,4 +16,5 @@ export interface NavigationState {
     layerID?: string;
     idColumn?: string | null;
     isAsterism?: boolean;
+    nStars?: number;
   }

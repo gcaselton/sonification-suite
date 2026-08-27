@@ -17,7 +17,7 @@ import {
   Portal,
   createListCollection,
 } from "@chakra-ui/react";
-import { RefineMenuProps } from "./RefineMenu";
+import { RefineMenuProps } from "../../types/refine_menu";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import LoadingMessage from "../ui/LoadingMessage";
 import ErrorMsg from "../ui/ErrorMsg";
@@ -39,7 +39,6 @@ export default function DataComposer({
   idColumn: prevIdColumn,
   onApply,
 }: RefineMenuProps) {
-
   // Column metadata, fetched once on mount
   const [columns, setColumns] = useState<ColumnInfo[]>([]);
   const [selectedColumns, setSelectedColumns] = useState<Set<string>>(
@@ -218,7 +217,7 @@ export default function DataComposer({
     try {
       const result = await apiRequest(endpoint, payload, "POST");
       if (onApply) {
-        onApply(result.file_ref, idColumn);
+        onApply({newRef: result.file_ref, idColumn: idColumn});
       }
     } catch (err) {
       console.error("Error saving refined data:", err);

@@ -36,7 +36,7 @@ export interface ObserverValues {
 }
 
 export interface ObserverSetupProps {
-  onSubmit: (values: ObserverValues) => Promise<void>;
+  onSubmit: (values: ObserverValues) => void | Promise<void>;
   onCancel?: () => void;
 }
 

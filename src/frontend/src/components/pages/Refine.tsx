@@ -4,12 +4,13 @@ import PageContainer from "../ui/PageContainer";
 import { Box, Heading, Text, Highlight, Separator } from "@chakra-ui/react";
 import { useComposer } from "../../context/ComposerContext";
 import { NavigationState } from "../../types/navigation";
+import { ApplyResult } from "../../types/refine_menu";
 
 export default function Refine() {
   const navigate = useNavigate();
   const location = useLocation();
   const composer = useComposer();
-  
+
   const dataName = location.state.dataName;
   const sourceDataRef = location.state.sourceDataRef;
   const soniType = location.state.soniType;
@@ -32,14 +33,16 @@ export default function Refine() {
           {`Optionally, edit the ${dataName} dataset`}
         </Highlight>
       </Text>
-      <br/>
+      <br />
       <Suspense>
         <Menu
           dataRef={sourceDataRef}
           dataName={dataName}
           isAsterism={isAsterism}
           idColumn={idColumn}
-          onApply={(newRef: string, idColumn?: string, newRa?: number, newDec?: number) => {
+          onApply={(result: ApplyResult) => {
+            const { newRef, idColumn, newRa, newDec, nStars } = result;
+
             // Go back to Data Composer with new data ref if we came from there
             if (soniType === "data_composer") {
               composer.updateLayer(layerID, {
@@ -59,6 +62,7 @@ export default function Refine() {
               ra: newRa ?? ra,
               dec: newDec ?? dec,
               userUpload,
+              nStars: nStars
             };
             navigate("/planetaria/style", { state });
           }}

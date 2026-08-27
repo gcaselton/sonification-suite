@@ -25,7 +25,7 @@ function App() {
   useEffect(() => {
     // runs once when the app first loads to get a session ID from backend
 
-    if (sessionInitialised.current) return; // to prevent 
+    if (sessionInitialised.current) return;
     sessionInitialised.current = true;
 
     async function setupSession() {
@@ -33,7 +33,6 @@ function App() {
         credentials: 'include'  // Tell browser to send/save cookies
       });
       const data = await response.json();
-      console.log('Session ID:', data.session_id);
       setSessionReady(true);
     }
     

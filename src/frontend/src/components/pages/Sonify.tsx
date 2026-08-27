@@ -35,6 +35,7 @@ import {
   Separator,
   VStack,
   Stack,
+  Toast,
   Select,
   HStack,
   VisuallyHidden,
@@ -58,6 +59,8 @@ import { NavigationState } from "../../types/navigation";
 import AudioDownloadButton from "../ui/AudioDownloadButton";
 import { SummaryList, LayerSummary } from "../ui/sonify/SummaryComponents";
 import { formatCoord, formatSoniType } from "../../utils/formatting";
+import { Toaster, toaster } from "../ui/toaster";
+
 
 export default function Sonify() {
   const navigate = useNavigate();
@@ -309,12 +312,12 @@ export default function Sonify() {
     }
   };
 
-  const handlePlaceOnDome = async (values: ObserverValues) => {
+  const handlePlaceOnDome = (values: ObserverValues) => {
     setObserverValues(values);
     setObserverOpen(false);
   };
 
-  const handleEditStyle = async (styleRef: string) => {
+  const handleEditStyle = (styleRef: string) => {
     const state: NavigationState = {
       ...location.state,
       dataRef,
@@ -327,6 +330,36 @@ export default function Sonify() {
     };
     navigate("/planetaria/style", { state });
   };
+
+  const askForFeedback = () => {
+    if (sessionStorage.getItem("feedbackShown")) {
+      return;
+    }
+
+    sessionStorage.setItem("feedbackShown", "true");
+
+    setTimeout(() => {
+      toaster.create({
+        title: "What do you think?",
+        description: (
+          <>
+            Let us know how you are using the Suite to help demonstrate success
+            and justify future funding.{" "}
+            <a
+              href="mailto:contactaudiouniverse@gmail.com"
+              style={{ textDecoration: "underline" }}
+            >
+              Drop us a line
+            </a>
+            .
+          </>
+        ),
+        type: "info",
+        duration: 15000,
+        closable: true,
+      });
+    }, 500);
+  }
 
   const invalidLength =
     Number(length) > defaults.max_length ||
@@ -374,7 +407,11 @@ export default function Sonify() {
               : ""}
         </div>
       </VisuallyHidden>
+
+      <Toaster />
+
       <SpecHelper open={specHelperOpen} onOpenChange={setSpecHelperOpen} />
+
       <Heading as="h1">Step 4: Sonify</Heading>
       <br />
       <Text textStyle="lg">
@@ -757,7 +794,7 @@ export default function Sonify() {
       <ActionBar.Root open={soniClicked}>
         <ActionBar.Positioner zIndex={1400}>
           <ActionBar.Content
-            w={{ base: "90%", md: loading ? "20%" : "50%" }}
+            w={{ base: "90%", md: loading ? "25%" : "50%" }}
             justifyContent="center"
           >
             {loading && <LoadingMessage msg="Generating Sonification..." />}
@@ -781,6 +818,7 @@ export default function Sonify() {
                   audioFileRef={audioFilename}
                   audioKey={audioKey}
                   audioSystem={generatedAudioSystem}
+                  onDownload={askForFeedback}
                 />
               </HStack>
             )}

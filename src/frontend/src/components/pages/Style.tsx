@@ -6,7 +6,7 @@ import CustomStyleMenu from "../utils/CustomStyleMenu";
 import { coreAPI } from "../../apiConfig";
 import { apiRequest } from "../../utils/requests";
 
-import { Box, Heading, Stack, Text } from "@chakra-ui/react";
+import { Box, Heading, Stack, Text, Dialog, Portal, Button, CloseButton } from "@chakra-ui/react";
 import { useComposer } from "../../context/ComposerContext";
 import { NavigationState } from "../../types/navigation";
 
@@ -24,9 +24,13 @@ export default function Style() {
   const userUpload = location.state.userUpload;
   const layerID = location.state.layerID ?? null;
   const editStyle = location.state.editStyle ?? null;
+  const nStars = location.state.nStars ?? 0;
 
   // Custom style menu open/close
   const [customOpen, setCustomOpen] = useState(false);
+
+  const [orchestraWarnOpen, setOrchestraWarnOpen] = useState(false);
+  const [pendingStyle, setPendingStyle] = useState<any | null>(null);
 
   // Suggested styles
   const [suggestedStyles, setSuggestedStyles] = useState<any[]>([]);
@@ -62,10 +66,27 @@ export default function Style() {
       return;
     }
 
+    if (soniType === 'constellations' && style.name === "Orchestra" && Number(nStars) >= 100) {
+      setPendingStyle(style);
+      setOrchestraWarnOpen(true);
+      return;
+    }
+
     if (soniType === "data_composer") {
       goToComposer(style.file_ref, style.name, style.description);
       return;
     }
+
+    goToSonify(style.file_ref, style.name, style.description);
+  };
+
+  const continueWithStyle = () => {
+    if (!pendingStyle) return;
+
+    const style = pendingStyle;
+
+    setOrchestraWarnOpen(false);
+    setPendingStyle(null);
 
     goToSonify(style.file_ref, style.name, style.description);
   };
@@ -170,7 +191,7 @@ export default function Style() {
               onClick={() => {
                 handleSelectStyle(style);
               }}
-              cursor={'disabled'}
+              cursor={"button"}
             >
               <StyleCard
                 title={style.name}
@@ -202,6 +223,47 @@ export default function Style() {
         onStyleCreated={handleStyleCreated}
         editStyle={editStyle}
       />
+      <Dialog.Root
+        open={orchestraWarnOpen}
+        onOpenChange={(e) => setOrchestraWarnOpen(e.open)}
+      >
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content colorPalette="teal">
+              <Dialog.Header>
+                <Dialog.Title>Large number of stars</Dialog.Title>
+              </Dialog.Header>
+
+              <Dialog.Body>
+                <Text>
+                  The Orchestra style uses long sustained notes, which may take several minutes to generate when
+                  using a large number of stars.
+                </Text>
+                <Text mt="3">Are you sure you want to continue?</Text>
+              </Dialog.Body>
+
+              <Dialog.Footer justifyContent="center">
+                <Dialog.ActionTrigger asChild>
+                  <Button variant="outline">Cancel</Button>
+                </Dialog.ActionTrigger>
+
+                <Button onClick={continueWithStyle}>Patience is a virtue</Button>
+              </Dialog.Footer>
+
+              <Dialog.CloseTrigger asChild>
+                <CloseButton
+                  variant="ghost"
+                  size="sm"
+                  position="absolute"
+                  top="2"
+                  right="2"
+                />
+              </Dialog.CloseTrigger>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
     </PageContainer>
   );
 }

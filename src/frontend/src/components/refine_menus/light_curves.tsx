@@ -11,7 +11,7 @@ import {
   Skeleton,
   HStack,
 } from "@chakra-ui/react";
-import { RefineMenuProps } from "./RefineMenu";
+import { RefineMenuProps } from "../../types/refine_menu";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import LoadingMessage from "../ui/LoadingMessage";
 import ErrorMsg from "../ui/ErrorMsg";
@@ -57,7 +57,6 @@ export default function LightCurves({
     let mounted = true;
     async function fetchPlot() {
       try {
-
         const base64 = await plotData(dataRef, "light_curves");
         if (!mounted) return;
         setImageSrc(`data:image/svg+xml;base64,${base64}`);
@@ -128,7 +127,12 @@ export default function LightCurves({
 
   // preview function
   const fetchPreviewPlot = useCallback(
-    async (range: [number, number] | null, sigmaVal: number, nanStrategy: NanStrategy, fillWith: string) => {
+    async (
+      range: [number, number] | null,
+      sigmaVal: number,
+      nanStrategy: NanStrategy,
+      fillWith: string,
+    ) => {
       if (!range) return;
       setImageLoading(true);
 
@@ -139,7 +143,7 @@ export default function LightCurves({
         new_range: range,
         sigma: sigmaVal,
         nan_strategy: nanStrategy,
-        fill_with: fillWith
+        fill_with: fillWith,
       };
 
       try {
@@ -183,7 +187,7 @@ export default function LightCurves({
     const result = await apiRequest(endpoint, payload);
 
     if (onApply) {
-      onApply(result.file_ref); // pass new filepath up to parent Refine.tsx
+      onApply({newRef: result.file_ref}); // pass new filepath up to parent Refine.tsx
     }
 
     setApplyLoading(false);
@@ -207,8 +211,8 @@ export default function LightCurves({
         ? false
         : true
       : false;
-      
-  const applyButtonOn = slidersMoved || nanHandled
+
+  const applyButtonOn = slidersMoved || nanHandled;
 
   // Apply button component separate to TSX as we use it in different places depending on viewport size
   const applyButton = !slidersLoading ? (

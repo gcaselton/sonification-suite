@@ -5,9 +5,9 @@ import {
   Image,
   NumberInput,
   Stack,
-  VStack
+  VStack,
 } from "@chakra-ui/react";
-import { RefineMenuProps } from "./RefineMenu";
+import { RefineMenuProps } from "../../types/refine_menu";
 import { useState, useEffect } from "react";
 import LoadingMessage from "../ui/LoadingMessage";
 import ErrorMsg from "../ui/ErrorMsg";
@@ -16,17 +16,19 @@ import { apiRequest } from "../../utils/requests";
 import { plotData } from "../../utils/plot";
 import { LuArrowRight } from "react-icons/lu";
 
-
-export default function NightSky({ dataRef, dataName, onApply }: RefineMenuProps) {
-
+export default function NightSky({
+  dataRef,
+  dataName,
+  onApply,
+}: RefineMenuProps) {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState(true);
   const [fileRef, setFileRef] = useState(dataRef);
 
   // magnitude state
-  const [magnitude, setMagnitude] = useState('4.5')
+  const [magnitude, setMagnitude] = useState("4.5");
 
-  const [applyLoading, setApplyLoading] = useState(false)
+  const [applyLoading, setApplyLoading] = useState(false);
 
   // re-plot when nStars or magnitude changes(also on initial magnitude fetch)
   useEffect(() => {
@@ -38,40 +40,36 @@ export default function NightSky({ dataRef, dataName, onApply }: RefineMenuProps
     return () => clearTimeout(handler);
   }, [magnitude]);
 
-
   // request plot from backend
   const plotNightSky = async () => {
+    setImageLoading(true);
 
-    setImageLoading(true)
-
-    const refineURL = `${nightSkyAPI}/refine-stars/`
+    const refineURL = `${nightSkyAPI}/refine-stars/`;
     const refinePayload = {
       maglim: magnitude,
-      file_ref: dataRef
-    }
+      file_ref: dataRef,
+    };
 
-    const refineResult = await apiRequest(refineURL, refinePayload)
-    const refinedRef = refineResult.file_ref
-    
+    const refineResult = await apiRequest(refineURL, refinePayload);
+    const refinedRef = refineResult.file_ref;
+
     setFileRef(refinedRef);
 
-    const image = await plotData(refinedRef, 'night-sky')
+    const image = await plotData(refinedRef, "night-sky");
 
     // update image state
     setImageSrc(`data:image/svg+xml;base64,${image}`);
 
-    setImageLoading(false)
-  }
+    setImageLoading(false);
+  };
 
   const handleClickApply = async () => {
-
     setApplyLoading(true);
 
-    if (onApply){
-      onApply(fileRef); // Pass the refined data file reference up to Refine.tsx
+    if (onApply) {
+      onApply({newRef: fileRef}); // Pass the refined data file reference up to Refine.tsx
     }
-
-  }
+  };
 
   const applyButton = (
     <Button
@@ -84,7 +82,6 @@ export default function NightSky({ dataRef, dataName, onApply }: RefineMenuProps
       Apply & Continue <LuArrowRight />
     </Button>
   );
-
 
   return (
     <Stack
