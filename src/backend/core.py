@@ -164,7 +164,8 @@ def generate_sonification(request: SonificationRequest):
             soni = fig.sonify(df, **kwargs)
             
             # Get the mapping table
-            table: pd.DataFrame = fig.get_table(name=f'sonification_{i}')
+            source_name = 'source_0' if style_dict['sources'].lower() == 'objects' else None
+            table: pd.DataFrame = fig.get_table(name=f'sonification_{i}', source=source_name)
             
             if is_stars:
                 table.rename(columns={'Source': 'Star Name'}, inplace=True)

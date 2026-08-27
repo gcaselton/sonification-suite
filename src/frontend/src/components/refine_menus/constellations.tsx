@@ -271,7 +271,9 @@ export default function Constellations({
                 >
                   <NumberInput.Input aria-valuetext={`${nStars} stars`} />
                 </NumberInput.Root>
-                <Field.HelperText>Maximum {MAX_STARS}</Field.HelperText>
+                {Number(nStars) > 300 && (
+                  <Field.ErrorText>Maximum {MAX_STARS}</Field.ErrorText>
+                )}
               </Field.Root>
             </HStack>
           )}
@@ -298,7 +300,7 @@ export default function Constellations({
           </Box>
         </VStack>
       </Box>
-      <Box flex='1'>
+      <Box flex="1">
         <Box flex="1" borderWidth="1px" borderRadius="md">
           {filterType === "shape" &&
             (customOrderOn ? (

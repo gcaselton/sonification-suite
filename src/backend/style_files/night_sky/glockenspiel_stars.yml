@@ -17,14 +17,14 @@ map:
     function: "invert"
 
   - input: "magnitude"
-    input_range: ["0%", "110%"]
+    input_range: ["0%", "120%"]
     output: "time"
 
   - input: "relative_az"
+    input_range: [0, 1]
     output: "azimuth"
 
   - input: "altitude_deg"
-    input_range: [0, 180]
     output: "polar"
     function: "invert"
 

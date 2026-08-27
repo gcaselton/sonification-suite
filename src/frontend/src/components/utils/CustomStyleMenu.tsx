@@ -906,9 +906,9 @@ export default function CustomStyleMenu({
 
                             <Field.Root>
                               <HStack>
-                                <Field.Label>Output</Field.Label>
+                                <Field.Label>Output</Field.Label> 
                                 <InfoTip
-                                  portalled={false}
+                                  portalled={true}
                                   content="Choose which sound property the input data will control"
                                   positioning={{ placement: "right" }}
                                 />

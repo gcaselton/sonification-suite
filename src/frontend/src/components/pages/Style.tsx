@@ -170,7 +170,7 @@ export default function Style() {
               onClick={() => {
                 handleSelectStyle(style);
               }}
-              style={{ cursor: "pointer" }}
+              cursor={'disabled'}
             >
               <StyleCard
                 title={style.name}

@@ -158,8 +158,12 @@ def get_star_data(request: NightSkyRequest):
         "direction_offset": direction
     })
 
-    # Calculate azimuth relative to observer
-    star_data['relative_az'] = (star_data["azimuth_rad"] - direction + np.pi) % (2*np.pi) - np.pi
+    # Calculate azimuth relative to observer, normalised to 0–1
+    # 0/1 = behind, 0.5 = directly ahead
+    star_data['relative_az'] = (
+        (star_data["azimuth_rad"] - direction) % (2 * np.pi)
+    ) / (2 * np.pi)
+    star_data['relative_az'] = (star_data['relative_az'] + 0.5) % 1
 
     # save to tmp directory (overwriting any existing dataset)
     session_id = session_id_var.get()
