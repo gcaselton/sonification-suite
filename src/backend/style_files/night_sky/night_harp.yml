@@ -21,8 +21,15 @@ map:
     input_range: ['0%', '120%']
     output: 'time'
 
-  - input: 'relative_az'
-    output: 'pan'
+  - input: 'relative_azimuth'
+    input_range: [0, 360]
+    output: 'azimuth'
+
+  - input: 'zenith_angle'
+    input_range: [0, 180]
+    output: 'polar'
+
+angle_unit: 'degrees'
 
 sources: 'events'
 

@@ -11,10 +11,9 @@ import {
   Badge,
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
-import { LuTelescope } from "react-icons/lu";
+import { LuLayers3, LuSparkles, LuTelescope } from "react-icons/lu";
 import { IconType } from "react-icons/lib";
 import PageContainer from "../ui/PageContainer";
-
 
 interface Domain {
   id: string;
@@ -27,12 +26,19 @@ interface Domain {
 const DOMAINS: Domain[] = [
   {
     id: "planetaria",
-    label: "for Planetaria",
+    label: "Planetaria",
     description:
       "Sonify constellations, stellar light curves, and entire night skies for your planetarium shows.",
     href: "/planetaria",
     Icon: LuTelescope,
-  }
+  },
+  {
+    id: "data-composer",
+    label: "Data Composer",
+    description: "Upload your own data and compose sonifications in layers.",
+    href: "/data-composer",
+    Icon: LuLayers3,
+  },
 ];
 
 function WaveformDecoration() {
@@ -131,8 +137,19 @@ export default function Landing() {
         <WaveformDecoration />
 
         <Text fontSize="lg" maxW="540px" opacity={0.7}>
-          An accessible platform for transforming scientific datasets into tangible
-          audio representations. Choose a domain below to begin.
+          An accessible platform for transforming scientific datasets into
+          tangible audio representations. Choose a module below, or{" "}
+          <Link
+            textDecoration="underline"
+            colorPalette="teal"
+            href="https://www.audiouniverse.org/sonification-suite/suggestions-and-example-bank"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Go to Audio Universe examples page in new tab"
+          >
+            start with some of our examples
+          </Link>
+          .
         </Text>
       </Flex>
 
@@ -140,7 +157,7 @@ export default function Landing() {
       <Box>
         <HStack gap={4} mb={5} align="center">
           <Heading as="h2" size="lg" fontWeight="400">
-            Domains
+            Modules
           </Heading>
           <Box flex={1} h="1px" bg="border" />
         </HStack>
@@ -151,7 +168,6 @@ export default function Landing() {
           ))}
         </Grid>
       </Box>
-
     </PageContainer>
   );
 }

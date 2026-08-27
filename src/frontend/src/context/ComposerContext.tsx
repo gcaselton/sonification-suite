@@ -27,8 +27,14 @@ export function ComposerProvider({ children }: { children: ReactNode }) {
 
 export function useComposer() {
   const ctx = useContext(ComposerContext);
+
   if (!ctx) {
     throw new Error("useComposer must be used within a ComposerProvider");
   }
+
   return ctx;
+}
+
+export function useOptionalComposer() {
+  return useContext(ComposerContext);
 }

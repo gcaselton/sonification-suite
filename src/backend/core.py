@@ -122,7 +122,7 @@ def generate_sonification(request: SonificationRequest):
                         m['function'] = None # Remove any previous invert functions
                         break
                     
-            # Swap azimuth for pan if not using 5.1/7.1
+            # Swap azimuth for pan if not using 5.1/7.1 ???
             
                         
             # Build dict with keyword arguments for sonification function
@@ -137,6 +137,9 @@ def generate_sonification(request: SonificationRequest):
                 # Remove any existing spatial mappings
                 style_dict['map'] = [mapping for mapping in style_dict['map'] 
                                         if mapping['output'] not in ['azimuth', 'polar', 'pan']]
+                
+                # Add angle unit
+                style_dict['angle_unit'] = 'degrees'
                 
                 # Add fixed values to kwargs
                 for param in ['azimuth', 'polar']:

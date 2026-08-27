@@ -94,10 +94,12 @@ def handle_observer(observer: dict):
     # Convert observing direction to radians
     direction = COMPASS_MAP[observer['orientation']]
     
-    # Corrected for STRAUSS, so 0 and 360 are behind, 90 degs is left, 180 straight ahead etc.
-    azimuth = (az.degrees - np.degrees(direction) + 180) % 360
+    # 0° = ahead, 90° = left, 180° = behind, 270° = right
+    azimuth = (
+        np.degrees(direction) - az.degrees
+    ) % 360
     
-    # STRAUSS polar angle: 0° = zenith, 90° = horizon, 180° = nadir
+    # polar angle: 0° = zenith, 90° = horizon, 180° = nadir
     polar = 90 - alt.degrees
     
     return {
@@ -158,12 +160,15 @@ def get_star_data(request: NightSkyRequest):
         "direction_offset": direction
     })
 
-    # Calculate azimuth relative to observer, normalised to 0–1
-    # 0/1 = behind, 0.5 = directly ahead
-    star_data['relative_az'] = (
-        (star_data["azimuth_rad"] - direction) % (2 * np.pi)
-    ) / (2 * np.pi)
-    star_data['relative_az'] = (star_data['relative_az'] + 0.5) % 1
+    # Calculate azimuth relative to observer, in degrees (0–360)
+    star_data['relative_azimuth'] = np.degrees(
+        (direction - star_data["azimuth_rad"]) % (2 * np.pi)
+    )
+    
+    # Convert altitude (90 to -90 degrees) to polar (0 to 180 degrees)
+    star_data['zenith_angle'] = 90 - star_data['altitude_deg']
+    
+    # Possibly need to add another column which transforms the azimuth into stereo pan?
 
     # save to tmp directory (overwriting any existing dataset)
     session_id = session_id_var.get()

@@ -106,17 +106,10 @@ export default function Lightcurves() {
   const [keplerChecked, setKeplerChecked] = useState(true);
   const [k2Checked, setK2Checked] = useState(true);
 
-  const [uploading, setUploading] = useState(false);
-  const [dataReduced, setDataReduced] = useState(false);
-  const [pendingNav, setPendingNav] = useState<null | {
-    dataRef: string;
-    dataName: string;
-    userUpload: boolean;
-  }>(null);
-  const [uploadKey, setUploadKey] = useState(0);
-
   const [ra, setRa] = useState(null);
   const [dec, setDec] = useState(null);
+
+  const [loadingLong, setLoadingLong] = useState(false);
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -168,6 +161,21 @@ export default function Lightcurves() {
       cancelSearch();
     };
   }, []);
+
+  
+  // Displays extra message if search takes a while
+  useEffect(() => {
+    if (!loading) {
+      setLoadingLong(false);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setLoadingLong((prev) => !prev);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [loading]);
 
   const searchLightcurves = async () => {
     if (!selectedStar.trim()) {
@@ -266,7 +274,7 @@ export default function Lightcurves() {
           ra,
           dec,
         };
-        navigate("/planetaria/refine", { state });
+        navigate("../refine", { state });
       }
     });
   };
@@ -310,7 +318,7 @@ export default function Lightcurves() {
       dec: star.dec,
     };
 
-    navigate("/planetaria/refine", { state });
+    navigate("../refine", { state });
   };
 
   const filterCount = [tessChecked, keplerChecked, k2Checked].filter(
@@ -432,7 +440,7 @@ export default function Lightcurves() {
       </form>
       {loading && (
         <LoadingMessage
-          msg={`Searching the Universe for ${searchTerm}...`}
+          msg={loadingLong ? "...it's a big place" : `Searching the Universe for ${searchTerm}...`}
           icon="pulsar"
           onCancel={cancelSearch}
         />

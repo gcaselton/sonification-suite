@@ -103,7 +103,7 @@ export default function Constellations() {
       isAsterism: item.group === 'Asterisms',
     };
 
-    navigate("/planetaria/refine", { state });
+    navigate("../refine", { state });
   };
 
   // Needed to use ComboBox search/filter

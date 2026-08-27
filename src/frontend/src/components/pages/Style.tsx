@@ -7,12 +7,12 @@ import { coreAPI } from "../../apiConfig";
 import { apiRequest } from "../../utils/requests";
 
 import { Box, Heading, Stack, Text, Dialog, Portal, Button, CloseButton } from "@chakra-ui/react";
-import { useComposer } from "../../context/ComposerContext";
+import { useComposer, useOptionalComposer } from "../../context/ComposerContext";
 import { NavigationState } from "../../types/navigation";
 
 export default function Style() {
   const navigate = useNavigate();
-  const composer = useComposer();
+  const composer = useOptionalComposer();
 
   // Location and state
   const location = useLocation();
@@ -66,6 +66,7 @@ export default function Style() {
       return;
     }
 
+    // Open warning for Orchestra constellations Style with lots of stars
     if (soniType === 'constellations' && style.name === "Orchestra" && Number(nStars) >= 100) {
       setPendingStyle(style);
       setOrchestraWarnOpen(true);
@@ -114,10 +115,13 @@ export default function Style() {
       ra,
       dec,
     };
-    navigate("/planetaria/sonify", { state });
+    navigate("../sonify", { state });
   }
 
   const goToComposer = (styleRef: string, styleName: string, styleDescription: string) => {
+    if (!composer) {
+      throw new Error("Data Composer requires ComposerProvider");
+    }
     composer.updateLayer(layerID, {
       styleRef,
       styleName,
@@ -125,7 +129,7 @@ export default function Style() {
     })
 
     const state: NavigationState = { ...location.state }
-    navigate("/planetaria/data-composer", { state });
+    navigate("/data-composer", { state });
   }
 
   const onFileSelect = async (file: File) => {
@@ -144,7 +148,7 @@ export default function Style() {
         ra,
         dec,
       };
-      navigate("/planetaria/sonify", { state });
+      navigate("../sonify", { state });
     } catch (err: any) {
       console.error("File upload failed:", err);
     }

@@ -1,24 +1,23 @@
-import { ChakraProvider, defaultSystem} from '@chakra-ui/react'
-import { ColorModeProvider } from './components/ui/color-mode'
-import { Box } from '@chakra-ui/react'
+import { ChakraProvider, defaultSystem } from "@chakra-ui/react";
+import { ColorModeProvider } from "./components/ui/color-mode";
+import { Box } from "@chakra-ui/react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
-import Lightcurves from './components/pages/Lightcurves';
-import Style from './components/pages/Style';
-import Sonify from './components/pages/Sonify';
-import Planetaria from './components/pages/Planetaria';
-import Landing from './components/pages/Landing';
-import Refine from './components/pages/Refine';
-import Constellations from './components/pages/Constellations';
-import DataComposer from './components/pages/DataComposer';
-import { useEffect, useState, useRef } from 'react';
-import { coreAPI } from './apiConfig';
-import NightSky from './components/pages/NightSky';
-import { ComposerProvider } from './context/ComposerContext';
-import ScrollToTop from './utils/ScrollToTop';
+import Lightcurves from "./components/pages/Lightcurves";
+import Style from "./components/pages/Style";
+import Sonify from "./components/pages/Sonify";
+import Planetaria from "./components/pages/Planetaria";
+import Landing from "./components/pages/Landing";
+import Refine from "./components/pages/Refine";
+import Constellations from "./components/pages/Constellations";
+import DataComposer from "./components/pages/DataComposer";
+import { useEffect, useState, useRef } from "react";
+import { coreAPI } from "./apiConfig";
+import NightSky from "./components/pages/NightSky";
+import { ComposerProvider } from "./context/ComposerContext";
+import ScrollToTop from "./utils/ScrollToTop";
 
 function App() {
-
   const [sessionReady, setSessionReady] = useState(false);
   const sessionInitialised = useRef(false);
 
@@ -30,17 +29,17 @@ function App() {
 
     async function setupSession() {
       const response = await fetch(`${coreAPI}/session/`, {
-        credentials: 'include'  // Tell browser to send/save cookies
+        credentials: "include", // Tell browser to send/save cookies
       });
       const data = await response.json();
       setSessionReady(true);
     }
-    
+
     setupSession();
   }, []);
 
   if (!sessionReady) {
-    return <div>Loading...</div>
+    return <div>Loading...</div>;
   }
 
   return (
@@ -53,24 +52,26 @@ function App() {
               <Route path="/" element={<Landing />} />
               <Route path="/planetaria">
                 <Route index element={<Planetaria />} />
-
                 <Route path="light-curves" element={<Lightcurves />} />
                 <Route path="constellations" element={<Constellations />} />
                 <Route path="night-sky" element={<NightSky />} />
-                
-                {/* Routes that may need context from the Data Composer feature */}
-                <Route
-                  element={
-                    <ComposerProvider>
-                      <Outlet />
-                    </ComposerProvider>
-                  }
-                >
-                  <Route path="data-composer" element={<DataComposer />} />
-                  <Route path="refine" element={<Refine />} />
-                  <Route path="style" element={<Style />} />
-                  <Route path="sonify" element={<Sonify />} />
-                </Route>
+                <Route path="refine" element={<Refine />} />
+                <Route path="style" element={<Style />} />
+                <Route path="sonify" element={<Sonify />} />
+              </Route>
+
+              <Route
+                path="/data-composer"
+                element={
+                  <ComposerProvider>
+                    <Outlet />
+                  </ComposerProvider>
+                }
+              >
+                <Route index element={<DataComposer />} />
+                <Route path="refine" element={<Refine />} />
+                <Route path="style" element={<Style />} />
+                <Route path="sonify" element={<Sonify />} />
               </Route>
             </Routes>
           </BrowserRouter>
@@ -81,4 +82,3 @@ function App() {
 }
 
 export default App;
-

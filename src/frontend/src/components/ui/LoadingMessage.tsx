@@ -47,7 +47,11 @@ const LoadingMessage = ({
     ) : (
       <Pulsar size="35" color="#14b8a6" />
     )}
-    {msg && <Text mt={2}>{msg}</Text>}
+    {msg && (
+      <Text key={msg} animation="fade-in 0.5s ease-in-out" mt={2}>
+        {msg}
+      </Text>
+    )}
     <br />
   </Box>
 );

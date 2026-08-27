@@ -324,7 +324,7 @@ export default function DataComposer() {
       idColumn: layer.idColumn,
       soniType,
     };
-    navigate("/planetaria/refine", { state });
+    navigate("refine", { state });
   };
 
   const handleChooseStyle = (layer: Layer, editStyleRef?: string) => {
@@ -336,12 +336,12 @@ export default function DataComposer() {
       userUpload: true, // tell custom style menu we are using user data
       ...(editStyleRef !== undefined && { editStyle: editStyleRef }), // Only pass edit style if provided (e.g. user has clicked the edit button)
     };
-    navigate("/planetaria/style", { state });
+    navigate("style", { state });
   };
 
   const handleContinueToSonify = () => {
     const state: NavigationState = { ...location.state, layers, soniType }
-    navigate("/planetaria/sonify", { state });
+    navigate("sonify", { state });
   };
 
   const pendingDeleteLayer = layers.find((l) => l.id === pendingDeleteId);

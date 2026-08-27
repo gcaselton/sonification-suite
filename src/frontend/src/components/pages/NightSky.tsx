@@ -33,7 +33,7 @@ export default function NightSky() {
       sourceDataRef: response.file_ref,
       soniType
     };
-    navigate("/planetaria/refine", { state });
+    navigate("../refine", { state });
   };
 
   return (

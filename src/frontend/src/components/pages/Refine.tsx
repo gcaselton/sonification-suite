@@ -2,14 +2,14 @@ import { lazy, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import PageContainer from "../ui/PageContainer";
 import { Box, Heading, Text, Highlight, Separator } from "@chakra-ui/react";
-import { useComposer } from "../../context/ComposerContext";
+import { useComposer, useOptionalComposer } from "../../context/ComposerContext";
 import { NavigationState } from "../../types/navigation";
 import { ApplyResult } from "../../types/refine_menu";
 
 export default function Refine() {
   const navigate = useNavigate();
   const location = useLocation();
-  const composer = useComposer();
+  const composer = useOptionalComposer();
 
   const dataName = location.state.dataName;
   const sourceDataRef = location.state.sourceDataRef;
@@ -45,13 +45,16 @@ export default function Refine() {
 
             // Go back to Data Composer with new data ref if we came from there
             if (soniType === "data_composer") {
+              if (!composer) {
+                throw new Error("Data Composer requires ComposerProvider");
+              }
               composer.updateLayer(layerID, {
                 dataRef: newRef,
                 idColumn: idColumn,
                 refined: true,
               });
 
-              navigate("/planetaria/data-composer");
+              navigate("/data-composer");
               return;
             }
 
@@ -64,7 +67,7 @@ export default function Refine() {
               userUpload,
               nStars: nStars
             };
-            navigate("/planetaria/style", { state });
+            navigate("../style", { state });
           }}
         />
       </Suspense>

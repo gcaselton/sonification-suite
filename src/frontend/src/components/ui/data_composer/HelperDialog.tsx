@@ -48,7 +48,7 @@ export default function HelperDialog({
 
                 <Text color="fg.muted">
                   Each layer needs a CSV dataset. You can upload a new file, or
-                  reuse a dataset already used by another layer.
+                  use the same dataset as another layer.
                 </Text>
               </Box>
 
@@ -80,7 +80,7 @@ export default function HelperDialog({
                       margin: "0 3px",
                     }}
                   />{" "}
-                  icon on a preset to see how your columns will be styled.
+                  icon on a preset to see how your columns will be used.
                 </Text>
               </Box>
 
@@ -90,7 +90,7 @@ export default function HelperDialog({
                 </Text>
 
                 <Text color="fg.muted">
-                  On the final step, set a duration for the whole composition.
+                  On the final step, set a duration for the whole sonification.
                   Every layer's data will stretch or compress to fit that
                   duration, so layers play in sync regardless of how much data
                   each one has.

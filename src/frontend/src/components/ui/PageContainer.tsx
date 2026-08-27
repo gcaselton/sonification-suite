@@ -15,7 +15,8 @@ import { useNavigate, NavLink } from "react-router-dom";
 import { CircleQuestionMark, Info, Menu } from "lucide-react";
 import { useState } from "react";
 import { NavDrawer } from "./NavDrawer";
-import Breadcrumbs from "./BreadCrumbs";
+import Breadcrumbs from "./Breadcrumbs";
+import { LuChevronRight } from "react-icons/lu";
 
 export default function PageContainer({
   children,
@@ -92,7 +93,6 @@ export default function PageContainer({
              
                 </Text>
               </NavLink>
-              <Text opacity={0.7}>/</Text>
 
               <Breadcrumbs />
               

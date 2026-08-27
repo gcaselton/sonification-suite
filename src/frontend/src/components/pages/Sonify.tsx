@@ -86,7 +86,7 @@ export default function Sonify() {
       default_length: 15,
       audio_system: "stereo",
     },
-    night_sky: { max_length: 120, default_length: 30, audio_system: "stereo" },
+    night_sky: { max_length: 120, default_length: 45, audio_system: "stereo" },
     data_composer: {
       max_length: 120,
       default_length: 15,
@@ -328,7 +328,7 @@ export default function Sonify() {
       userUpload,
       editStyle: styleRef,
     };
-    navigate("/planetaria/style", { state });
+    navigate("../style", { state });
   };
 
   const askForFeedback = () => {

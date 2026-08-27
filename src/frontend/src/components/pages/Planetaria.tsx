@@ -1,32 +1,20 @@
 import { useNavigate } from "react-router-dom";
 import PageContainer from "../ui/PageContainer";
 import { getImage } from "../../utils/assets";
-import { Tooltip } from "../ui/Tooltip";
 import { LuExternalLink, LuFilm, LuLayers3, LuStar } from "react-icons/lu";
 
 import {
   Box,
-  Alert,
-  Button,
   Card,
-  FileUpload,
   LinkOverlay,
   Link,
-  Image,
   Icon,
-  Input,
-  Dialog,
   Stack,
   Heading,
-  VStack,
-  Table,
   Text,
-  IconButton,
-  chakra,
   HStack,
   Badge,
 } from "@chakra-ui/react";
-import { apiUrl } from "../../apiConfig";
 
 interface AstroType {
   name: string;
@@ -40,22 +28,22 @@ const astroTypes: AstroType[] = [
   {
     name: "Light Curves",
     description: "Listen to fluctuations in a star's light.",
-    page: "/planetaria/light-curves",
+    page: "light-curves",
   },
   {
     name: "Constellations",
     description: "Hear the unique qualities of famous star patterns.",
-    page: "/planetaria/constellations",
+    page: "constellations",
   },
   {
     name: "Night Sky",
     description: "Hear the stars at your location appear.",
-    page: "/planetaria/night-sky",
+    page: "night-sky",
   },
   {
     name: "Data Composer",
     description: "Upload your own data and compose sonifications in layers.",
-    page: "/planetaria/data-composer",
+    page: "/data-composer",
     icon: LuLayers3,
   },
   {
