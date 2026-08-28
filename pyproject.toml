@@ -23,7 +23,7 @@ dependencies = [
     "scipy==1.15.3",
     "skyfield==1.53",
     "strauss @ git+https://github.com/james-trayford/strauss.git@v1p5",
-    "timezonefinder>=8.2.1",
+    "timezonefinder>=8.0.0",
     "uvicorn>=0.38.0",
 ]
 
