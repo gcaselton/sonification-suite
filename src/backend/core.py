@@ -378,11 +378,17 @@ def get_audio(file_ref: str, format: str = 'wav'):
 def convert_to_mp3(wav_file: str) -> str:
     """
     Convert a WAV file to an MP3.
-    
+
     Args:
         wav_file: Path to the WAV file.
+
     Returns:
         Path to the generated MP3 file.
+
+    Raises:
+        FileNotFoundError: If the WAV file does not exist.
+        ValueError: If the input file is not a WAV.
+        RuntimeError: If FFmpeg cannot be found.
     """
     wav_path = Path(wav_file)
 
@@ -392,26 +398,41 @@ def convert_to_mp3(wav_file: str) -> str:
     if wav_path.suffix.lower() != ".wav":
         raise ValueError(f"Expected a .wav file, got {wav_path.suffix}")
 
+    # Find FFmpeg
+    system_ffmpeg = shutil.which("ffmpeg")
+
+    if system_ffmpeg:
+        # Production/Linux server
+        AudioSegment.converter = system_ffmpeg
+    else:
+        # Development/Windows
+        local_ffmpeg = r"C:\Users\ngc133\ffmpeg\bin\ffmpeg.exe"
+
+        if not Path(local_ffmpeg).exists():
+            raise RuntimeError(
+                "FFmpeg is not installed or could not be found in this environment."
+            )
+
+        AudioSegment.converter = local_ffmpeg
+
     mp3_path = wav_path.with_suffix(".mp3")
-    
+
     if mp3_path.exists():
         return str(mp3_path)
 
-    system_ffmpeg = shutil.which("ffmpeg")
-    
-    if system_ffmpeg:
-        # System has ffmpeg installed (likely production server)
-        AudioSegment.converter = system_ffmpeg
-    else:
-        # Hardcoded for development on Windows
-        local_ffmpeg = r"C:\Users\ngc133\ffmpeg\bin\ffmpeg.exe"
-        if not Path(local_ffmpeg).exists():
-            raise RuntimeError("FFmpeg is not installed in this environment.")
-        
-        AudioSegment.converter = local_ffmpeg
-    
     audio = AudioSegment.from_wav(wav_path)
-    audio.export(mp3_path, format="mp3", bitrate="320k")
+
+    try:
+        audio.export(
+            mp3_path,
+            format="mp3",
+            bitrate="320k"
+        )
+    except Exception:
+        # Remove any partially-created/corrupt MP3
+        if mp3_path.exists():
+            mp3_path.unlink()
+        raise
 
     return str(mp3_path)
     
