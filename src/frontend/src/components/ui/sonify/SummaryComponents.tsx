@@ -146,7 +146,7 @@ export const LayerDownloads = ({
   audioKey,
   audioSystem,
 }: LayerDownloadsProps) => {
-  const i = layerIndex === undefined ? 0 : layerIndex
+  const i = layerIndex === undefined ? 0 : layerIndex;
   const mappingTableButton = (
     <Button
       asChild={soniReady}
@@ -158,7 +158,7 @@ export const LayerDownloads = ({
       {soniReady ? (
         <a
           href={`${coreAPI}/download?file_ref=${encodeURIComponent(
-            `session:mapping_table_${String(i + 1)}.csv`
+            `session:mapping_table_${String(i + 1)}.csv`,
           )}`}
           style={{ color: "inherit" }}
         >
@@ -181,9 +181,17 @@ export const LayerDownloads = ({
       </Text>
 
       <HStack gap={2} wrap="wrap">
-          <DownloadButton label="Data" fileRef={summary.dataRef} tooltip="Download data"/>
+        <DownloadButton
+          label="Data"
+          fileRef={summary.dataRef}
+          tooltip="Download data"
+        />
 
-          <DownloadButton label="Style" fileRef={summary.styleRef} tooltip="Download style file"/>
+        <DownloadButton
+          label="Style"
+          fileRef={summary.styleRef}
+          tooltip="Download style file"
+        />
 
         <Tooltip
           content={
@@ -195,17 +203,17 @@ export const LayerDownloads = ({
           {mappingTableButton}
         </Tooltip>
         {layerIndex !== undefined && (
-            <AudioDownloadMenu
-              audioFileRef={`session:layer_${layerIndex + 1}.wav`}
-              audioKey={audioKey}
-              audioSystem={audioSystem}
-              disabled={!soniReady}
-              tooltip={
-                soniReady
-                  ? "Download layer audio"
-                  : "Generate the sonification to download this layer's audio."
-              }
-            />
+          <AudioDownloadMenu
+            audioFileRef={`session:layer_${layerIndex + 1}.wav`}
+            audioKey={audioKey}
+            audioSystem={audioSystem}
+            disabled={!soniReady}
+            tooltip={
+              soniReady
+                ? "Download layer audio"
+                : "Generate the sonification to download this layer's audio."
+            }
+          />
         )}
       </HStack>
     </VStack>
@@ -231,16 +239,16 @@ export const LayerContent = ({
       borderBottomWidth="1px"
       py={3}
     >
-      <Stat.Root flex="1" px={4} size="xs">
+      <Stat.Root flex="1" px={4}>
         <Stat.Label>Data</Stat.Label>
-        <Stat.ValueText>{summary.dataName}</Stat.ValueText>
+        <Stat.ValueText textStyle="md">{summary.dataName}</Stat.ValueText>
       </Stat.Root>
 
-      <Stat.Root flex="1" px={4} size="xs">
+      <Stat.Root flex="1" px={4}>
         <Stat.Label>Style</Stat.Label>
 
         <HStack justify="space-between">
-          <Stat.ValueText>{summary.styleName}</Stat.ValueText>
+          <Stat.ValueText textStyle="md">{summary.styleName}</Stat.ValueText>
 
           {summary.styleName === "Custom" && summary.styleRef && (
             <Tooltip content="Open in the custom style menu">
@@ -268,14 +276,18 @@ export const LayerContent = ({
         borderBottomWidth="1px"
         py={3}
       >
-        <Stat.Root flex="1" px={4} size="sm">
+        <Stat.Root flex="1" px={4}>
           <Stat.Label>Altitude</Stat.Label>
-          <Stat.ValueText>{formatCoord(altAz[0])}°</Stat.ValueText>
+          <Stat.ValueText textStyle="md">
+            {formatCoord(altAz[0])}°
+          </Stat.ValueText>
         </Stat.Root>
 
-        <Stat.Root flex="1" px={4} size="sm">
+        <Stat.Root flex="1" px={4}>
           <Stat.Label>Azimuth</Stat.Label>
-          <Stat.ValueText>{formatCoord(altAz[1])}°</Stat.ValueText>
+          <Stat.ValueText textStyle="md">
+            {formatCoord(altAz[1])}°
+          </Stat.ValueText>
         </Stat.Root>
       </HStack>
     )}
@@ -294,7 +306,9 @@ export const SummaryList = ({
     <VStack w="100%" align="stretch" gap={4}>
       <HStack w="100%">
         <Separator w="100%" size="lg" />
-        <Text flexShrink="0">Summary</Text>
+        <Text flexShrink="0" textStyle="lg">
+          Summary
+        </Text>
         <Separator w="100%" size="lg" />
       </HStack>
 
