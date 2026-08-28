@@ -332,11 +332,11 @@ export default function Sonify() {
   };
 
   const askForFeedback = () => {
-    if (sessionStorage.getItem("feedbackShown")) {
-      return;
-    }
+    // if (sessionStorage.getItem("feedbackShown")) {
+    //   return;
+    // }
 
-    sessionStorage.setItem("feedbackShown", "true");
+    // sessionStorage.setItem("feedbackShown", "true");
 
     setTimeout(() => {
       toaster.create({
@@ -345,12 +345,13 @@ export default function Sonify() {
           <>
             Let us know how you are using the Suite to help demonstrate success
             and justify future funding.{" "}
-            <a
+            <Link
+              colorPalette='teal'
               href="mailto:contactaudiouniverse@gmail.com"
               style={{ textDecoration: "underline" }}
             >
               Drop us a line
-            </a>
+            </Link>
             .
           </>
         ),
@@ -564,7 +565,7 @@ export default function Sonify() {
                       </Button>
                     </Tooltip>
                     <InfoTip
-                      content="Positions the audio in space to match where this object would appear in the sky from your location. Note: if your chosen style already maps data to Azimuth or Pan, those mappings will be overridden."
+                      content="Positions the audio in space to match where this object would appear in the sky from your location. Note: if your chosen style already maps data to Azimuth, Polar, or Pan, those mappings will be overridden."
                       positioning={{ placement: "right" }}
                       contentProps={{ maxW: "300px" }}
                     />

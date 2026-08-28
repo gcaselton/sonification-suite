@@ -122,12 +122,13 @@ def generate_sonification(request: SonificationRequest):
                         m['function'] = None # Remove any previous invert functions
                         break
                     
-            # Swap azimuth for pan if not using 5.1/7.1 ???
+            # TODO Swap azimuth for pan if not using 5.1/7.1 ???
             
                         
             # Build dict with keyword arguments for sonification function
             kwargs = {
-                'duration': request.duration
+                'duration': request.duration,
+                'angle_unit': 'degrees' # use degrees as standard for azimuth/polar
             }
             
             # Handle case that 'Place on Dome' feature is used
@@ -138,12 +139,16 @@ def generate_sonification(request: SonificationRequest):
                 style_dict['map'] = [mapping for mapping in style_dict['map'] 
                                         if mapping['output'] not in ['azimuth', 'polar', 'pan']]
                 
-                # Add angle unit
-                style_dict['angle_unit'] = 'degrees'
-                
                 # Add fixed values to kwargs
-                for param in ['azimuth', 'polar']:
-                    kwargs[f'fix_{param}'] = position_info['STRAUSS_inputs'][param]
+                if request.system == 'stereo':
+                    # Use pan
+                    kwargs['fix_pan'] = position_info['STRAUSS_inputs']['pan']
+                elif request.system in ['5.1', '7.1']:
+                    # Use Azimuth and Polar
+                    for param in ['azimuth', 'polar']:
+                        kwargs[f'fix_{param}'] = position_info['STRAUSS_inputs'][param]
+                else:
+                    raise ValueError("Place on Dome feature not available for mono audio")
                 
                 # Get altitude and azimuth values in degrees to send to the frontend to display    
                 alt_az = [position_info['display_values'][value] for value in ['altitude', 'azimuth']]
@@ -166,7 +171,7 @@ def generate_sonification(request: SonificationRequest):
             # Add layer to the AudioFigure and sonify
             soni = fig.sonify(df, **kwargs)
             
-            # Get the mapping table
+            # Get the mapping table(s)
             source_name = 'source_0' if style_dict['sources'].lower() == 'objects' else None
             table: pd.DataFrame = fig.get_table(name=f'sonification_{i}', source=source_name)
             
@@ -182,6 +187,16 @@ def generate_sonification(request: SonificationRequest):
                 cols.remove(('HIP', ''))
                 cols.insert(cols.index(('Star Name', '')) + 1, ('HIP', ''))
                 table = table[cols]
+                
+            if request.observer:
+                fixed_table = fig.get_fixed_table(name=f'sonification_{i}', source=source_name)
+                # Add each fixed parameter as a column in main mapping table
+                for _, row in fixed_table.iterrows():
+                    parameter = row['parameter']
+                    value = row['value']
+                    unit = row['unit']
+                    unit_header = f'[{unit}]' if unit else ''
+                    table[(parameter, unit_header)] = value
             
             # Save mapping table to CSV
             table_path = session_dir / f'mapping_table_{i}.csv'
@@ -347,7 +362,7 @@ def generate_spectrogram(request: DataRequest):
     return {'image': img_base64}
 
 @router.get('/audio/{file_ref}')
-def get_audio(file_ref: str, format: str):
+def get_audio(file_ref: str, format: str = 'wav'):
     
     wav_path = str(resolve_file(file_ref))
 

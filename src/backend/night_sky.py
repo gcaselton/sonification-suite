@@ -94,17 +94,21 @@ def handle_observer(observer: dict):
     # Convert observing direction to radians
     direction = COMPASS_MAP[observer['orientation']]
     
-    # 0° = ahead, 90° = left, 180° = behind, 270° = right
+    # Azimuth: 0° = ahead, 90° = left, 180° = behind, 270° = right
     azimuth = (
         np.degrees(direction) - az.degrees
     ) % 360
     
-    # polar angle: 0° = zenith, 90° = horizon, 180° = nadir
+    # Stereo pan: 0 = left, 0.5 = centre, 1 = right
+    pan = (1 - np.sin(np.radians(azimuth))) / 2
+    
+    # Polar angle: 0° = zenith, 90° = horizon, 180° = nadir
     polar = 90 - alt.degrees
     
     return {
         'STRAUSS_inputs': {
             'azimuth': azimuth,
+            'pan': pan,
             'polar': polar
         },
         'display_values': {
@@ -169,6 +173,8 @@ def get_star_data(request: NightSkyRequest):
     star_data['zenith_angle'] = 90 - star_data['altitude_deg']
     
     # Possibly need to add another column which transforms the azimuth into stereo pan?
+    # I.E if a user creates a custom night sky style and maps relative_azimuth to pan,
+    # the mapping won't work because the input values are in the wrong format
 
     # save to tmp directory (overwriting any existing dataset)
     session_id = session_id_var.get()

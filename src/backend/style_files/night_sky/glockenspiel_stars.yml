@@ -21,14 +21,10 @@ map:
     output: "time"
 
   - input: "relative_azimuth"
-    input_range: [0, 360]
     output: "azimuth"
 
   - input: "zenith_angle"
-    input_range: [0, 180]
     output: "polar"
-
-angle_unit: 'degrees'
 
 notes: ["C#3", "F#3", "G#3", "D#4", "F4"]
 

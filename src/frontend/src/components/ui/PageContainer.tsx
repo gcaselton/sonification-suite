@@ -182,7 +182,7 @@ export default function PageContainer({
           </Link>
         </Text>
 
-        <Text fontSize="xs">v0.2 (Alpha)</Text>
+        <Text fontSize="xs">v0.5 (Pre-release)</Text>
       </Flex>
       <Dialog.Root
         open={licenseOpen}

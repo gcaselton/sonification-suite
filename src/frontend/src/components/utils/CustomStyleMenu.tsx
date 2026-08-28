@@ -816,6 +816,10 @@ export default function CustomStyleMenu({
                     mapping.input === "Custom Order" &&
                     mapping.output === "Time" &&
                     autoMappedTime;
+
+                  // Used to disable output range for Azimuth and Polar (not allowed in STRAUSS)
+                  const isSpatial = ["Azimuth", "Polar Angle"].includes(mapping.output);
+
                   return (
                     <Card.Root key={index} variant="elevated" size="sm">
                       <Card.Body>
@@ -906,7 +910,7 @@ export default function CustomStyleMenu({
 
                             <Field.Root>
                               <HStack>
-                                <Field.Label>Output</Field.Label> 
+                                <Field.Label>Output</Field.Label>
                                 <InfoTip
                                   portalled={true}
                                   content="Choose which sound property the input data will control"
@@ -1039,75 +1043,89 @@ export default function CustomStyleMenu({
                                     />
                                   </HStack>
                                   <HStack gap={8}>
-                                    <HStack>
-                                      <NumberInput.Root
-                                        aria-label={`${mapping.output} range minimum`}
-                                        value={
-                                          mapping.output_range?.[0]?.toString() ??
-                                          "0"
-                                        }
-                                        onValueChange={(e) => {
-                                          const n = parseFloat(e.value);
-                                          if (Number.isNaN(n)) return; // don't commit while the field is empty/mid-edit
-                                          updateMapping(index, "output_range", [
-                                            round2(
-                                              Math.min(
-                                                n,
-                                                (mapping.output_range?.[1] ??
-                                                  1) - 0.01,
-                                              ),
-                                            ),
-                                            mapping.output_range?.[1] ?? 1,
-                                          ]);
-                                        }}
-                                        min={0}
-                                        max={
-                                          (mapping.output_range?.[1] ?? 1) -
-                                          0.01
-                                        }
-                                        size="sm"
-                                        width="80px"
-                                      >
-                                        <NumberInput.Input
-                                          placeholder="0"
-                                          aria-valuetext={`${mapping.output_range?.[0] ?? 0}`}
-                                        />
-                                      </NumberInput.Root>
-                                      <Text fontSize="sm">–</Text>
-                                      <NumberInput.Root
-                                        aria-label={`${mapping.output} range maximum`}
-                                        value={
-                                          mapping.output_range?.[1]?.toString() ??
-                                          "1"
-                                        }
-                                        onValueChange={(e) => {
-                                          const n = parseFloat(e.value);
-                                          if (Number.isNaN(n)) return;
-                                          updateMapping(index, "output_range", [
-                                            mapping.output_range?.[0] ?? 0,
-                                            round2(
-                                              Math.max(
-                                                n,
-                                                (mapping.output_range?.[0] ??
-                                                  0) + 0.01,
-                                              ),
-                                            ),
-                                          ]);
-                                        }}
-                                        min={
-                                          (mapping.output_range?.[0] ?? 0) +
-                                          0.01
-                                        }
-                                        max={1}
-                                        size="sm"
-                                        width="80px"
-                                      >
-                                        <NumberInput.Input
-                                          placeholder="1"
-                                          aria-valuetext={`${mapping.output_range?.[1] ?? 1}`}
-                                        />
-                                      </NumberInput.Root>
-                                    </HStack>
+                                    <Tooltip content='Range is not supported for spatial parameters'>
+                                      <HStack>
+                                        <NumberInput.Root
+                                          disabled={isSpatial}
+                                          aria-label={`${mapping.output} range minimum`}
+                                          value={
+                                            mapping.output_range?.[0]?.toString() ??
+                                            "0"
+                                          }
+                                          onValueChange={(e) => {
+                                            const n = parseFloat(e.value);
+                                            if (Number.isNaN(n)) return; // don't commit while the field is empty/mid-edit
+                                            updateMapping(
+                                              index,
+                                              "output_range",
+                                              [
+                                                round2(
+                                                  Math.min(
+                                                    n,
+                                                    (mapping
+                                                      .output_range?.[1] ?? 1) -
+                                                      0.01,
+                                                  ),
+                                                ),
+                                                mapping.output_range?.[1] ?? 1,
+                                              ],
+                                            );
+                                          }}
+                                          min={0}
+                                          max={
+                                            (mapping.output_range?.[1] ?? 1) -
+                                            0.01
+                                          }
+                                          size="sm"
+                                          width="80px"
+                                        >
+                                          <NumberInput.Input
+                                            placeholder="0"
+                                            aria-valuetext={`${mapping.output_range?.[0] ?? 0}`}
+                                          />
+                                        </NumberInput.Root>
+                                        <Text fontSize="sm">–</Text>
+                                        <NumberInput.Root
+                                          disabled={isSpatial}
+                                          aria-label={`${mapping.output} range maximum`}
+                                          value={
+                                            mapping.output_range?.[1]?.toString() ??
+                                            "1"
+                                          }
+                                          onValueChange={(e) => {
+                                            const n = parseFloat(e.value);
+                                            if (Number.isNaN(n)) return;
+                                            updateMapping(
+                                              index,
+                                              "output_range",
+                                              [
+                                                mapping.output_range?.[0] ?? 0,
+                                                round2(
+                                                  Math.max(
+                                                    n,
+                                                    (mapping
+                                                      .output_range?.[0] ?? 0) +
+                                                      0.01,
+                                                  ),
+                                                ),
+                                              ],
+                                            );
+                                          }}
+                                          min={
+                                            (mapping.output_range?.[0] ?? 0) +
+                                            0.01
+                                          }
+                                          max={1}
+                                          size="sm"
+                                          width="80px"
+                                        >
+                                          <NumberInput.Input
+                                            placeholder="1"
+                                            aria-valuetext={`${mapping.output_range?.[1] ?? 1}`}
+                                          />
+                                        </NumberInput.Root>
+                                      </HStack>
+                                    </Tooltip>
 
                                     {/* Invert */}
                                     <HStack>

@@ -440,7 +440,7 @@ export default function Lightcurves() {
       </form>
       {loading && (
         <LoadingMessage
-          msg={loadingLong ? "...it's a big place" : `Searching the Universe for ${searchTerm}...`}
+          msg={loadingLong ? "it's a big place..." : `Searching the Universe for ${searchTerm}...`}
           icon="pulsar"
           onCancel={cancelSearch}
         />

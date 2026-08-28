@@ -61,12 +61,12 @@ INPUTS = {
         {
             'magnitude': _MAGNITUDE,
             'colour': _COLOUR,
-            'altitude_deg': 
+            'zenith_angle': 
                 {
                     'name': 'Altitude',
-                    'desc': 'The angle of the star above the horizon in degrees'
+                    'desc': 'The angle of the star from the zenith in degrees'
                 },
-            'relative_az':
+            'relative_azimuth':
                 {
                     'name': 'Azimuth',
                     'desc': 'The horizontal position of the star relative to the observer'
@@ -80,24 +80,28 @@ OUTPUTS = {
         'name': 'Time',
         'desc': 'When in the sonification the data point is heard'
     },
-    'cutoff': {
-        'name': 'Filter Cutoff',
-        'desc': 'The brightness of the sound'
-    },
     'pitch': {
         'name': 'Pitch',
         'desc': 'The perceived highness or lowness of the note'
+    },
+    'cutoff': {
+        'name': 'Filter Cutoff',
+        'desc': 'The brightness of the sound (the amount of high frequencies)'
     },
     'volume': {
         'name': 'Volume',
         'desc': 'The loudness of each data point'
     },
-    'azimuth': {
-        'name': 'Azimuth',
-        'desc': 'The position of the sound in surround space (0 and 1 are behind, 0.5 is front)'
-    },
     'pan': {
         'name': 'Pan',
         'desc': 'The position of the sound in stereo (0 is left, 1 is right)'
+    },
+    'azimuth': {
+        'name': 'Azimuth',
+        'desc': 'The position of the sound in surround space (only suitable for 5.1 and 7.1 audio)'
+    },
+    'polar': {
+        'name': 'Polar Angle',
+        'desc': 'The height of the sound in surround space (only suitable when paired with Azimuth on 5.1 and 7.1 systems)'
     }
 }
