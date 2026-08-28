@@ -404,7 +404,11 @@ def convert_to_mp3(wav_file: str) -> str:
         AudioSegment.converter = system_ffmpeg
     else:
         # Hardcoded for development on Windows
-        AudioSegment.converter = r"C:\Users\ngc133\ffmpeg\bin\ffmpeg.exe"
+        local_ffmpeg = r"C:\Users\ngc133\ffmpeg\bin\ffmpeg.exe"
+        if not Path(local_ffmpeg).exists():
+            raise RuntimeError("FFmpeg is not installed in this environment.")
+        
+        AudioSegment.converter = local_ffmpeg
     
     audio = AudioSegment.from_wav(wav_path)
     audio.export(mp3_path, format="mp3", bitrate="320k")
