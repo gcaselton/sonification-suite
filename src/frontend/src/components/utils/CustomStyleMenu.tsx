@@ -10,6 +10,7 @@ import {
   LuDices,
   LuChartSpline,
   LuChartScatter,
+  LuFileMusic,
 } from "react-icons/lu";
 import ErrorMsg from "../ui/ErrorMsg";
 
@@ -707,6 +708,33 @@ export default function CustomStyleMenu({
     return true;
   };
 
+  const handleUploadAudio = async (files: File[]) => {
+    setErrorMessage("");
+
+    const file = files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch(`${coreAPI}/upload-audio/`, {
+      method: "POST",
+      body: formData,
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      console.error("Audio upload failed:", errorData?.detail);
+      return;
+    }
+
+    const result = await res.json();
+
+    // Do something with result.file_ref
+
+  };
+
   const handleNotesChange = (newNotes: string[]) => {
     // Capitalize notes and remove whitespace
     const normalised = newNotes.map(normaliseNote);
@@ -818,7 +846,9 @@ export default function CustomStyleMenu({
                     autoMappedTime;
 
                   // Used to disable output range for Azimuth and Polar (not allowed in STRAUSS)
-                  const isSpatial = ["Azimuth", "Polar Angle"].includes(mapping.output);
+                  const isSpatial = ["Azimuth", "Polar Angle"].includes(
+                    mapping.output,
+                  );
 
                   return (
                     <Card.Root key={index} variant="elevated" size="sm">
@@ -1043,7 +1073,7 @@ export default function CustomStyleMenu({
                                     />
                                   </HStack>
                                   <HStack gap={8}>
-                                    <Tooltip content='Range is not supported for spatial parameters'>
+                                    <Tooltip content="Range is not supported for spatial parameters">
                                       <HStack>
                                         <NumberInput.Root
                                           disabled={isSpatial}
@@ -1218,52 +1248,77 @@ export default function CustomStyleMenu({
                   />
                 </SegmentGroup.Root>
               </Field.Root>
-
-              <Select.Root
-                size="sm"
-                positioning={{
-                  strategy: "fixed",
-                  hideWhenDetached: true,
-                  sameWidth: true,
-                }}
-                collection={soundOptions}
-                value={[sound.name]}
-                onValueChange={(e) => {
-                  const selected = soundOptions.items.find(
-                    (s) => s.value === e.value[0],
-                  );
-                  if (selected) setSound(selected);
-                }}
-              >
-                <Select.HiddenSelect />
-                <HStack>
-                  <Select.Label>Base Sound</Select.Label>
-                  <InfoTip
-                    portalled={false}
-                    content="This is the underlying sound (or instrument) that is used as a basis for the sonification. Sounds with a 🎹 icon next to them are composable, meaning you can apply musical settings like chords and scales."
-                    positioning={{ placement: "right" }}
-                    contentProps={{ maxW: "300px" }}
-                  />
-                </HStack>
-                <Select.Control>
-                  <Select.Trigger>
-                    <Select.ValueText placeholder={sound.name} />
-                  </Select.Trigger>
-                  <Select.IndicatorGroup>
-                    <Select.Indicator />
-                  </Select.IndicatorGroup>
-                </Select.Control>
-                <Select.Positioner>
-                  <Select.Content maxH="200px">
-                    {soundOptions.items.map((option) => (
-                      <Select.Item item={option} key={option.value}>
-                        {option.label}
-                        <Select.ItemIndicator />
-                      </Select.Item>
-                    ))}
-                  </Select.Content>
-                </Select.Positioner>
-              </Select.Root>
+              <HStack>
+                <Select.Root
+                  size="sm"
+                  positioning={{
+                    strategy: "fixed",
+                    hideWhenDetached: true,
+                    sameWidth: true,
+                  }}
+                  collection={soundOptions}
+                  value={[sound.name]}
+                  onValueChange={(e) => {
+                    const selected = soundOptions.items.find(
+                      (s) => s.value === e.value[0],
+                    );
+                    if (selected) setSound(selected);
+                  }}
+                >
+                  <Select.HiddenSelect />
+                  <HStack>
+                    <Select.Label>Base Sound</Select.Label>
+                    <InfoTip
+                      portalled={false}
+                      content="This is the underlying sound (or instrument) that is used as a basis for the sonification. Sounds with a 🎹 icon next to them are composable, meaning you can apply musical settings like chords and scales."
+                      positioning={{ placement: "right" }}
+                      contentProps={{ maxW: "300px" }}
+                    />
+                  </HStack>
+                  <Select.Control>
+                    <Select.Trigger>
+                      <Select.ValueText placeholder={sound.name} />
+                    </Select.Trigger>
+                    <Select.IndicatorGroup>
+                      <Select.Indicator />
+                    </Select.IndicatorGroup>
+                  </Select.Control>
+                  <Select.Positioner>
+                    <Select.Content maxH="200px">
+                      {soundOptions.items.map((option) => (
+                        <Select.Item item={option} key={option.value}>
+                          {option.label}
+                          <Select.ItemIndicator />
+                        </Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Positioner>
+                </Select.Root>
+                <FileUpload.Root
+                  alignSelf='flex-end'
+                  accept={{ "*/*": [".wav", ".mp3"] }}
+                  maxFiles={1}
+                  maxFileSize={1 * 1024 * 1024} // 1MB file limit
+                  onFileAccept={({ files }) => handleUploadAudio(files)}
+                  onFileReject={(details) => {
+                    setErrorMessage(
+                      `File rejected: ${details.files[0].errors.join(", ")}`,
+                    );
+                  }}
+                >
+                  <FileUpload.HiddenInput />
+                  <FileUpload.Trigger asChild>
+                    <Button
+                      size="sm"
+                      variant="subtle"
+                      colorPalette="teal"
+                      aria-label="Upload your own sound"
+                    >
+                      <LuFileMusic /> Use your own sound
+                    </Button>
+                  </FileUpload.Trigger>
+                </FileUpload.Root>
+              </HStack>
 
               {sound.composable && (
                 <>

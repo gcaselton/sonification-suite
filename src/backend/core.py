@@ -454,54 +454,65 @@ def download_file(file_ref: str):
     return response
 
 
-@router.post('/upload-data/')
-async def upload_data(file: UploadFile, request: Request):
+async def upload_file(
+    file: UploadFile,
+    request: Request,
+    accepted_file_types: list[str],
+    max_size: int = 10*1024*1024, # 10MB default
+) -> str:
     """
-    Function for the user to upload their own data to the system, which is then written
-    to the tmp directory. The maximum file size is 10mb, as this is a limit set in nginx.
+    Generic helper for handling user file uploads.
 
-    - **file**: The user-uploaded data file.
-    - Returns: The filepath of the saved data file.
+    Args:
+        file: The uploaded file.
+        accepted_file_types: List of allowed extensions, e.g. [".csv", ".wav"].
+        max_size: Maximum allowed file size in bytes.
+        invalid_type_message: Error message returned for rejected extensions.
+
+    Returns:
+        A file reference in the form:
+        session:uploads:<generated_filename>
     """
 
-    # Client details for logging
-    ip = request.client.host
     session_id = session_id_var.get()
+    ip = request.client.host
+    
+    LOG.info( "Upload attempt | filename=%s | session=%s | ip=%s", file.filename, session_id, ip )
 
-    LOG.info(
-        "Upload attempt | filename=%s | session=%s | ip=%s",
-        file.filename,
-        session_id,
-        ip
-    )
+    if not file.filename:
+        LOG.warning(
+            "Upload rejected | reason=no_filename | session=%s",
+            session_id
+        )
+        raise HTTPException(400, "Uploaded file has no filename")
 
     suffixes = Path(file.filename).suffixes
 
     # Check for multiple extensions
     if len(suffixes) != 1:
         LOG.warning(
-            "Upload rejected | filename=%s | reason=multiple_extensions | session=%s | ip=%s",
+            "Upload rejected | filename=%s | reason=multiple_extensions | session=%s",
             file.filename,
-            session_id,
-            ip
+            session_id
         )
-        raise HTTPException(400, "Files with multiple extensions are not allowed")
+        raise HTTPException(
+            400,
+            "Files with multiple extensions are not allowed"
+        )
 
     ext = suffixes[0].lower()
 
-    if ext != '.csv':
+    if ext not in accepted_file_types:
         LOG.warning(
-            "Upload rejected | ext=%s | reason=rejected_extension | session=%s | ip=%s",
+            "Upload rejected | filename=%s | ext=%s | reason=rejected_extension | session=%s",
+            file.filename,
             ext,
-            session_id,
-            ip
+            session_id
         )
         raise HTTPException(
             status_code=415,
-            detail='Uploaded data must be in .csv format'
+            detail=f"Invalid file type - only {', '.join(accepted_file_types)} allowed."
         )
-
-    MAX_SIZE = 10 * 1024 * 1024
 
     contents = await file.read()
     await file.close()
@@ -509,23 +520,25 @@ async def upload_data(file: UploadFile, request: Request):
     # Check for empty file
     if not contents:
         LOG.warning(
-            "Upload rejected | reason=empty_file | session=%s | ip=%s",
-            session_id,
-            ip
+            "Upload rejected | filename=%s | reason=empty_file | session=%s",
+            file.filename,
+            session_id
         )
         raise HTTPException(400, "Uploaded file is empty")
 
-    # Double check the file size isn't > 10mb
-    if len(contents) > MAX_SIZE:
+    # Check file size
+    if len(contents) > max_size:
         LOG.warning(
-            "Upload rejected | size=%d | reason=file_too_large | session=%s | ip=%s",
+            "Upload rejected | filename=%s | size=%d | max_size=%d | "
+            "reason=file_too_large | session=%s",
+            file.filename,
             len(contents),
-            session_id,
-            ip
+            max_size,
+            session_id
         )
         raise HTTPException(400, "File too large")
-
-    # Check CSV is actually text
+    
+    # If CSV, check it's actually text
     if ext == ".csv":
         try:
             contents.decode('utf-8')
@@ -540,41 +553,68 @@ async def upload_data(file: UploadFile, request: Request):
     # Ensure session directory exists
     session_dir = os.path.join(TMP_DIR, session_id)
     os.makedirs(session_dir, exist_ok=True)
-    
+
     # Ensure uploads directory exists
-    uploads_dir = os.path.join(session_dir, 'uploads')
+    uploads_dir = os.path.join(session_dir, "uploads")
     os.makedirs(uploads_dir, exist_ok=True)
-    
-    # Check session's upload quota
+
+    # Check session upload quota
     current_usage = get_uploads_dir_size(uploads_dir)
+
     if current_usage + len(contents) > UPLOAD_QUOTA_BYTES:
         LOG.warning(
-            "Upload rejected | reason=quota_exceeded | usage=%d | file_size=%d | session=%s | ip=%s",
+            "Upload rejected | filename=%s | reason=quota_exceeded | "
+            "usage=%d | file_size=%d | session=%s",
+            file.filename,
             current_usage,
             len(contents),
             session_id,
-            ip
         )
-        raise HTTPException(429, f"Session upload quota of {UPLOAD_QUOTA_MB}MB exceeded")
+        raise HTTPException(
+            429,
+            f"Session upload quota of {UPLOAD_QUOTA_MB}MB exceeded"
+        )
 
-    # Create random ID to store file under
-    new_name = f"{uuid.uuid4()}.csv"
+    # Generate unique filename while preserving extension
+    new_name = f"{uuid.uuid4()}{ext}"
     filepath = os.path.join(uploads_dir, new_name)
-    
-    # Write to new csv file
+
+    # Write file
     with open(filepath, "wb") as f:
         f.write(contents)
 
     LOG.info(
-        "Upload success | original=%s | stored=%s | size=%d | session=%s | ip=%s",
+        "Upload success | original=%s | stored=%s | size=%d | session=%s",
         file.filename,
         new_name,
         len(contents),
-        session_id,
-        ip
+        session_id
     )
 
-    file_ref = f"session:uploads:{new_name}"
+    return f"session:uploads:{new_name}"
+
+
+@router.post("/upload-data/")
+async def upload_data(file: UploadFile, request: Request):
+
+    file_ref = await upload_file(
+        file=file,
+        request=request,
+        accepted_file_types=[".csv"],
+        max_size=10 * 1024 * 1024,
+    )
+
+    return {"file_ref": file_ref}
+
+@router.post("/upload-audio/")
+async def upload_audio(file: UploadFile, request: Request):
+
+    file_ref = await upload_file(
+        file=file,
+        request=request,
+        accepted_file_types=[".wav", ".mp3"],
+        max_size=10 * 1024 * 1024,
+    )
 
     return {"file_ref": file_ref}
 
