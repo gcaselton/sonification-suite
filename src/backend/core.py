@@ -850,9 +850,7 @@ def convert_style_to_settings(request: DataRequest):
     
     for k in ['map', 'notes', 'metadata']:
         settings[k] = style[k]
-    
-    print(str(settings))
-    
+        
     return settings
 
 @router.post("/upload-style/")
