@@ -16,6 +16,7 @@ import { Tooltip } from "../Tooltip";
 import { coreAPI } from "../../../apiConfig";
 import { formatCoord } from "../../../utils/formatting";
 import { useState } from "react";
+import AudioDownloadButton from "../AudioDownloadButton";
 
 export interface LayerSummary {
   layerLabel?: string;
@@ -35,6 +36,7 @@ interface LayerContentProps {
 interface LayerDownloadsProps {
   summary: LayerSummary;
   layerIndex?: number;
+  layerLabel?: string
   soniReady: boolean;
   audioKey: string | number;
   audioSystem: string;
@@ -48,8 +50,6 @@ interface SummaryListProps {
   audioKey: string | number;
   audioSystem: string;
 }
-
-const downloadFormats = ["wav", "mp3"] as const;
 
 const DownloadButton = ({
   label,
@@ -77,71 +77,10 @@ const DownloadButton = ({
   );
 };
 
-const AudioDownloadMenu = ({
-  audioFileRef,
-  audioKey,
-  audioSystem,
-  disabled,
-  tooltip,
-}: {
-  audioFileRef: string;
-  audioKey: string | number;
-  audioSystem: string;
-  disabled: boolean;
-  tooltip: string;
-}) => {
-  const button = (
-    <Button size="sm" colorPalette="teal" variant="subtle" disabled={disabled}>
-      <LuDownload />
-      Audio
-    </Button>
-  );
-
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  return (
-    <Menu.Root
-      open={menuOpen}
-      onOpenChange={(details) => setMenuOpen(details.open)}
-    >
-      <Tooltip content={tooltip} disabled={menuOpen}>
-        <span style={{ display: "inline-flex" }}>
-          <Menu.Trigger asChild>{button}</Menu.Trigger>
-        </span>
-      </Tooltip>
-      <Portal>
-        <Menu.Positioner>
-          <Menu.Content>
-            {downloadFormats.map((format) => {
-              const mp3Disabled =
-                format === "mp3" && !["stereo", "mono"].includes(audioSystem);
-
-              return (
-                <Tooltip
-                  key={format}
-                  disabled={!mp3Disabled}
-                  content="MP3 is only available for Mono or Stereo audio."
-                >
-                  <Menu.Item value={format} asChild disabled={mp3Disabled}>
-                    <a
-                      href={`${coreAPI}/audio/${audioFileRef}?format=${format}&v=${audioKey}`}
-                    >
-                      Download {format.toUpperCase()}
-                    </a>
-                  </Menu.Item>
-                </Tooltip>
-              );
-            })}
-          </Menu.Content>
-        </Menu.Positioner>
-      </Portal>
-    </Menu.Root>
-  );
-};
-
 export const LayerDownloads = ({
   summary,
   layerIndex,
+  layerLabel,
   soniReady,
   audioKey,
   audioSystem,
@@ -203,16 +142,13 @@ export const LayerDownloads = ({
           {mappingTableButton}
         </Tooltip>
         {layerIndex !== undefined && (
-          <AudioDownloadMenu
+          <AudioDownloadButton
             audioFileRef={`session:layer_${layerIndex + 1}.wav`}
+            fileName={layerLabel ?? `Layer ${layerIndex + 1}`}
             audioKey={audioKey}
             audioSystem={audioSystem}
-            disabled={!soniReady}
-            tooltip={
-              soniReady
-                ? "Download layer audio"
-                : "Generate the sonification to download this layer's audio."
-            }
+            layer
+            soniReady={soniReady}
           />
         )}
       </HStack>
@@ -343,6 +279,7 @@ export const SummaryList = ({
                     <LayerDownloads
                       summary={summary}
                       layerIndex={i}
+                      layerLabel={summary.layerLabel}
                       soniReady={soniReady}
                       audioKey={audioKey}
                       audioSystem={audioSystem}

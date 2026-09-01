@@ -61,7 +61,6 @@ import { SummaryList, LayerSummary } from "../ui/sonify/SummaryComponents";
 import { formatCoord, formatSoniType } from "../../utils/formatting";
 import { Toaster, toaster } from "../ui/toaster";
 
-
 export default function Sonify() {
   const navigate = useNavigate();
 
@@ -216,7 +215,7 @@ export default function Sonify() {
         layers.map((l) => ({
           data_ref: l.dataRef,
           style_ref: l.styleRef,
-          id_column: l.idColumn
+          id_column: l.idColumn,
         }))
       : [
           // Otherwise, send just the one wrapped in an array
@@ -346,7 +345,7 @@ export default function Sonify() {
             Let us know how you are using the Suite to help demonstrate success
             and justify future funding.{" "}
             <Link
-              colorPalette='teal'
+              colorPalette="teal"
               href="mailto:contactaudiouniverse@gmail.com"
               style={{ textDecoration: "underline" }}
             >
@@ -360,16 +359,12 @@ export default function Sonify() {
         closable: true,
       });
     }, 500);
-  }
+  };
 
   const invalidLength =
     Number(length) > defaults.max_length ||
     length === "0" ||
     length.includes("-");
-
-  
-
-  
 
   const summaries: LayerSummary[] = layers
     ? layers.map((l) => ({
@@ -396,6 +391,12 @@ export default function Sonify() {
 
   // Place on dome option should only display for these sonification types
   const placeOnDomeModes = ["light_curves", "constellations"];
+
+  // Formatted name for the master audio download
+  const masterAudioName =
+    soniType === "data_composer"
+      ? "My Sonification"
+      : `${dataName} (${styleName})`;
 
   return (
     <PageContainer>
@@ -810,15 +811,18 @@ export default function Sonify() {
                 <audio
                   ref={audioRef}
                   key={audioKey}
-                  src={`${coreAPI}/audio/${audioFilename}?format=wav&v=${audioKey}`}
+                  src={`${coreAPI}/audio/${audioFilename}?name=${encodeURIComponent(masterAudioName)}&audio_format=wav&v=${audioKey}`}
                   controls
                   style={{ flex: 1 }}
                 />
 
                 <AudioDownloadButton
                   audioFileRef={audioFilename}
+                  fileName={masterAudioName}
                   audioKey={audioKey}
                   audioSystem={generatedAudioSystem}
+                  layer={false}
+                  soniReady={soniReady}
                   onDownload={askForFeedback}
                 />
               </HStack>

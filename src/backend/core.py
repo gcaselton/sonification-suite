@@ -362,18 +362,18 @@ def generate_spectrogram(request: DataRequest):
     return {'image': img_base64}
 
 @router.get('/audio/{file_ref}')
-def get_audio(file_ref: str, format: str = 'wav'):
+def get_audio(file_ref: str, name: str, audio_format: str = 'wav'):
     
     wav_path = str(resolve_file(file_ref))
 
-    if format == 'mp3':
+    if audio_format == 'mp3':
         file_path = convert_to_mp3(wav_path)
     else:
         file_path = wav_path
 
     return FileResponse(path=file_path, 
-                        filename=Path(file_path).name,
-                        media_type="audio/mpeg" if format == "mp3" else "audio/wav")
+                        filename=f'{name}.{audio_format}',
+                        media_type="audio/mpeg" if audio_format == "mp3" else "audio/wav")
 
 def convert_to_mp3(wav_file: str) -> str:
     """
