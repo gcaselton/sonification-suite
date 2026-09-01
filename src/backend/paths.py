@@ -4,25 +4,14 @@ import sys
 import os
 import yaml
 
-def get_base_paths():
-    """
-    Determine base paths for development or server deployment.
-    Returns tuple of (backend_dir, project_root)
-    """
 
-    # Directory where this file lives (/backend)
-    backend_dir = Path(__file__).resolve().parent
+# Directory where this file lives (/backend)
+BACKEND_DIR = Path(__file__).resolve().parent
 
-    src_dir = backend_dir.parent
+SRC_DIR = BACKEND_DIR.parent
 
-    # Project root (/sonification-toolkit)
-    root_dir = src_dir.parent
-
-    return backend_dir, root_dir
-
-
-# Get the base paths
-BACKEND_DIR, ROOT_DIR = get_base_paths()
+# Project root
+ROOT_DIR = SRC_DIR.parent
 
 # Define all paths
 STYLE_FILES_DIR = BACKEND_DIR / "style_files"

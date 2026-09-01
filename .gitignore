@@ -1,5 +1,8 @@
-# Ignore backend tmp files
+# backend tmp files & user-generated data
 src/backend/tmp/
+
+# analytics
+analytics/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
