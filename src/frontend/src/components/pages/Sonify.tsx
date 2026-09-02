@@ -79,7 +79,7 @@ export default function Sonify() {
 
   // Define length limits based on sonification type
   const defaultsDict = {
-    light_curves: { max_length: 60, default_length: 15, audio_system: "mono" },
+    light_curves: { max_length: 60, default_length: 15, audio_system: "stereo" },
     constellations: {
       max_length: 120,
       default_length: 15,
@@ -331,11 +331,12 @@ export default function Sonify() {
   };
 
   const askForFeedback = () => {
-    // if (sessionStorage.getItem("feedbackShown")) {
-    //   return;
-    // }
+    
+    if (sessionStorage.getItem("feedbackShown")) {
+      return;
+    }
 
-    // sessionStorage.setItem("feedbackShown", "true");
+    sessionStorage.setItem("feedbackShown", "true");
 
     setTimeout(() => {
       toaster.create({

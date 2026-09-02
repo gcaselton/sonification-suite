@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from pychord import Chord
 from pychord.utils import transpose_note
 from strauss.notes import notesharps
-import os, yaml, uuid, random
+import os, yaml, uuid, random, re
 import pandas as pd
 import numpy as np
 
@@ -253,3 +253,44 @@ def random_chord():
       fourth_note = transpose_note(root_note, chosen_pair[1])
 
       return [[root_note + '2', fifth + '3', third_note + '4', fourth_note + '5']]
+  
+def cleanup_old_layers(session_id: str, n_layers: int):
+    """
+    Delete old audio files and mapping table CSVs from the user's session
+    directory where the layer number is greater than the number of layers.
+
+    Audio files are named e.g. ``layer_1.wav`` and ``layer_2.mp3``.
+    Mapping tables are named e.g. ``mapping_table_1.csv``.
+
+    Args:
+        session_id (str): The user's session ID
+        n_layers (int): The number of layers in the most recently generated
+            sonification.
+    """
+
+    session_dir = TMP_DIR / session_id
+    if not session_dir.exists():
+        return
+
+    for file in session_dir.iterdir():
+        if not file.is_file():
+            continue
+
+        suffix = file.suffix.lower()
+
+        # Audio files: layer_1.wav / layer_1.mp3
+        # Mapping tables: mapping_table_layer_1.csv
+        if suffix in {".wav", ".mp3"}:
+            match = re.search(r"^layer_(\d+)$", file.stem)
+        elif suffix == ".csv":
+            match = re.search(r"^mapping_table_(\d+)$", file.stem)
+        else:
+            continue
+
+        if not match:
+            continue
+
+        layer_number = int(match.group(1))
+
+        if layer_number > n_layers or suffix == ".mp3":
+            file.unlink()

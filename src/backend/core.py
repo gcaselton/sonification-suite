@@ -3,12 +3,13 @@ from fastapi.responses import FileResponse
 from pathlib import Path
 from paths import TMP_DIR, STYLE_FILES_DIR, SUGGESTED_DATA_DIR, SYNTHS_DIR, SAMPLES_DIR
 from context import session_id_var
-from utils import resolve_file, get_time_axis, read_YAML_file, write_YAML_file, is_synth, write_sound_to_style, is_time_series
+from utils import resolve_file, read_YAML_file, write_YAML_file, is_synth, write_sound_to_style, is_time_series, cleanup_old_layers
 from generator_mods import GENERATOR_MODS
 from request_models import DataRequest, CustomStyleSettings, LayerRequest, SonificationRequest, SoundInfo
 import logging, yaml, os, uuid, traceback, base64, gc, re, csv, shutil
 from param_descriptions import INPUTS, OUTPUTS
 from night_sky import handle_observer
+from analytics import log_event
 from strauss import AudioFigure
 
 import numpy as np
@@ -43,8 +44,9 @@ MASTER_VOL = 0.5
 
 @router.get('/session/')
 def get_or_create_session(
+    connection: Request,
     response: Response,
-    session_id: str | None = Cookie(None)
+    session_id: str | None = Cookie(None),
 ):
     if not session_id:
         session_id = str(uuid.uuid4())
@@ -57,6 +59,8 @@ def get_or_create_session(
             secure=True,
             path='/'
         )
+        log_event(session_id=session_id, ip=connection.client.host, event='session_start')
+        
 
     user_dir = TMP_DIR / session_id
     user_dir.mkdir(exist_ok=True)
@@ -77,7 +81,7 @@ def get_uploads_dir_size(uploads_dir: str) -> int:
 
 
 @router.post('/generate-sonification/')
-def generate_sonification(request: SonificationRequest):
+def generate_sonification(request: SonificationRequest, connection: Request):
     
     session_id = session_id_var.get()
     session_dir = TMP_DIR / session_id
@@ -164,6 +168,8 @@ def generate_sonification(request: SonificationRequest):
                 source_names = None
                 
             kwargs['source_names'] = source_names
+            
+            print(str(style_dict))
                 
             # Add style to kwargs
             kwargs['style'] = str(write_YAML_file(style_dict))
@@ -228,53 +234,12 @@ def generate_sonification(request: SonificationRequest):
     filepath = session_dir / filename
     fig.save(filepath)
     
+    log_event(session_id=session_id, ip=connection.client.host, event='sonification_generated', sonification_type=request.category)
     cleanup_old_layers(session_id, n_layers)
 
     file_ref = f'session:{filename}'
 
     return {'file_ref': file_ref, 'alt_az': alt_az}
-
-
-def cleanup_old_layers(session_id: str, n_layers: int):
-    """
-    Delete old audio files and mapping table CSVs from the user's session
-    directory where the layer number is greater than the number of layers.
-
-    Audio files are named e.g. ``layer_1.wav`` and ``layer_2.mp3``.
-    Mapping tables are named e.g. ``mapping_table_1.csv``.
-
-    Args:
-        session_id (str): The user's session ID
-        n_layers (int): The number of layers in the most recently generated
-            sonification.
-    """
-
-    session_dir = TMP_DIR / session_id
-    if not session_dir.exists():
-        return
-
-    for file in session_dir.iterdir():
-        if not file.is_file():
-            continue
-
-        suffix = file.suffix.lower()
-
-        # Audio files: layer_1.wav / layer_1.mp3
-        # Mapping tables: mapping_table_layer_1.csv
-        if suffix in {".wav", ".mp3"}:
-            match = re.search(r"^layer_(\d+)$", file.stem)
-        elif suffix == ".csv":
-            match = re.search(r"^mapping_table_(\d+)$", file.stem)
-        else:
-            continue
-
-        if not match:
-            continue
-
-        layer_number = int(match.group(1))
-
-        if layer_number > n_layers or suffix == ".mp3":
-            file.unlink()
     
     
 @router.post('/generate-spectrogram/')
@@ -362,7 +327,7 @@ def generate_spectrogram(request: DataRequest):
     return {'image': img_base64}
 
 @router.get('/audio/{file_ref}')
-def get_audio(file_ref: str, name: str, audio_format: str = 'wav'):
+def get_audio(connection: Request, file_ref: str, name: str, audio_format: str = 'wav'):
     
     wav_path = str(resolve_file(file_ref))
 
@@ -370,6 +335,8 @@ def get_audio(file_ref: str, name: str, audio_format: str = 'wav'):
         file_path = convert_to_mp3(wav_path)
     else:
         file_path = wav_path
+        
+    log_event(session_id=session_id_var.get(), ip=connection.client.host, event='audio_download')
 
     return FileResponse(path=file_path, 
                         filename=f'{name}.{audio_format}',

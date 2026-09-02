@@ -9,6 +9,7 @@ dependencies = [
     "astroquery==0.4.10",
     "fastapi[standard]==0.115.12",
     "httpx==0.28.1",
+    "iptocc==3.3.119",
     "ipython>=8.37.0",
     "lightkurve==2.5.0",
     "matplotlib==3.10.3",

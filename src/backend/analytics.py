@@ -1,22 +1,20 @@
 import csv
 import sys
+from iptocc import country_code
 from datetime import datetime, timezone
-from paths import ROOT_DIR
+from paths import ANALYTICS_DIR
 
 # fcntl package is only available on unix systems
 if sys.platform != "win32":
     import fcntl
 
-
-ANALYTICS_DIR = ROOT_DIR / "analytics"
 LOCK_FILE = ANALYTICS_DIR / "analytics.lock"
-
 
 def log_event(
     session_id: str,
-    country: str,
+    ip: str,
     event: str,
-    sonification_type: str,
+    sonification_type: str | None = None,
 ):
     """
     Log an analytics event in the current month's analytics file.
@@ -38,7 +36,7 @@ def log_event(
         row = {
             "timestamp": now.isoformat(),
             "session_id": session_id,
-            "country": country,
+            "country": country_code(ip),
             "event": event,
             "sonification_type": sonification_type,
         }

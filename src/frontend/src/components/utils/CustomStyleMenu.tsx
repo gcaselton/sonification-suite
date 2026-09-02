@@ -569,7 +569,7 @@ export default function CustomStyleMenu({
         file_ref: fileRef,
       });
 
-      const audioUrl = `${coreAPI}/audio/${response.file_ref}`;
+      const audioUrl = `${coreAPI}/audio/${response.file_ref}?name=preview`;
       const preview = new Audio(audioUrl);
 
       // Save this audio instance so we can stop it next time

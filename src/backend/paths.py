@@ -23,6 +23,7 @@ SOUND_ASSETS_DIR = BACKEND_DIR / "sound_assets"
 SYNTHS_DIR = SOUND_ASSETS_DIR / "synths"
 SAMPLES_DIR = SOUND_ASSETS_DIR / "samples"
 SAMPLES_DIR.mkdir(exist_ok=True)
+ANALYTICS_DIR = ROOT_DIR / "analytics"
 
 
 

@@ -47,9 +47,9 @@ const astroTypes: AstroType[] = [
     icon: LuLayers3,
   },
   {
-    name: "Example Bank",
-    description: "Use some of our pre-made examples in your shows.",
-    href: "https://www.audiouniverse.org/sonification-suite/planetaria/example-bank",
+    name: "Suggestions and Examples",
+    description: "Pre-made examples and suggestions for using the Suite.",
+    href: "https://www.audiouniverse.org/sonification-suite/suggestions-and-example-bank",
     icon: LuFilm,
   },
 ];

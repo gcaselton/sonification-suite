@@ -1,9 +1,10 @@
 import shutil
 import time
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 import logging
+from paths import ANALYTICS_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -189,6 +190,33 @@ class StorageManager:
             "freed_mb": freed_space / (1024**2),
             "reason": "disk-threshold" if not aggressive else "emergency-cleanup"
         }
+        
+    def cleanup_analytics(retention_months: int = 12):
+        """ Delete any analytics CSVs older than retention_months (default 1 year).
+
+        Args:
+            retention_months (int, optional): How many months to keep the analytics files for. Defaults to 12.
+        """
+        if not ANALYTICS_DIR.exists():
+            return
+
+        cutoff = datetime.now(timezone.utc).date()
+
+        # Keep the most recent 12 months
+        current_month = cutoff.year * 12 + cutoff.month
+        cutoff_month = current_month - retention_months
+
+        for csv_file in ANALYTICS_DIR.glob("*.csv"):
+            try:
+                year, month = map(int, csv_file.stem.split("-"))
+                file_month = year * 12 + month
+
+                if file_month < cutoff_month:
+                    csv_file.unlink()
+
+            except (ValueError, OSError):
+                # Ignore files that don't match the expected naming scheme
+                continue
     
     def run_cleanup(self) -> dict:
         """
