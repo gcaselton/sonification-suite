@@ -114,16 +114,16 @@ export default function ObserverSetup({
 
     // Auto-set orientation to South if location in northern hemisphere, and vice versa
     setOrientation(Number(item.lat) > 0 ? "S" : "N")
-    console.log(item.lat)
   };
 
   const handleSubmit = async () => {
     setSubmitting(true);
+    const name = locationMode === 'search' ? locationName : "Custom Location"
     try {
       await onSubmit({
         latitude,
         longitude,
-        locationName,
+        locationName: name,
         orientation,
         dateTime: dateTime.replace("T", " ") + ":00",
       });

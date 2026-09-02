@@ -161,7 +161,7 @@ export default function Style() {
 
   return (
     <PageContainer>
-      <Heading as="h1">Step 3: Style</Heading>
+      <Heading as="h1">Style</Heading>
       <br />
       <Text textStyle="lg">
         Choose from the styles below, or configure your own

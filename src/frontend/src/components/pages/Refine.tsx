@@ -26,7 +26,7 @@ export default function Refine() {
 
   return (
     <PageContainer>
-      <Heading as="h1">Step 2: Refine</Heading>
+      <Heading as="h1">Refine</Heading>
       <br />
       <Text textStyle="lg">
         <Highlight query={dataName} styles={{ color: "teal.600" }}>

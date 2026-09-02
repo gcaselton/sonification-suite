@@ -47,7 +47,7 @@ const astroTypes: AstroType[] = [
     icon: LuLayers3,
   },
   {
-    name: "Suggestions and Examples",
+    name: "Suggestions & Examples",
     description: "Pre-made examples and suggestions for using the Suite.",
     href: "https://www.audiouniverse.org/sonification-suite/suggestions-and-example-bank",
     icon: LuFilm,
@@ -59,7 +59,7 @@ export default function Planetaria() {
 
   return (
     <PageContainer>
-      <Heading as="h1">Step 1: Data</Heading>
+      <Heading as="h1">Planetaria</Heading>
       <br />
       <HStack flexWrap="nowrap">
         <Text textStyle="lg" flexShrink={1}>

@@ -1,6 +1,6 @@
 name: "Pentatonic Harp"
 
-description: "Harp plays an E Minor Pentatonic scale, where pitch increases with brightness."
+description: "Harp plays an E Minor Pentatonic scale, where pitch increases with the values in Column 2. Uses Column 1 as the time axis."
 
 generator:
   type: "sampler"

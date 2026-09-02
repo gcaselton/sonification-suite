@@ -97,7 +97,6 @@ def _get_pattern(pattern_name: str) -> dict:
 def get_constellation(pattern_name: str, by_shape: bool = True) -> pd.DataFrame:
 
     pattern = _get_pattern(pattern_name)
-    print(pattern)
 
     # load CSV
     df = pd.read_csv(HYG_DATA)
@@ -426,7 +425,6 @@ async def save_refined(request: ConstellationRequest):
 
     if request.by_shape:
         if request.order:
-            print(request.order)
             # Add the custom order column
             order_map = {hip: i for i, hip in enumerate(request.order, start=1)}
             refined_stars["custom_order"] = refined_stars["hip"].map(order_map)

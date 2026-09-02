@@ -383,10 +383,6 @@ def convert_to_mp3(wav_file: str) -> str:
         AudioSegment.converter = local_ffmpeg
 
     mp3_path = wav_path.with_suffix(".mp3")
-
-    if mp3_path.exists():
-        return str(mp3_path)
-
     audio = AudioSegment.from_wav(wav_path)
 
     try:

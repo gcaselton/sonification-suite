@@ -1,5 +1,5 @@
 export function formatCoord(coord: string) {
-    return Number(coord).toFixed(2);
+    return Number(coord).toFixed(4);
   }
 
 export function formatSoniType(value: string) {

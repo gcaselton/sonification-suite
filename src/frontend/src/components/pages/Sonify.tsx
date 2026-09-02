@@ -415,7 +415,7 @@ export default function Sonify() {
 
       <SpecHelper open={specHelperOpen} onOpenChange={setSpecHelperOpen} />
 
-      <Heading as="h1">Step 4: Sonify</Heading>
+      <Heading as="h1">Sonify</Heading>
       <br />
       <Text textStyle="lg">
         Set the length of the sonification and specify the audio system you
