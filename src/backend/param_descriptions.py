@@ -90,7 +90,7 @@ OUTPUTS = {
     },
     'volume': {
         'name': 'Volume',
-        'desc': 'The loudness of each data point'
+        'desc': 'The loudness of each data point (0 is silence)'
     },
     'pan': {
         'name': 'Pan',

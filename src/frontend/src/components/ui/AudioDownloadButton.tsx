@@ -53,7 +53,7 @@ export default function AudioDownloadButton({
             variant={layer ? "subtle" : "solid"}
             disabled={layer && !soniReady}
           >
-            <LuDownload /> {layer ? "Audio" : "Download"}
+            <LuDownload /> {layer ? "Layer audio" : "Download"}
           </Button>
         </Menu.Trigger>
       </Tooltip>

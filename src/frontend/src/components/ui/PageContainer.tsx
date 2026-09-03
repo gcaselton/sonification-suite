@@ -26,6 +26,7 @@ export default function PageContainer({
   nav?: boolean;
 }) {
   const [licenseOpen, setLicenseOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   return (
     <Box maxW="1200px" mx="auto" px={6} py={4} width="100%">
@@ -90,12 +91,10 @@ export default function PageContainer({
                   transition="opacity 0.15s ease"
                 >
                   Sonification Suite
-             
                 </Text>
               </NavLink>
 
               <Breadcrumbs />
-              
             </Flex>
             <Flex gap={5}>
               <Link
@@ -172,8 +171,8 @@ export default function PageContainer({
         <Text fontSize="xs">
           Powered by{" "}
           <Link
-            aria-label="Go to STRAUSS repository on GitHub"
-            href="https://github.com/james-trayford/strauss"
+            aria-label="Go to STRAUSS documentation in new tab"
+            href="https://strauss.readthedocs.io/en/latest/"
             colorPalette="teal"
             target="_blank"
             rel="noopener noreferrer"
@@ -181,8 +180,18 @@ export default function PageContainer({
             STRAUSS
           </Link>
         </Text>
+        <Text
+          aria-label="Open feedback details."
+          fontSize="xs"
+          as="button"
+          cursor="pointer"
+          _hover={{ opacity: 1 }}
+          onClick={() => setFeedbackOpen(true)}
+        >
+          Submit feedback
+        </Text>
 
-        <Text fontSize="xs">v0.5 (Pre-release)</Text>
+        <Text fontSize="xs">v1.0</Text>
       </Flex>
       <Dialog.Root
         open={licenseOpen}
@@ -221,6 +230,43 @@ export default function PageContainer({
                   fontSize="sm"
                 >
                   Read the full GNU GPL v3 license →
+                </Link>
+              </VStack>
+            </Dialog.Body>
+            <Dialog.Footer>
+              <Dialog.CloseTrigger asChild>
+                <CloseButton />
+              </Dialog.CloseTrigger>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
+
+      <Dialog.Root
+        open={feedbackOpen}
+        onOpenChange={(e) => setFeedbackOpen(e.open)}
+        placement="center"
+        size="lg"
+      >
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content maxH="80vh">
+            <Dialog.Header>
+              <Dialog.Title>Submit Feedback</Dialog.Title>
+            </Dialog.Header>
+            <Dialog.Body overflowY="auto">
+              <VStack align="stretch" gap={3}>
+                <Text fontSize="sm">
+                  Have a request for a feature/improvement? Found a bug? Want to
+                  let us know how you are using the Suite? For all these
+                  enquiries and more, please contact us at
+                </Text>
+                <Link
+                  colorPalette="teal"
+                  href="mailto:contactaudiouniverse@gmail.com"
+                  style={{ textDecoration: "underline" }}
+                >
+                  contactaudiouniverse@gmail.com
                 </Link>
               </VStack>
             </Dialog.Body>

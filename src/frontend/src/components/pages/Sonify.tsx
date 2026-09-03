@@ -344,13 +344,13 @@ export default function Sonify() {
         description: (
           <>
             Let us know how you are using the Suite to help demonstrate success
-            and justify future funding.{" "}
+            and justify future funding. Email:
             <Link
               colorPalette="teal"
               href="mailto:contactaudiouniverse@gmail.com"
               style={{ textDecoration: "underline" }}
             >
-              Drop us a line
+              contactaudiouniverse@gmail.com
             </Link>
             .
           </>

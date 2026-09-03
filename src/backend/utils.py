@@ -199,7 +199,6 @@ def is_number(x):
     except ValueError:
         return False
     
-    
 def voice_chord(chord_name: str):
 
       # This will raise a ValueError if chord_name is invalid.

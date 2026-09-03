@@ -1,6 +1,6 @@
 # Sonification Suite
 
-An accessible platform for transforming scientific datasets into tangible audio representations.
+An accessible platform for transforming datasets into tangible audio representations.
 
 ## Documentation
 

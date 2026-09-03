@@ -50,7 +50,7 @@ LOG = logging.getLogger(__name__)
 def run_lightkurve_search(idents, authors, cancel_event: threading.Event):
     
     # Set a timeout on MAST requests
-    Observations.TIMEOUT = 10 
+    Observations.TIMEOUT = 30 
 
     results_metadata = []
 
@@ -190,7 +190,7 @@ async def search_lightcurves(query: StarQuery, request: Request):
     )
 
     try:
-        results_metadata = await asyncio.wait_for(task, timeout=20)
+        results_metadata = await asyncio.wait_for(task, timeout=30)
 
         if results_metadata is None:
             raise HTTPException(status_code=499, detail='Search cancelled')

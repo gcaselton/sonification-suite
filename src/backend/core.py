@@ -789,8 +789,10 @@ def format_style(settings: CustomStyleSettings):
                 
         elif m['output'] == 'pitch':
             # Swap pitch for pitch_shift if Objects, or Events with no notes given
-            m['output'] = 'pitch_shift' if sources == 'objects' or not settings.notes else m['output']
-        
+            if sources == 'objects' or not settings.notes:
+                m['output'] = 'pitch_shift'
+                lims = m['output_range'] or [0, 1]
+                m['output_range'] = [x*24 for x in lims] # Rescale 0-1 to 0-24 semitones (STRAUSS range for pitch_shift)        
         
     # Set up Generator dictionary
     gen_type, sound_key = (

@@ -366,7 +366,17 @@ export default function Lightcurves() {
                   />
                 </InputGroup>
                 <Field.HelperText>
-                  Search by name or any catalog identifier
+                  Search by name or any catalog identifier (resolved by{" "}
+                  <Link
+                    href="https://simbad.cds.unistra.fr/simbad/"
+                    aria-label="Go to SIMBAD database in new tab"
+                    colorPalette="teal"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    SIMBAD
+                  </Link>
+                  )
                 </Field.HelperText>
               </Field.Root>
               <Button
@@ -440,7 +450,11 @@ export default function Lightcurves() {
       </form>
       {loading && (
         <LoadingMessage
-          msg={loadingLong ? "it's a big place..." : `Searching the Universe for ${searchTerm}...`}
+          msg={
+            loadingLong
+              ? "it's a big place..."
+              : `Searching the Universe for ${searchTerm}...`
+          }
           icon="pulsar"
           onCancel={cancelSearch}
         />

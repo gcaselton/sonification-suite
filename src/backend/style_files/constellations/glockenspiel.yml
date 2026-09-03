@@ -1,0 +1,33 @@
+name: Glockenspiel
+
+description: >
+  A glockenspiel plays the stars from brightest to dimmest, where bluer stars are higher pitched and 
+  redder stars are lower pitched. Uses a C# pentatonic scale.
+
+generator:
+  sample: Glockenspiel
+  type: sampler
+
+map:
+
+- input: magnitude
+  input_range: ['0%','120%']
+  output: time
+  
+- input: ra_corrected
+  output: pan
+  output_range: [0.25, 0.75]
+  function: invert
+
+- input: colour
+  output: pitch
+  function: invert
+  
+- function: invert
+  input: magnitude
+  output: volume
+  output_range: [0.7, 1]
+
+notes: ['C#3','E3','F#3','G#3','B3','C#4']
+
+sources: events

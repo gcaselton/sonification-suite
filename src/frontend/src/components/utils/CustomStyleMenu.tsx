@@ -1043,7 +1043,7 @@ export default function CustomStyleMenu({
                                     />
                                   </HStack>
                                   <HStack gap={8}>
-                                    <Tooltip content='Range is not supported for spatial parameters'>
+                                    <Tooltip content='Range is not supported for spatial parameters' disabled={!isSpatial}>
                                       <HStack>
                                         <NumberInput.Root
                                           disabled={isSpatial}

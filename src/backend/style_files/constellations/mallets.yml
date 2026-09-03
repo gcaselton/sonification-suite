@@ -2,7 +2,7 @@ name: Mallets
 
 description: >
   Mallets play the stars from left to right, with bluer/hotter stars playing a higher pitch,
-  and redder/cooler stars playing lower pitches. Brighter stars are louder.
+  and redder/cooler stars playing lower pitches. Brighter stars are louder. Uses a C blues scale.
 
 generator:
   type: 'sampler'
@@ -12,7 +12,7 @@ map:
     
   - input: 'magnitude'
     output: 'volume'
-    output_range: [0.2, 1]
+    output_range: [0.05, 1]
     function: 'invert'
 
   - input: 'ra_corrected'
