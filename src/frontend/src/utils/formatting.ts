@@ -8,3 +8,7 @@ export function formatSoniType(value: string) {
       .replace(/\b\w/g, (c) => c.toLowerCase())
       .replace(/s$/, "");
   }
+
+export function capitaliseWords(str: string) {
+  return str.replace(/\b\w/g, (char) => char.toUpperCase());
+}

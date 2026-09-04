@@ -168,9 +168,7 @@ def generate_sonification(request: SonificationRequest, connection: Request):
                 source_names = None
                 
             kwargs['source_names'] = source_names
-            
-            print(str(style_dict))
-                
+                            
             # Add style to kwargs
             kwargs['style'] = str(write_YAML_file(style_dict))
             

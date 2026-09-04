@@ -43,7 +43,7 @@ TESS_PIPELINE_RANK = {
     "TESS-SPOC": 1,
 }
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 LOG = logging.getLogger(__name__)
 
 

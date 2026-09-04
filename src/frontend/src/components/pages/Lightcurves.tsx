@@ -52,6 +52,7 @@ import {
   useBreakpointValue,
 } from "@chakra-ui/react";
 import { NavigationState } from "../../types/navigation";
+import { capitaliseWords } from "../../utils/formatting";
 
 const soniType = "light_curves";
 
@@ -71,15 +72,6 @@ export interface SuggestedData {
   ra: number;
   dec: number;
   fileRef: string;
-}
-
-const LightcurvesContext = createContext({
-  lightcurves: [],
-  fetchLightcurves: () => {},
-});
-
-function capitaliseWords(str: string) {
-  return str.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 export default function Lightcurves() {
